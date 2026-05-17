@@ -134,11 +134,11 @@ class TagManagementPage extends ConsumerWidget {
               child: const Text('取消'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  ref.read(tagActionsProvider).create(name, selectedColor);
-                  Navigator.pop(context);
+                  await ref.read(tagActionsProvider).create(name, selectedColor);
+                  if (context.mounted) Navigator.pop(context);
                 }
               },
               child: const Text('创建'),

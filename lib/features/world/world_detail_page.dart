@@ -32,7 +32,7 @@ class WorldDetailPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.label),
             tooltip: '标签管理',
-            onPressed: () {},
+            onPressed: () => context.push('/tags'),
           ),
         ],
       ),

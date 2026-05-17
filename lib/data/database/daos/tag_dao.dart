@@ -25,6 +25,7 @@ class TagDao extends DatabaseAccessor<AppDatabase> with _$TagDaoMixin {
           characterId: characterId,
           tagId: tagId,
         ),
+        mode: InsertMode.insertOrIgnore,
       );
 
   Future<void> removeTagFromCharacter(int characterId, int tagId) =>
