@@ -18,11 +18,50 @@ class WorldListPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {},
+            onPressed: () => context.push('/search'),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {},
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'tags',
+                child: ListTile(
+                  leading: Icon(Icons.label),
+                  title: Text('标签管理'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'drafts',
+                child: ListTile(
+                  leading: Icon(Icons.drafts),
+                  title: Text('草稿箱'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'trash',
+                child: ListTile(
+                  leading: Icon(Icons.delete),
+                  title: Text('回收站'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('设置'),
+                ),
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'tags') {
+                context.push('/tags');
+              } else if (value == 'drafts') {
+                context.push('/drafts');
+              } else if (value == 'trash') {
+                // TODO: 回收站页面
+              } else if (value == 'settings') {
+                // TODO: 设置页面
+              }
+            },
           ),
         ],
       ),

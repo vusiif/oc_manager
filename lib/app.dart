@@ -6,6 +6,9 @@ import 'core/theme/app_theme.dart';
 import 'features/world/world_list_page.dart';
 import 'features/world/world_detail_page.dart';
 import 'features/character/character_detail_page.dart';
+import 'features/search/search_page.dart';
+import 'features/tag/tag_management_page.dart';
+import 'features/trash/drafts_page.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
@@ -33,6 +36,18 @@ final _router = GoRouter(
           characterId: characterId,
         );
       },
+    ),
+    GoRoute(
+      path: '/search',
+      builder: (context, state) => const SearchPage(),
+    ),
+    GoRoute(
+      path: '/tags',
+      builder: (context, state) => const TagManagementPage(),
+    ),
+    GoRoute(
+      path: '/drafts',
+      builder: (context, state) => const DraftsPage(),
     ),
   ],
 );

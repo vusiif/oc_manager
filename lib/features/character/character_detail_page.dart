@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/character_provider.dart';
+import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
 
 class CharacterDetailPage extends ConsumerWidget {
@@ -111,6 +112,10 @@ class CharacterDetailPage extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // 标签
+            TagSelector(characterId: characterId),
             const SizedBox(height: 16),
 
             // 自定义字段
