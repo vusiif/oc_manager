@@ -9,6 +9,7 @@ import 'features/character/character_detail_page.dart';
 import 'features/search/search_page.dart';
 import 'features/tag/tag_management_page.dart';
 import 'features/trash/drafts_page.dart';
+import 'features/relation/relation_graph_page.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
@@ -35,6 +36,13 @@ final _router = GoRouter(
           worldId: worldId,
           characterId: characterId,
         );
+      },
+    ),
+    GoRoute(
+      path: '/world/:worldId/graph',
+      builder: (context, state) {
+        final worldId = int.parse(state.pathParameters['worldId']!);
+        return RelationGraphPage(worldId: worldId);
       },
     ),
     GoRoute(
