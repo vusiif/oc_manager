@@ -3915,6 +3915,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TrashTable trash = $TrashTable(this);
   late final $BackupsTable backups = $BackupsTable(this);
   late final $GraphLayoutsTable graphLayouts = $GraphLayoutsTable(this);
+  late final WorldDao worldDao = WorldDao(this as AppDatabase);
+  late final CharacterDao characterDao = CharacterDao(this as AppDatabase);
+  late final RelationDao relationDao = RelationDao(this as AppDatabase);
+  late final TemplateDao templateDao = TemplateDao(this as AppDatabase);
+  late final TagDao tagDao = TagDao(this as AppDatabase);
+  late final TrashDao trashDao = TrashDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

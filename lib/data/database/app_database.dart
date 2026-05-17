@@ -10,6 +10,12 @@ import 'tables/relations.dart';
 import 'tables/templates.dart';
 import 'tables/tags.dart';
 import 'tables/trash.dart';
+import 'daos/world_dao.dart';
+import 'daos/character_dao.dart';
+import 'daos/relation_dao.dart';
+import 'daos/template_dao.dart';
+import 'daos/tag_dao.dart';
+import 'daos/trash_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -25,6 +31,13 @@ part 'app_database.g.dart';
   Trash,
   Backups,
   GraphLayouts,
+], daos: [
+  WorldDao,
+  CharacterDao,
+  RelationDao,
+  TemplateDao,
+  TagDao,
+  TrashDao,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
