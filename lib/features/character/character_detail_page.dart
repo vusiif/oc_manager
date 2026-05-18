@@ -42,7 +42,10 @@ class CharacterDetailPage extends ConsumerWidget {
                     worldId: worldId,
                     character: character,
                   ),
-                );
+                ).then((_) {
+                  ref.invalidate(characterByIdProvider(characterId));
+                  ref.invalidate(charactersByWorldProvider(worldId));
+                });
               }
             },
           ),
@@ -103,6 +106,8 @@ class CharacterDetailPage extends ConsumerWidget {
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     const Divider(),
                     _InfoRow(label: '名称', value: character.name),
+                    if (character.gender.isNotEmpty)
+                      _InfoRow(label: '性别', value: character.gender),
                     _InfoRow(
                       label: '状态',
                       value: character.status == 0 ? '正式' : '草稿',

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
+import '../character/character_dialog.dart';
 
 class RelationGraphPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -604,6 +605,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                                               character,
                                               characters,
                                               relations),
+                                      onEdit: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => CharacterDialog(
+                                            worldId: widget.worldId,
+                                            character: character,
+                                          ),
+                                        ).then((_) {
+                                          ref.invalidate(
+                                              charactersByWorldProvider(
+                                                  widget.worldId));
+                                        });
+                                      },
                                     ),
                                 if (candidateData.isNotEmpty)
                                   Center(
@@ -654,17 +668,6 @@ Widget _buildShape(String gender, double size, Color color, String label) {
   final text = label.isNotEmpty ? label[0] : '?';
 
   if (gender == '男') {
-    // 圆形
-    return CircleAvatar(
-      radius: half,
-      backgroundColor: color,
-      child: Text(text,
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: half * 0.75,
-              fontWeight: FontWeight.bold)),
-    );
-  } else if (gender == '女') {
     // 方形
     return Container(
       width: half * 2,
@@ -674,6 +677,17 @@ Widget _buildShape(String gender, double size, Color color, String label) {
         borderRadius: BorderRadius.circular(4),
       ),
       alignment: Alignment.center,
+      child: Text(text,
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: half * 0.75,
+              fontWeight: FontWeight.bold)),
+    );
+  } else if (gender == '女') {
+    // 圆形
+    return CircleAvatar(
+      radius: half,
+      backgroundColor: color,
       child: Text(text,
           style: TextStyle(
               color: Colors.white,
@@ -755,6 +769,7 @@ class _DraggableNode extends StatefulWidget {
   final ValueChanged<Offset> onDragEnd;
   final VoidCallback onRemove;
   final VoidCallback onManageRelations;
+  final VoidCallback onEdit;
 
   const _DraggableNode({
     required this.character,
@@ -765,6 +780,7 @@ class _DraggableNode extends StatefulWidget {
     required this.onDragEnd,
     required this.onRemove,
     required this.onManageRelations,
+    required this.onEdit,
   });
 
   @override
@@ -798,6 +814,17 @@ class _DraggableNodeState extends State<_DraggableNode> {
         details.globalPosition.dy,
       ),
       items: [
+        PopupMenuItem(
+          height: 36,
+          onTap: widget.onEdit,
+          child: const Row(
+            children: [
+              Icon(Icons.edit, size: 18),
+              SizedBox(width: 8),
+              Text('编辑人物'),
+            ],
+          ),
+        ),
         PopupMenuItem(
           height: 36,
           onTap: widget.onManageRelations,
