@@ -38,4 +38,11 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
 
   Future<void> deleteLayoutsByWorld(int worldId) =>
       (delete(graphLayouts)..where((t) => t.worldId.equals(worldId))).go();
+
+  Future<void> deleteLayout(int worldId, int characterId) =>
+      (delete(graphLayouts)
+            ..where((t) =>
+                t.worldId.equals(worldId) &
+                t.characterId.equals(characterId)))
+          .go();
 }

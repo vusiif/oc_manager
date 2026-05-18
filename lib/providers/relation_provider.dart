@@ -28,6 +28,7 @@ class RelationActions {
     required String relationType,
     bool isBidirectional = true,
     String? note,
+    String? relationGroupId,
   }) async {
     final id = await _ref.read(relationDaoProvider).createRelation(
           RelationsCompanion(
@@ -36,9 +37,53 @@ class RelationActions {
             relationType: Value(relationType),
             isBidirectional: Value(isBidirectional),
             note: Value(note),
+            relationGroupId: Value(relationGroupId),
           ),
         );
     return id;
+  }
+
+  /// 创建多人关系：以 hubId 为中心，hubId 与其他每个 characterId 各建一条 pair relation
+  Future<void> createGroupRelation({
+    required int hubId,
+    required List<int> characterIds,
+    required String relationType,
+    bool isBidirectional = true,
+    String? note,
+  }) async {
+    final groupId = DateTime.now().microsecondsSinceEpoch.toString();
+    for (final cid in characterIds) {
+      if (cid == hubId) continue;
+      await create(
+        fromCharacterId: hubId,
+        toCharacterId: cid,
+        relationType: relationType,
+        isBidirectional: isBidirectional,
+        note: note,
+        relationGroupId: groupId,
+      );
+    }
+  }
+
+  /// 创建家谱关系：每个父母到每个子女各一条 relation，共用 groupId
+  Future<void> createFamilyRelation({
+    required List<int> parentIds,
+    required List<int> childIds,
+    String? note,
+  }) async {
+    final groupId = 'family_${DateTime.now().microsecondsSinceEpoch}';
+    for (final pid in parentIds) {
+      for (final cid in childIds) {
+        await create(
+          fromCharacterId: pid,
+          toCharacterId: cid,
+          relationType: '亲子',
+          isBidirectional: false,
+          note: note,
+          relationGroupId: groupId,
+        );
+      }
+    }
   }
 
   Future<bool> update(Relation relation) async {
@@ -82,5 +127,9 @@ class GraphLayoutActions {
             y: Value(y),
           ),
         );
+  }
+
+  Future<void> removePosition(int worldId, int characterId) async {
+    await _ref.read(trashDaoProvider).deleteLayout(worldId, characterId);
   }
 }

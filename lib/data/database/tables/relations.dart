@@ -8,4 +8,5 @@ class Relations extends Table {
   TextColumn get relationType => text().withLength(min: 1, max: 50)();
   BoolColumn get isBidirectional => boolean().withDefault(const Constant(true))();
   TextColumn get note => text().nullable()();
+  TextColumn get relationGroupId => text().nullable()();
 }

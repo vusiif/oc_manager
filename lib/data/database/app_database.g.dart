@@ -464,6 +464,20 @@ class $CharactersTable extends Characters
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _genderMeta = const VerificationMeta('gender');
+  @override
+  late final GeneratedColumn<String> gender = GeneratedColumn<String>(
+    'gender',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<int> status = GeneratedColumn<int>(
@@ -534,6 +548,7 @@ class $CharactersTable extends Characters
     worldId,
     name,
     avatarPath,
+    gender,
     status,
     isFavorite,
     isPinned,
@@ -575,6 +590,12 @@ class $CharactersTable extends Characters
       context.handle(
         _avatarPathMeta,
         avatarPath.isAcceptableOrUnknown(data['avatar_path']!, _avatarPathMeta),
+      );
+    }
+    if (data.containsKey('gender')) {
+      context.handle(
+        _genderMeta,
+        gender.isAcceptableOrUnknown(data['gender']!, _genderMeta),
       );
     }
     if (data.containsKey('status')) {
@@ -632,6 +653,10 @@ class $CharactersTable extends Characters
         DriftSqlType.string,
         data['${effectivePrefix}avatar_path'],
       ),
+      gender: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gender'],
+      )!,
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}status'],
@@ -666,6 +691,7 @@ class Character extends DataClass implements Insertable<Character> {
   final int worldId;
   final String name;
   final String? avatarPath;
+  final String gender;
   final int status;
   final bool isFavorite;
   final bool isPinned;
@@ -676,6 +702,7 @@ class Character extends DataClass implements Insertable<Character> {
     required this.worldId,
     required this.name,
     this.avatarPath,
+    required this.gender,
     required this.status,
     required this.isFavorite,
     required this.isPinned,
@@ -691,6 +718,7 @@ class Character extends DataClass implements Insertable<Character> {
     if (!nullToAbsent || avatarPath != null) {
       map['avatar_path'] = Variable<String>(avatarPath);
     }
+    map['gender'] = Variable<String>(gender);
     map['status'] = Variable<int>(status);
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['is_pinned'] = Variable<bool>(isPinned);
@@ -707,6 +735,7 @@ class Character extends DataClass implements Insertable<Character> {
       avatarPath: avatarPath == null && nullToAbsent
           ? const Value.absent()
           : Value(avatarPath),
+      gender: Value(gender),
       status: Value(status),
       isFavorite: Value(isFavorite),
       isPinned: Value(isPinned),
@@ -725,6 +754,7 @@ class Character extends DataClass implements Insertable<Character> {
       worldId: serializer.fromJson<int>(json['worldId']),
       name: serializer.fromJson<String>(json['name']),
       avatarPath: serializer.fromJson<String?>(json['avatarPath']),
+      gender: serializer.fromJson<String>(json['gender']),
       status: serializer.fromJson<int>(json['status']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       isPinned: serializer.fromJson<bool>(json['isPinned']),
@@ -740,6 +770,7 @@ class Character extends DataClass implements Insertable<Character> {
       'worldId': serializer.toJson<int>(worldId),
       'name': serializer.toJson<String>(name),
       'avatarPath': serializer.toJson<String?>(avatarPath),
+      'gender': serializer.toJson<String>(gender),
       'status': serializer.toJson<int>(status),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'isPinned': serializer.toJson<bool>(isPinned),
@@ -753,6 +784,7 @@ class Character extends DataClass implements Insertable<Character> {
     int? worldId,
     String? name,
     Value<String?> avatarPath = const Value.absent(),
+    String? gender,
     int? status,
     bool? isFavorite,
     bool? isPinned,
@@ -763,6 +795,7 @@ class Character extends DataClass implements Insertable<Character> {
     worldId: worldId ?? this.worldId,
     name: name ?? this.name,
     avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
+    gender: gender ?? this.gender,
     status: status ?? this.status,
     isFavorite: isFavorite ?? this.isFavorite,
     isPinned: isPinned ?? this.isPinned,
@@ -777,6 +810,7 @@ class Character extends DataClass implements Insertable<Character> {
       avatarPath: data.avatarPath.present
           ? data.avatarPath.value
           : this.avatarPath,
+      gender: data.gender.present ? data.gender.value : this.gender,
       status: data.status.present ? data.status.value : this.status,
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
@@ -794,6 +828,7 @@ class Character extends DataClass implements Insertable<Character> {
           ..write('worldId: $worldId, ')
           ..write('name: $name, ')
           ..write('avatarPath: $avatarPath, ')
+          ..write('gender: $gender, ')
           ..write('status: $status, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('isPinned: $isPinned, ')
@@ -809,6 +844,7 @@ class Character extends DataClass implements Insertable<Character> {
     worldId,
     name,
     avatarPath,
+    gender,
     status,
     isFavorite,
     isPinned,
@@ -823,6 +859,7 @@ class Character extends DataClass implements Insertable<Character> {
           other.worldId == this.worldId &&
           other.name == this.name &&
           other.avatarPath == this.avatarPath &&
+          other.gender == this.gender &&
           other.status == this.status &&
           other.isFavorite == this.isFavorite &&
           other.isPinned == this.isPinned &&
@@ -835,6 +872,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
   final Value<int> worldId;
   final Value<String> name;
   final Value<String?> avatarPath;
+  final Value<String> gender;
   final Value<int> status;
   final Value<bool> isFavorite;
   final Value<bool> isPinned;
@@ -845,6 +883,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     this.worldId = const Value.absent(),
     this.name = const Value.absent(),
     this.avatarPath = const Value.absent(),
+    this.gender = const Value.absent(),
     this.status = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.isPinned = const Value.absent(),
@@ -856,6 +895,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     required int worldId,
     required String name,
     this.avatarPath = const Value.absent(),
+    this.gender = const Value.absent(),
     this.status = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.isPinned = const Value.absent(),
@@ -868,6 +908,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Expression<int>? worldId,
     Expression<String>? name,
     Expression<String>? avatarPath,
+    Expression<String>? gender,
     Expression<int>? status,
     Expression<bool>? isFavorite,
     Expression<bool>? isPinned,
@@ -879,6 +920,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       if (worldId != null) 'world_id': worldId,
       if (name != null) 'name': name,
       if (avatarPath != null) 'avatar_path': avatarPath,
+      if (gender != null) 'gender': gender,
       if (status != null) 'status': status,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (isPinned != null) 'is_pinned': isPinned,
@@ -892,6 +934,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Value<int>? worldId,
     Value<String>? name,
     Value<String?>? avatarPath,
+    Value<String>? gender,
     Value<int>? status,
     Value<bool>? isFavorite,
     Value<bool>? isPinned,
@@ -903,6 +946,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       worldId: worldId ?? this.worldId,
       name: name ?? this.name,
       avatarPath: avatarPath ?? this.avatarPath,
+      gender: gender ?? this.gender,
       status: status ?? this.status,
       isFavorite: isFavorite ?? this.isFavorite,
       isPinned: isPinned ?? this.isPinned,
@@ -925,6 +969,9 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     }
     if (avatarPath.present) {
       map['avatar_path'] = Variable<String>(avatarPath.value);
+    }
+    if (gender.present) {
+      map['gender'] = Variable<String>(gender.value);
     }
     if (status.present) {
       map['status'] = Variable<int>(status.value);
@@ -951,6 +998,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
           ..write('worldId: $worldId, ')
           ..write('name: $name, ')
           ..write('avatarPath: $avatarPath, ')
+          ..write('gender: $gender, ')
           ..write('status: $status, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('isPinned: $isPinned, ')
@@ -1414,6 +1462,17 @@ class $RelationsTable extends Relations
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _relationGroupIdMeta = const VerificationMeta(
+    'relationGroupId',
+  );
+  @override
+  late final GeneratedColumn<String> relationGroupId = GeneratedColumn<String>(
+    'relation_group_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1422,6 +1481,7 @@ class $RelationsTable extends Relations
     relationType,
     isBidirectional,
     note,
+    relationGroupId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1486,6 +1546,15 @@ class $RelationsTable extends Relations
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('relation_group_id')) {
+      context.handle(
+        _relationGroupIdMeta,
+        relationGroupId.isAcceptableOrUnknown(
+          data['relation_group_id']!,
+          _relationGroupIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1519,6 +1588,10 @@ class $RelationsTable extends Relations
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      relationGroupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relation_group_id'],
+      ),
     );
   }
 
@@ -1535,6 +1608,7 @@ class Relation extends DataClass implements Insertable<Relation> {
   final String relationType;
   final bool isBidirectional;
   final String? note;
+  final String? relationGroupId;
   const Relation({
     required this.id,
     required this.fromCharacterId,
@@ -1542,6 +1616,7 @@ class Relation extends DataClass implements Insertable<Relation> {
     required this.relationType,
     required this.isBidirectional,
     this.note,
+    this.relationGroupId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1554,6 +1629,9 @@ class Relation extends DataClass implements Insertable<Relation> {
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
+    if (!nullToAbsent || relationGroupId != null) {
+      map['relation_group_id'] = Variable<String>(relationGroupId);
+    }
     return map;
   }
 
@@ -1565,6 +1643,9 @@ class Relation extends DataClass implements Insertable<Relation> {
       relationType: Value(relationType),
       isBidirectional: Value(isBidirectional),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      relationGroupId: relationGroupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(relationGroupId),
     );
   }
 
@@ -1580,6 +1661,7 @@ class Relation extends DataClass implements Insertable<Relation> {
       relationType: serializer.fromJson<String>(json['relationType']),
       isBidirectional: serializer.fromJson<bool>(json['isBidirectional']),
       note: serializer.fromJson<String?>(json['note']),
+      relationGroupId: serializer.fromJson<String?>(json['relationGroupId']),
     );
   }
   @override
@@ -1592,6 +1674,7 @@ class Relation extends DataClass implements Insertable<Relation> {
       'relationType': serializer.toJson<String>(relationType),
       'isBidirectional': serializer.toJson<bool>(isBidirectional),
       'note': serializer.toJson<String?>(note),
+      'relationGroupId': serializer.toJson<String?>(relationGroupId),
     };
   }
 
@@ -1602,6 +1685,7 @@ class Relation extends DataClass implements Insertable<Relation> {
     String? relationType,
     bool? isBidirectional,
     Value<String?> note = const Value.absent(),
+    Value<String?> relationGroupId = const Value.absent(),
   }) => Relation(
     id: id ?? this.id,
     fromCharacterId: fromCharacterId ?? this.fromCharacterId,
@@ -1609,6 +1693,9 @@ class Relation extends DataClass implements Insertable<Relation> {
     relationType: relationType ?? this.relationType,
     isBidirectional: isBidirectional ?? this.isBidirectional,
     note: note.present ? note.value : this.note,
+    relationGroupId: relationGroupId.present
+        ? relationGroupId.value
+        : this.relationGroupId,
   );
   Relation copyWithCompanion(RelationsCompanion data) {
     return Relation(
@@ -1626,6 +1713,9 @@ class Relation extends DataClass implements Insertable<Relation> {
           ? data.isBidirectional.value
           : this.isBidirectional,
       note: data.note.present ? data.note.value : this.note,
+      relationGroupId: data.relationGroupId.present
+          ? data.relationGroupId.value
+          : this.relationGroupId,
     );
   }
 
@@ -1637,7 +1727,8 @@ class Relation extends DataClass implements Insertable<Relation> {
           ..write('toCharacterId: $toCharacterId, ')
           ..write('relationType: $relationType, ')
           ..write('isBidirectional: $isBidirectional, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('relationGroupId: $relationGroupId')
           ..write(')'))
         .toString();
   }
@@ -1650,6 +1741,7 @@ class Relation extends DataClass implements Insertable<Relation> {
     relationType,
     isBidirectional,
     note,
+    relationGroupId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1660,7 +1752,8 @@ class Relation extends DataClass implements Insertable<Relation> {
           other.toCharacterId == this.toCharacterId &&
           other.relationType == this.relationType &&
           other.isBidirectional == this.isBidirectional &&
-          other.note == this.note);
+          other.note == this.note &&
+          other.relationGroupId == this.relationGroupId);
 }
 
 class RelationsCompanion extends UpdateCompanion<Relation> {
@@ -1670,6 +1763,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
   final Value<String> relationType;
   final Value<bool> isBidirectional;
   final Value<String?> note;
+  final Value<String?> relationGroupId;
   const RelationsCompanion({
     this.id = const Value.absent(),
     this.fromCharacterId = const Value.absent(),
@@ -1677,6 +1771,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
     this.relationType = const Value.absent(),
     this.isBidirectional = const Value.absent(),
     this.note = const Value.absent(),
+    this.relationGroupId = const Value.absent(),
   });
   RelationsCompanion.insert({
     this.id = const Value.absent(),
@@ -1685,6 +1780,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
     required String relationType,
     this.isBidirectional = const Value.absent(),
     this.note = const Value.absent(),
+    this.relationGroupId = const Value.absent(),
   }) : fromCharacterId = Value(fromCharacterId),
        toCharacterId = Value(toCharacterId),
        relationType = Value(relationType);
@@ -1695,6 +1791,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
     Expression<String>? relationType,
     Expression<bool>? isBidirectional,
     Expression<String>? note,
+    Expression<String>? relationGroupId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1703,6 +1800,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
       if (relationType != null) 'relation_type': relationType,
       if (isBidirectional != null) 'is_bidirectional': isBidirectional,
       if (note != null) 'note': note,
+      if (relationGroupId != null) 'relation_group_id': relationGroupId,
     });
   }
 
@@ -1713,6 +1811,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
     Value<String>? relationType,
     Value<bool>? isBidirectional,
     Value<String?>? note,
+    Value<String?>? relationGroupId,
   }) {
     return RelationsCompanion(
       id: id ?? this.id,
@@ -1721,6 +1820,7 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
       relationType: relationType ?? this.relationType,
       isBidirectional: isBidirectional ?? this.isBidirectional,
       note: note ?? this.note,
+      relationGroupId: relationGroupId ?? this.relationGroupId,
     );
   }
 
@@ -1745,6 +1845,9 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (relationGroupId.present) {
+      map['relation_group_id'] = Variable<String>(relationGroupId.value);
+    }
     return map;
   }
 
@@ -1756,7 +1859,8 @@ class RelationsCompanion extends UpdateCompanion<Relation> {
           ..write('toCharacterId: $toCharacterId, ')
           ..write('relationType: $relationType, ')
           ..write('isBidirectional: $isBidirectional, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('relationGroupId: $relationGroupId')
           ..write(')'))
         .toString();
   }
@@ -4355,6 +4459,7 @@ typedef $$CharactersTableCreateCompanionBuilder =
       required int worldId,
       required String name,
       Value<String?> avatarPath,
+      Value<String> gender,
       Value<int> status,
       Value<bool> isFavorite,
       Value<bool> isPinned,
@@ -4367,6 +4472,7 @@ typedef $$CharactersTableUpdateCompanionBuilder =
       Value<int> worldId,
       Value<String> name,
       Value<String?> avatarPath,
+      Value<String> gender,
       Value<int> status,
       Value<bool> isFavorite,
       Value<bool> isPinned,
@@ -4462,6 +4568,11 @@ class $$CharactersTableFilterComposer
 
   ColumnFilters<String> get avatarPath => $composableBuilder(
     column: $table.avatarPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gender => $composableBuilder(
+    column: $table.gender,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4588,6 +4699,11 @@ class $$CharactersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get gender => $composableBuilder(
+    column: $table.gender,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -4656,6 +4772,9 @@ class $$CharactersTableAnnotationComposer
     column: $table.avatarPath,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get gender =>
+      $composableBuilder(column: $table.gender, builder: (column) => column);
 
   GeneratedColumn<int> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -4784,6 +4903,7 @@ class $$CharactersTableTableManager
                 Value<int> worldId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
+                Value<String> gender = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
@@ -4794,6 +4914,7 @@ class $$CharactersTableTableManager
                 worldId: worldId,
                 name: name,
                 avatarPath: avatarPath,
+                gender: gender,
                 status: status,
                 isFavorite: isFavorite,
                 isPinned: isPinned,
@@ -4806,6 +4927,7 @@ class $$CharactersTableTableManager
                 required int worldId,
                 required String name,
                 Value<String?> avatarPath = const Value.absent(),
+                Value<String> gender = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
@@ -4816,6 +4938,7 @@ class $$CharactersTableTableManager
                 worldId: worldId,
                 name: name,
                 avatarPath: avatarPath,
+                gender: gender,
                 status: status,
                 isFavorite: isFavorite,
                 isPinned: isPinned,
@@ -5275,6 +5398,7 @@ typedef $$RelationsTableCreateCompanionBuilder =
       required String relationType,
       Value<bool> isBidirectional,
       Value<String?> note,
+      Value<String?> relationGroupId,
     });
 typedef $$RelationsTableUpdateCompanionBuilder =
     RelationsCompanion Function({
@@ -5284,6 +5408,7 @@ typedef $$RelationsTableUpdateCompanionBuilder =
       Value<String> relationType,
       Value<bool> isBidirectional,
       Value<String?> note,
+      Value<String?> relationGroupId,
     });
 
 final class $$RelationsTableReferences
@@ -5355,6 +5480,11 @@ class $$RelationsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relationGroupId => $composableBuilder(
+    column: $table.relationGroupId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5434,6 +5564,11 @@ class $$RelationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get relationGroupId => $composableBuilder(
+    column: $table.relationGroupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CharactersTableOrderingComposer get fromCharacterId {
     final $$CharactersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5505,6 +5640,11 @@ class $$RelationsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get relationGroupId => $composableBuilder(
+    column: $table.relationGroupId,
+    builder: (column) => column,
+  );
 
   $$CharactersTableAnnotationComposer get fromCharacterId {
     final $$CharactersTableAnnotationComposer composer = $composerBuilder(
@@ -5587,6 +5727,7 @@ class $$RelationsTableTableManager
                 Value<String> relationType = const Value.absent(),
                 Value<bool> isBidirectional = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<String?> relationGroupId = const Value.absent(),
               }) => RelationsCompanion(
                 id: id,
                 fromCharacterId: fromCharacterId,
@@ -5594,6 +5735,7 @@ class $$RelationsTableTableManager
                 relationType: relationType,
                 isBidirectional: isBidirectional,
                 note: note,
+                relationGroupId: relationGroupId,
               ),
           createCompanionCallback:
               ({
@@ -5603,6 +5745,7 @@ class $$RelationsTableTableManager
                 required String relationType,
                 Value<bool> isBidirectional = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<String?> relationGroupId = const Value.absent(),
               }) => RelationsCompanion.insert(
                 id: id,
                 fromCharacterId: fromCharacterId,
@@ -5610,6 +5753,7 @@ class $$RelationsTableTableManager
                 relationType: relationType,
                 isBidirectional: isBidirectional,
                 note: note,
+                relationGroupId: relationGroupId,
               ),
           withReferenceMapper: (p0) => p0
               .map(

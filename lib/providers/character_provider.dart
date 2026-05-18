@@ -29,12 +29,14 @@ class CharacterActions {
     required int worldId,
     required String name,
     int status = 0,
+    String gender = '',
   }) async {
     return _ref.read(characterDaoProvider).createCharacter(
           CharactersCompanion(
             worldId: Value(worldId),
             name: Value(name),
             status: Value(status),
+            gender: Value(gender),
           ),
         );
   }
@@ -46,6 +48,7 @@ class CharacterActions {
             worldId: Value(character.worldId),
             name: Value(character.name),
             avatarPath: Value(character.avatarPath),
+            gender: Value(character.gender),
             status: Value(character.status),
             isFavorite: Value(character.isFavorite),
             isPinned: Value(character.isPinned),
