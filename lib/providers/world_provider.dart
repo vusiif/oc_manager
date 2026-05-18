@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../data/database/app_database.dart';
 import 'database_provider.dart';
+import 'trash_provider.dart';
 
 final worldsProvider = StreamProvider<List<World>>((ref) {
   return ref.watch(worldDaoProvider).watchAllWorlds();
@@ -41,6 +42,7 @@ class WorldActions {
   }
 
   Future<void> delete(int id) async {
-    await _ref.read(worldDaoProvider).deleteWorld(id);
+    final world = await _ref.read(worldDaoProvider).getWorldById(id);
+    await _ref.read(trashActionsProvider).deleteWorld(world);
   }
 }

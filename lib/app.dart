@@ -9,6 +9,7 @@ import 'features/character/character_detail_page.dart';
 import 'features/search/search_page.dart';
 import 'features/tag/tag_management_page.dart';
 import 'features/trash/drafts_page.dart';
+import 'features/trash/trash_page.dart';
 import 'features/relation/relation_graph_page.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -56,6 +57,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/drafts',
       builder: (context, state) => const DraftsPage(),
+    ),
+    GoRoute(
+      path: '/trash',
+      builder: (context, state) => const TrashPage(),
     ),
   ],
 );

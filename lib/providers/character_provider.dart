@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../data/database/app_database.dart';
 import 'database_provider.dart';
+import 'trash_provider.dart';
 
 final charactersByWorldProvider =
     StreamProvider.family<List<Character>, int>((ref, worldId) {
@@ -59,7 +60,9 @@ class CharacterActions {
   }
 
   Future<void> delete(int id) async {
-    await _ref.read(characterDaoProvider).deleteCharacter(id);
+    final character =
+        await _ref.read(characterDaoProvider).getCharacterById(id);
+    await _ref.read(trashActionsProvider).deleteCharacter(character);
   }
 
   Future<void> toggleFavorite(Character character) async {

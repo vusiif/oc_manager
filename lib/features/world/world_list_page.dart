@@ -57,7 +57,7 @@ class WorldListPage extends ConsumerWidget {
               } else if (value == 'drafts') {
                 context.push('/drafts');
               } else if (value == 'trash') {
-                // TODO: 回收站页面
+                context.push('/trash');
               } else if (value == 'settings') {
                 // TODO: 设置页面
               }
