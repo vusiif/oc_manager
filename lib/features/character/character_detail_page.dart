@@ -8,7 +8,7 @@ import '../../data/database/app_database.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
 
-class CharacterDetailPage extends ConsumerWidget {
+class CharacterDetailPage extends ConsumerStatefulWidget {
   final int worldId;
   final int characterId;
 
@@ -19,14 +19,49 @@ class CharacterDetailPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final characterAsync = ref.watch(characterByIdProvider(characterId));
-    final fieldsAsync = ref.watch(characterFieldsProvider(characterId));
+  ConsumerState<CharacterDetailPage> createState() =>
+      _CharacterDetailPageState();
+}
+
+class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
+  final _descController = TextEditingController();
+  bool _descInitialized = false;
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    super.dispose();
+  }
+
+  void _initDesc(Character character) {
+    if (!_descInitialized) {
+      _descInitialized = true;
+      _descController.text = character.description;
+    }
+  }
+
+  void _saveDescription(Character character) {
+    final text = _descController.text;
+    if (text != character.description) {
+      ref.read(characterActionsProvider).update(
+            character.copyWith(description: text),
+          );
+      ref.invalidate(characterByIdProvider(widget.characterId));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final characterAsync =
+        ref.watch(characterByIdProvider(widget.characterId));
+    final fieldsAsync =
+        ref.watch(characterFieldsProvider(widget.characterId));
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: characterAsync.when(
-          data: (character) => Text(character.name),
+          data: (c) => Text(c.name),
           loading: () => const Text('加载中'),
           error: (_, __) => const Text('错误'),
         ),
@@ -38,13 +73,15 @@ class CharacterDetailPage extends ConsumerWidget {
               if (character != null) {
                 showDialog(
                   context: context,
-                  builder: (context) => CharacterDialog(
-                    worldId: worldId,
+                  builder: (_) => CharacterDialog(
+                    worldId: widget.worldId,
                     character: character,
                   ),
                 ).then((_) {
-                  ref.invalidate(characterByIdProvider(characterId));
-                  ref.invalidate(charactersByWorldProvider(worldId));
+                  ref.invalidate(
+                      characterByIdProvider(widget.characterId));
+                  ref.invalidate(
+                      charactersByWorldProvider(widget.worldId));
                 });
               }
             },
@@ -57,7 +94,8 @@ class CharacterDetailPage extends ConsumerWidget {
               ),
               const PopupMenuItem(
                 value: 'delete',
-                child: Text('删除人物', style: TextStyle(color: Colors.red)),
+                child:
+                    Text('删除人物', style: TextStyle(color: Colors.red)),
               ),
             ],
             onSelected: (value) {
@@ -71,136 +109,124 @@ class CharacterDetailPage extends ConsumerWidget {
         ],
       ),
       body: characterAsync.when(
-        data: (character) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // 头像区域
-            Center(
-              child: CircleAvatar(
-                radius: 48,
-                backgroundColor:
-                    Theme.of(context).colorScheme.primaryContainer,
-                child: Text(
-                  character.name.isNotEmpty
-                      ? character.name[0]
-                      : '?',
-                  style: TextStyle(
-                    fontSize: 36,
-                    color:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+        data: (character) {
+          _initDesc(character);
+          final fields = fieldsAsync.valueOrNull ?? [];
 
-            // 基本信息
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('基本信息',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    const Divider(),
-                    _InfoRow(label: '名称', value: character.name),
-                    if (character.gender.isNotEmpty)
-                      _InfoRow(label: '性别', value: character.gender),
-                    _InfoRow(
-                      label: '状态',
-                      value: character.status == 0 ? '正式' : '草稿',
-                    ),
-                    _InfoRow(
-                      label: '创建时间',
-                      value: _formatDate(character.createdAt),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 标签
-            TagSelector(characterId: characterId),
-            const SizedBox(height: 16),
-
-            // 关系
-            _RelationSection(
-              worldId: worldId,
-              characterId: characterId,
-            ),
-            const SizedBox(height: 16),
-
-            // 自定义字段
-            fieldsAsync.when(
-              data: (fields) {
-                if (fields.isEmpty) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          const Text('自定义字段',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          const Text('还没有自定义字段',
-                              style: TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('添加字段'),
-                            onPressed: () =>
-                                _showAddFieldDialog(context, ref),
-                          ),
-                        ],
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // === 基本信息 + 自定义字段 ===
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 基本信息
+                      const Text('基本信息',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Divider(),
+                      _InfoRow(label: '名称', value: character.name),
+                      if (character.gender.isNotEmpty)
+                        _InfoRow(label: '性别', value: character.gender),
+                      _InfoRow(
+                        label: '状态',
+                        value: character.status == 0 ? '正式' : '草稿',
                       ),
-                    ),
-                  );
-                }
+                      _InfoRow(
+                        label: '创建时间',
+                        value: _formatDate(character.createdAt),
+                      ),
 
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      // 自定义字段紧贴基本信息
+                      if (fields.isNotEmpty) ...[
+                        const SizedBox(height: 16),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('自定义字段',
+                            Text('附加信息',
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme
+                                        .colorScheme.onSurfaceVariant)),
                             IconButton(
-                              icon: const Icon(Icons.add),
-                              onPressed: () =>
-                                  _showAddFieldDialog(context, ref),
+                              icon: const Icon(Icons.add, size: 20),
+                              onPressed: () => _showAddFieldDialog(
+                                  context, ref),
                             ),
                           ],
                         ),
                         const Divider(),
-                        ...fields.map((field) => _FieldRow(
-                              field: field,
-                              characterId: characterId,
-                            )),
+                        for (final field in fields)
+                          _FieldRow(
+                            field: field,
+                            characterId: widget.characterId,
+                          ),
                       ],
-                    ),
+                      if (fields.isEmpty) ...[
+                        const SizedBox(height: 12),
+                        Center(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('添加附加字段'),
+                            onPressed: () =>
+                                _showAddFieldDialog(context, ref),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                );
-              },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Text('错误: $error'),
-            ),
-          ],
-        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // === 标签 ===
+              TagSelector(characterId: widget.characterId),
+              const SizedBox(height: 16),
+
+              // === 详细描述 ===
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('详细描述',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Divider(),
+                      TextField(
+                        controller: _descController,
+                        maxLines: null,
+                        minLines: 6,
+                        decoration: const InputDecoration(
+                          hintText: '输入人物的详细描述…',
+                          border: InputBorder.none,
+                        ),
+                        style: const TextStyle(fontSize: 14, height: 1.6),
+                        onSubmitted: (_) =>
+                            _saveDescription(character),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // === 关系 ===
+              _RelationSection(
+                worldId: widget.worldId,
+                characterId: widget.characterId,
+              ),
+            ],
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('错误: $error')),
+        error: (error, _) => Center(child: Text('错误: $error')),
       ),
     );
   }
@@ -227,13 +253,16 @@ class CharacterDetailPage extends ConsumerWidget {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: fieldType,
-                decoration: const InputDecoration(labelText: '字段类型'),
+                decoration:
+                    const InputDecoration(labelText: '字段类型'),
                 items: const [
                   DropdownMenuItem(value: 'text', child: Text('文本')),
                   DropdownMenuItem(value: 'number', child: Text('数字')),
-                  DropdownMenuItem(value: 'long_text', child: Text('长文本')),
+                  DropdownMenuItem(
+                      value: 'long_text', child: Text('长文本')),
                   DropdownMenuItem(value: 'select', child: Text('单选')),
-                  DropdownMenuItem(value: 'multi_select', child: Text('多选')),
+                  DropdownMenuItem(
+                      value: 'multi_select', child: Text('多选')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -253,7 +282,7 @@ class CharacterDetailPage extends ConsumerWidget {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
                   ref.read(characterActionsProvider).updateField(
-                        characterId,
+                        widget.characterId,
                         name,
                         fieldType,
                         null,
@@ -284,11 +313,12 @@ class CharacterDetailPage extends ConsumerWidget {
             onPressed: () {
               ref
                   .read(characterActionsProvider)
-                  .delete(characterId);
+                  .delete(widget.characterId);
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
+            child:
+                const Text('删除', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -314,7 +344,8 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 80,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child:
+                Text(label, style: const TextStyle(color: Colors.grey)),
           ),
           Expanded(child: Text(value)),
         ],
@@ -351,14 +382,14 @@ class _FieldRowState extends ConsumerState<_FieldRow> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           SizedBox(
             width: 80,
             child: Text(
               widget.field.fieldName,
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ),
           Expanded(
@@ -382,7 +413,7 @@ class _FieldRowState extends ConsumerState<_FieldRow> {
                   ),
           ),
           IconButton(
-            icon: const Icon(Icons.check, size: 20),
+            icon: const Icon(Icons.check, size: 18),
             onPressed: () => _save(_controller.text),
           ),
         ],
@@ -404,12 +435,15 @@ class _RelationSection extends ConsumerWidget {
   final int worldId;
   final int characterId;
 
-  const _RelationSection({required this.worldId, required this.characterId});
+  const _RelationSection(
+      {required this.worldId, required this.characterId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final relationsAsync = ref.watch(relationsByCharacterProvider(characterId));
-    final charactersAsync = ref.watch(charactersByWorldProvider(worldId));
+    final relationsAsync =
+        ref.watch(relationsByCharacterProvider(characterId));
+    final charactersAsync =
+        ref.watch(charactersByWorldProvider(worldId));
 
     return Card(
       child: Padding(
@@ -421,8 +455,8 @@ class _RelationSection extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('关系',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () => _showAddRelationDialog(
@@ -436,7 +470,8 @@ class _RelationSection extends ConsumerWidget {
                 if (relations.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('暂无关系', style: TextStyle(color: Colors.grey)),
+                    child: Text('暂无关系',
+                        style: TextStyle(color: Colors.grey)),
                   );
                 }
 
@@ -444,9 +479,10 @@ class _RelationSection extends ConsumerWidget {
 
                 return Column(
                   children: relations.map((rel) {
-                    final otherId = rel.fromCharacterId == characterId
-                        ? rel.toCharacterId
-                        : rel.fromCharacterId;
+                    final otherId =
+                        rel.fromCharacterId == characterId
+                            ? rel.toCharacterId
+                            : rel.fromCharacterId;
                     final other = allChars
                         .where((c) => c.id == otherId)
                         .firstOrNull;
@@ -471,7 +507,8 @@ class _RelationSection extends ConsumerWidget {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(directionIcon, size: 18, color: Colors.grey),
+                          Icon(directionIcon,
+                              size: 18, color: Colors.grey),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () => _showEditRelationDialog(
@@ -489,7 +526,8 @@ class _RelationSection extends ConsumerWidget {
                   }).toList(),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text('错误: $error'),
             ),
           ],
@@ -500,7 +538,8 @@ class _RelationSection extends ConsumerWidget {
 
   void _showAddRelationDialog(
       BuildContext context, WidgetRef ref, List<Character> allChars) {
-    final others = allChars.where((c) => c.id != characterId).toList();
+    final others =
+        allChars.where((c) => c.id != characterId).toList();
     if (others.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('该世界观下暂无其他人物')),
@@ -523,21 +562,25 @@ class _RelationSection extends ConsumerWidget {
             children: [
               DropdownButtonFormField<int>(
                 initialValue: selectedCharId,
-                decoration: const InputDecoration(labelText: '目标人物'),
+                decoration:
+                    const InputDecoration(labelText: '目标人物'),
                 items: others
                     .map((c) => DropdownMenuItem(
                           value: c.id,
                           child: Text(c.name),
                         ))
                     .toList(),
-                onChanged: (v) => setState(() => selectedCharId = v),
+                onChanged: (v) =>
+                    setState(() => selectedCharId = v),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedType,
-                decoration: const InputDecoration(labelText: '关系类型'),
+                decoration:
+                    const InputDecoration(labelText: '关系类型'),
                 items: _relationTypes
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .map((t) =>
+                        DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => selectedType = v);
@@ -548,7 +591,8 @@ class _RelationSection extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('双向关系'),
                 value: isBidirectional,
-                onChanged: (v) => setState(() => isBidirectional = v),
+                onChanged: (v) =>
+                    setState(() => isBidirectional = v),
               ),
               TextField(
                 controller: noteController,
@@ -575,8 +619,10 @@ class _RelationSection extends ConsumerWidget {
                             ? null
                             : noteController.text.trim(),
                       );
-                  ref.invalidate(relationsByCharacterProvider(characterId));
-                  ref.invalidate(relationsByWorldProvider(worldId));
+                  ref.invalidate(
+                      relationsByCharacterProvider(characterId));
+                  ref.invalidate(
+                      relationsByWorldProvider(worldId));
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -592,7 +638,8 @@ class _RelationSection extends ConsumerWidget {
       Relation rel, List<Character> allChars) {
     String selectedType = rel.relationType;
     bool isBidirectional = rel.isBidirectional;
-    final noteController = TextEditingController(text: rel.note ?? '');
+    final noteController =
+        TextEditingController(text: rel.note ?? '');
 
     showDialog(
       context: context,
@@ -604,9 +651,11 @@ class _RelationSection extends ConsumerWidget {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: selectedType,
-                decoration: const InputDecoration(labelText: '关系类型'),
+                decoration:
+                    const InputDecoration(labelText: '关系类型'),
                 items: _relationTypes
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .map((t) =>
+                        DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => selectedType = v);
@@ -617,11 +666,13 @@ class _RelationSection extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('双向关系'),
                 value: isBidirectional,
-                onChanged: (v) => setState(() => isBidirectional = v),
+                onChanged: (v) =>
+                    setState(() => isBidirectional = v),
               ),
               TextField(
                 controller: noteController,
-                decoration: const InputDecoration(labelText: '备注（可选）'),
+                decoration:
+                    const InputDecoration(labelText: '备注（可选）'),
               ),
             ],
           ),
@@ -636,13 +687,16 @@ class _RelationSection extends ConsumerWidget {
                       rel.copyWith(
                         relationType: selectedType,
                         isBidirectional: isBidirectional,
-                        note: Value(noteController.text.trim().isEmpty
-                            ? null
-                            : noteController.text.trim()),
+                        note: Value(
+                            noteController.text.trim().isEmpty
+                                ? null
+                                : noteController.text.trim()),
                       ),
                     );
-                ref.invalidate(relationsByCharacterProvider(characterId));
-                ref.invalidate(relationsByWorldProvider(worldId));
+                ref.invalidate(
+                    relationsByCharacterProvider(characterId));
+                ref.invalidate(
+                    relationsByWorldProvider(worldId));
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text('保存'),
@@ -667,12 +721,17 @@ class _RelationSection extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(relationActionsProvider).delete(rel.id);
-              ref.invalidate(relationsByCharacterProvider(characterId));
-              ref.invalidate(relationsByWorldProvider(worldId));
+              await ref
+                  .read(relationActionsProvider)
+                  .delete(rel.id);
+              ref.invalidate(
+                  relationsByCharacterProvider(characterId));
+              ref.invalidate(
+                  relationsByWorldProvider(worldId));
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
+            child: const Text('删除',
+                style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

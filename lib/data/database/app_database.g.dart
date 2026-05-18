@@ -478,6 +478,18 @@ class $CharactersTable extends Characters
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<int> status = GeneratedColumn<int>(
@@ -549,6 +561,7 @@ class $CharactersTable extends Characters
     name,
     avatarPath,
     gender,
+    description,
     status,
     isFavorite,
     isPinned,
@@ -596,6 +609,15 @@ class $CharactersTable extends Characters
       context.handle(
         _genderMeta,
         gender.isAcceptableOrUnknown(data['gender']!, _genderMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
       );
     }
     if (data.containsKey('status')) {
@@ -657,6 +679,10 @@ class $CharactersTable extends Characters
         DriftSqlType.string,
         data['${effectivePrefix}gender'],
       )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}status'],
@@ -692,6 +718,7 @@ class Character extends DataClass implements Insertable<Character> {
   final String name;
   final String? avatarPath;
   final String gender;
+  final String description;
   final int status;
   final bool isFavorite;
   final bool isPinned;
@@ -703,6 +730,7 @@ class Character extends DataClass implements Insertable<Character> {
     required this.name,
     this.avatarPath,
     required this.gender,
+    required this.description,
     required this.status,
     required this.isFavorite,
     required this.isPinned,
@@ -719,6 +747,7 @@ class Character extends DataClass implements Insertable<Character> {
       map['avatar_path'] = Variable<String>(avatarPath);
     }
     map['gender'] = Variable<String>(gender);
+    map['description'] = Variable<String>(description);
     map['status'] = Variable<int>(status);
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['is_pinned'] = Variable<bool>(isPinned);
@@ -736,6 +765,7 @@ class Character extends DataClass implements Insertable<Character> {
           ? const Value.absent()
           : Value(avatarPath),
       gender: Value(gender),
+      description: Value(description),
       status: Value(status),
       isFavorite: Value(isFavorite),
       isPinned: Value(isPinned),
@@ -755,6 +785,7 @@ class Character extends DataClass implements Insertable<Character> {
       name: serializer.fromJson<String>(json['name']),
       avatarPath: serializer.fromJson<String?>(json['avatarPath']),
       gender: serializer.fromJson<String>(json['gender']),
+      description: serializer.fromJson<String>(json['description']),
       status: serializer.fromJson<int>(json['status']),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       isPinned: serializer.fromJson<bool>(json['isPinned']),
@@ -771,6 +802,7 @@ class Character extends DataClass implements Insertable<Character> {
       'name': serializer.toJson<String>(name),
       'avatarPath': serializer.toJson<String?>(avatarPath),
       'gender': serializer.toJson<String>(gender),
+      'description': serializer.toJson<String>(description),
       'status': serializer.toJson<int>(status),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'isPinned': serializer.toJson<bool>(isPinned),
@@ -785,6 +817,7 @@ class Character extends DataClass implements Insertable<Character> {
     String? name,
     Value<String?> avatarPath = const Value.absent(),
     String? gender,
+    String? description,
     int? status,
     bool? isFavorite,
     bool? isPinned,
@@ -796,6 +829,7 @@ class Character extends DataClass implements Insertable<Character> {
     name: name ?? this.name,
     avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
     gender: gender ?? this.gender,
+    description: description ?? this.description,
     status: status ?? this.status,
     isFavorite: isFavorite ?? this.isFavorite,
     isPinned: isPinned ?? this.isPinned,
@@ -811,6 +845,9 @@ class Character extends DataClass implements Insertable<Character> {
           ? data.avatarPath.value
           : this.avatarPath,
       gender: data.gender.present ? data.gender.value : this.gender,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       status: data.status.present ? data.status.value : this.status,
       isFavorite: data.isFavorite.present
           ? data.isFavorite.value
@@ -829,6 +866,7 @@ class Character extends DataClass implements Insertable<Character> {
           ..write('name: $name, ')
           ..write('avatarPath: $avatarPath, ')
           ..write('gender: $gender, ')
+          ..write('description: $description, ')
           ..write('status: $status, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('isPinned: $isPinned, ')
@@ -845,6 +883,7 @@ class Character extends DataClass implements Insertable<Character> {
     name,
     avatarPath,
     gender,
+    description,
     status,
     isFavorite,
     isPinned,
@@ -860,6 +899,7 @@ class Character extends DataClass implements Insertable<Character> {
           other.name == this.name &&
           other.avatarPath == this.avatarPath &&
           other.gender == this.gender &&
+          other.description == this.description &&
           other.status == this.status &&
           other.isFavorite == this.isFavorite &&
           other.isPinned == this.isPinned &&
@@ -873,6 +913,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
   final Value<String> name;
   final Value<String?> avatarPath;
   final Value<String> gender;
+  final Value<String> description;
   final Value<int> status;
   final Value<bool> isFavorite;
   final Value<bool> isPinned;
@@ -884,6 +925,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     this.name = const Value.absent(),
     this.avatarPath = const Value.absent(),
     this.gender = const Value.absent(),
+    this.description = const Value.absent(),
     this.status = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.isPinned = const Value.absent(),
@@ -896,6 +938,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     required String name,
     this.avatarPath = const Value.absent(),
     this.gender = const Value.absent(),
+    this.description = const Value.absent(),
     this.status = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.isPinned = const Value.absent(),
@@ -909,6 +952,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Expression<String>? name,
     Expression<String>? avatarPath,
     Expression<String>? gender,
+    Expression<String>? description,
     Expression<int>? status,
     Expression<bool>? isFavorite,
     Expression<bool>? isPinned,
@@ -921,6 +965,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       if (name != null) 'name': name,
       if (avatarPath != null) 'avatar_path': avatarPath,
       if (gender != null) 'gender': gender,
+      if (description != null) 'description': description,
       if (status != null) 'status': status,
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (isPinned != null) 'is_pinned': isPinned,
@@ -935,6 +980,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     Value<String>? name,
     Value<String?>? avatarPath,
     Value<String>? gender,
+    Value<String>? description,
     Value<int>? status,
     Value<bool>? isFavorite,
     Value<bool>? isPinned,
@@ -947,6 +993,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
       name: name ?? this.name,
       avatarPath: avatarPath ?? this.avatarPath,
       gender: gender ?? this.gender,
+      description: description ?? this.description,
       status: status ?? this.status,
       isFavorite: isFavorite ?? this.isFavorite,
       isPinned: isPinned ?? this.isPinned,
@@ -972,6 +1019,9 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     }
     if (gender.present) {
       map['gender'] = Variable<String>(gender.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (status.present) {
       map['status'] = Variable<int>(status.value);
@@ -999,6 +1049,7 @@ class CharactersCompanion extends UpdateCompanion<Character> {
           ..write('name: $name, ')
           ..write('avatarPath: $avatarPath, ')
           ..write('gender: $gender, ')
+          ..write('description: $description, ')
           ..write('status: $status, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('isPinned: $isPinned, ')
@@ -4460,6 +4511,7 @@ typedef $$CharactersTableCreateCompanionBuilder =
       required String name,
       Value<String?> avatarPath,
       Value<String> gender,
+      Value<String> description,
       Value<int> status,
       Value<bool> isFavorite,
       Value<bool> isPinned,
@@ -4473,6 +4525,7 @@ typedef $$CharactersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> avatarPath,
       Value<String> gender,
+      Value<String> description,
       Value<int> status,
       Value<bool> isFavorite,
       Value<bool> isPinned,
@@ -4573,6 +4626,11 @@ class $$CharactersTableFilterComposer
 
   ColumnFilters<String> get gender => $composableBuilder(
     column: $table.gender,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4704,6 +4762,11 @@ class $$CharactersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -4775,6 +4838,11 @@ class $$CharactersTableAnnotationComposer
 
   GeneratedColumn<String> get gender =>
       $composableBuilder(column: $table.gender, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -4904,6 +4972,7 @@ class $$CharactersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
                 Value<String> gender = const Value.absent(),
+                Value<String> description = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
@@ -4915,6 +4984,7 @@ class $$CharactersTableTableManager
                 name: name,
                 avatarPath: avatarPath,
                 gender: gender,
+                description: description,
                 status: status,
                 isFavorite: isFavorite,
                 isPinned: isPinned,
@@ -4928,6 +4998,7 @@ class $$CharactersTableTableManager
                 required String name,
                 Value<String?> avatarPath = const Value.absent(),
                 Value<String> gender = const Value.absent(),
+                Value<String> description = const Value.absent(),
                 Value<int> status = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
@@ -4939,6 +5010,7 @@ class $$CharactersTableTableManager
                 name: name,
                 avatarPath: avatarPath,
                 gender: gender,
+                description: description,
                 status: status,
                 isFavorite: isFavorite,
                 isPinned: isPinned,

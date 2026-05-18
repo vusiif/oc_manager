@@ -50,6 +50,7 @@ class CharacterActions {
             name: Value(character.name),
             avatarPath: Value(character.avatarPath),
             gender: Value(character.gender),
+            description: Value(character.description),
             status: Value(character.status),
             isFavorite: Value(character.isFavorite),
             isPinned: Value(character.isPinned),
