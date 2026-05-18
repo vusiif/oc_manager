@@ -19,3 +19,5 @@ final trashDaoProvider =
     Provider((ref) => ref.watch(databaseProvider).trashDao);
 final settingsDaoProvider =
     Provider((ref) => ref.watch(databaseProvider).settingsDao);
+final groupDaoProvider =
+    Provider((ref) => ref.watch(databaseProvider).groupDao);

@@ -12,6 +12,9 @@ class CharacterDao extends DatabaseAccessor<AppDatabase>
   Future<List<Character>> getCharactersByWorld(int worldId) =>
       (select(characters)..where((t) => t.worldId.equals(worldId))).get();
 
+  Future<List<Character>> getCharactersByIds(List<int> ids) =>
+      (select(characters)..where((t) => t.id.isIn(ids))).get();
+
   Stream<List<Character>> watchCharactersByWorld(int worldId) =>
       (select(characters)..where((t) => t.worldId.equals(worldId))).watch();
 

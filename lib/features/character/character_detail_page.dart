@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
+import '../../providers/group_provider.dart';
 import '../../data/database/app_database.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
@@ -186,6 +187,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
 
               // === 标签 ===
               TagSelector(characterId: widget.characterId),
+              const SizedBox(height: 16),
+
+              // === 分组 ===
+              _GroupSelector(
+                worldId: widget.worldId,
+                characterId: widget.characterId,
+              ),
               const SizedBox(height: 16),
 
               // === 详细描述 ===
@@ -749,3 +757,79 @@ const _relationTypes = [
   '同事',
   '其他',
 ];
+
+class _GroupSelector extends ConsumerStatefulWidget {
+  final int worldId;
+  final int characterId;
+
+  const _GroupSelector({required this.worldId, required this.characterId});
+
+  @override
+  ConsumerState<_GroupSelector> createState() => _GroupSelectorState();
+}
+
+class _GroupSelectorState extends ConsumerState<_GroupSelector> {
+  @override
+  Widget build(BuildContext context) {
+    final groupsAsync = ref.watch(groupsByWorldProvider(widget.worldId));
+    final characterGroupIdsAsync = ref.watch(characterGroupIdsProvider(widget.characterId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('分组', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(),
+            groupsAsync.when(
+              data: (groups) {
+                if (groups.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('暂无分组', style: TextStyle(color: Colors.grey)),
+                  );
+                }
+
+                return characterGroupIdsAsync.when(
+                  data: (selectedIds) {
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: groups.map((group) {
+                        final isSelected = selectedIds.contains(group.id);
+                        return FilterChip(
+                          label: Text(group.name),
+                          selected: isSelected,
+                          onSelected: (selected) async {
+                            if (selected) {
+                              await ref.read(groupActionsProvider).addCharacterToGroup(
+                                widget.characterId,
+                                group.id,
+                              );
+                            } else {
+                              await ref.read(groupActionsProvider).removeCharacterFromGroup(
+                                widget.characterId,
+                                group.id,
+                              );
+                            }
+                            ref.invalidate(characterGroupIdsProvider);
+                            ref.invalidate(charactersByGroupProvider);
+                          },
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, _) => Text('错误: $e'),
+                );
+              },
+              loading: () => const CircularProgressIndicator(),
+              error: (e, _) => Text('错误: $e'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

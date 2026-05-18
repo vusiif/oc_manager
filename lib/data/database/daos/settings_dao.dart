@@ -11,9 +11,11 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
 
   // 获取设置值
   Future<String?> getValue(String key) async {
-    final query = select(settings)..where((s) => s.key.equals(key));
-    final row = await query.getSingleOrNull();
-    return row?.value;
+    final query = select(settings)
+      ..where((s) => s.key.equals(key))
+      ..limit(1);
+    final rows = await query.get();
+    return rows.isNotEmpty ? rows.first.value : null;
   }
 
   // 设置值
