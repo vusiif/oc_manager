@@ -17,3 +17,5 @@ final templateDaoProvider =
 final tagDaoProvider = Provider((ref) => ref.watch(databaseProvider).tagDao);
 final trashDaoProvider =
     Provider((ref) => ref.watch(databaseProvider).trashDao);
+final settingsDaoProvider =
+    Provider((ref) => ref.watch(databaseProvider).settingsDao);

@@ -4054,6 +4054,606 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
   }
 }
 
+class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, key, value, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Setting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Setting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Setting(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SettingsTable createAlias(String alias) {
+    return $SettingsTable(attachedDatabase, alias);
+  }
+}
+
+class Setting extends DataClass implements Insertable<Setting> {
+  final int id;
+  final String key;
+  final String value;
+  final DateTime updatedAt;
+  const Setting({
+    required this.id,
+    required this.key,
+    required this.value,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SettingsCompanion toCompanion(bool nullToAbsent) {
+    return SettingsCompanion(
+      id: Value(id),
+      key: Value(key),
+      value: Value(value),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Setting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Setting(
+      id: serializer.fromJson<int>(json['id']),
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Setting copyWith({
+    int? id,
+    String? key,
+    String? value,
+    DateTime? updatedAt,
+  }) => Setting(
+    id: id ?? this.id,
+    key: key ?? this.key,
+    value: value ?? this.value,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Setting copyWithCompanion(SettingsCompanion data) {
+    return Setting(
+      id: data.id.present ? data.id.value : this.id,
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Setting(')
+          ..write('id: $id, ')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, key, value, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Setting &&
+          other.id == this.id &&
+          other.key == this.key &&
+          other.value == this.value &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SettingsCompanion extends UpdateCompanion<Setting> {
+  final Value<int> id;
+  final Value<String> key;
+  final Value<String> value;
+  final Value<DateTime> updatedAt;
+  const SettingsCompanion({
+    this.id = const Value.absent(),
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  SettingsCompanion.insert({
+    this.id = const Value.absent(),
+    required String key,
+    required String value,
+    this.updatedAt = const Value.absent(),
+  }) : key = Value(key),
+       value = Value(value);
+  static Insertable<Setting> custom({
+    Expression<int>? id,
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  SettingsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? key,
+    Value<String>? value,
+    Value<DateTime>? updatedAt,
+  }) {
+    return SettingsCompanion(
+      id: id ?? this.id,
+      key: key ?? this.key,
+      value: value ?? this.value,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BasicInfoFieldsTable extends BasicInfoFields
+    with TableInfo<$BasicInfoFieldsTable, BasicInfoField> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BasicInfoFieldsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _fieldNameMeta = const VerificationMeta(
+    'fieldName',
+  );
+  @override
+  late final GeneratedColumn<String> fieldName = GeneratedColumn<String>(
+    'field_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isVisibleMeta = const VerificationMeta(
+    'isVisible',
+  );
+  @override
+  late final GeneratedColumn<bool> isVisible = GeneratedColumn<bool>(
+    'is_visible',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_visible" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, fieldName, sortOrder, isVisible];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'basic_info_fields';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BasicInfoField> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('field_name')) {
+      context.handle(
+        _fieldNameMeta,
+        fieldName.isAcceptableOrUnknown(data['field_name']!, _fieldNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fieldNameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('is_visible')) {
+      context.handle(
+        _isVisibleMeta,
+        isVisible.isAcceptableOrUnknown(data['is_visible']!, _isVisibleMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BasicInfoField map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BasicInfoField(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      fieldName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}field_name'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      isVisible: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_visible'],
+      )!,
+    );
+  }
+
+  @override
+  $BasicInfoFieldsTable createAlias(String alias) {
+    return $BasicInfoFieldsTable(attachedDatabase, alias);
+  }
+}
+
+class BasicInfoField extends DataClass implements Insertable<BasicInfoField> {
+  final int id;
+  final String fieldName;
+  final int sortOrder;
+  final bool isVisible;
+  const BasicInfoField({
+    required this.id,
+    required this.fieldName,
+    required this.sortOrder,
+    required this.isVisible,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['field_name'] = Variable<String>(fieldName);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['is_visible'] = Variable<bool>(isVisible);
+    return map;
+  }
+
+  BasicInfoFieldsCompanion toCompanion(bool nullToAbsent) {
+    return BasicInfoFieldsCompanion(
+      id: Value(id),
+      fieldName: Value(fieldName),
+      sortOrder: Value(sortOrder),
+      isVisible: Value(isVisible),
+    );
+  }
+
+  factory BasicInfoField.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BasicInfoField(
+      id: serializer.fromJson<int>(json['id']),
+      fieldName: serializer.fromJson<String>(json['fieldName']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      isVisible: serializer.fromJson<bool>(json['isVisible']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'fieldName': serializer.toJson<String>(fieldName),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'isVisible': serializer.toJson<bool>(isVisible),
+    };
+  }
+
+  BasicInfoField copyWith({
+    int? id,
+    String? fieldName,
+    int? sortOrder,
+    bool? isVisible,
+  }) => BasicInfoField(
+    id: id ?? this.id,
+    fieldName: fieldName ?? this.fieldName,
+    sortOrder: sortOrder ?? this.sortOrder,
+    isVisible: isVisible ?? this.isVisible,
+  );
+  BasicInfoField copyWithCompanion(BasicInfoFieldsCompanion data) {
+    return BasicInfoField(
+      id: data.id.present ? data.id.value : this.id,
+      fieldName: data.fieldName.present ? data.fieldName.value : this.fieldName,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      isVisible: data.isVisible.present ? data.isVisible.value : this.isVisible,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BasicInfoField(')
+          ..write('id: $id, ')
+          ..write('fieldName: $fieldName, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isVisible: $isVisible')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, fieldName, sortOrder, isVisible);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BasicInfoField &&
+          other.id == this.id &&
+          other.fieldName == this.fieldName &&
+          other.sortOrder == this.sortOrder &&
+          other.isVisible == this.isVisible);
+}
+
+class BasicInfoFieldsCompanion extends UpdateCompanion<BasicInfoField> {
+  final Value<int> id;
+  final Value<String> fieldName;
+  final Value<int> sortOrder;
+  final Value<bool> isVisible;
+  const BasicInfoFieldsCompanion({
+    this.id = const Value.absent(),
+    this.fieldName = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isVisible = const Value.absent(),
+  });
+  BasicInfoFieldsCompanion.insert({
+    this.id = const Value.absent(),
+    required String fieldName,
+    this.sortOrder = const Value.absent(),
+    this.isVisible = const Value.absent(),
+  }) : fieldName = Value(fieldName);
+  static Insertable<BasicInfoField> custom({
+    Expression<int>? id,
+    Expression<String>? fieldName,
+    Expression<int>? sortOrder,
+    Expression<bool>? isVisible,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fieldName != null) 'field_name': fieldName,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (isVisible != null) 'is_visible': isVisible,
+    });
+  }
+
+  BasicInfoFieldsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? fieldName,
+    Value<int>? sortOrder,
+    Value<bool>? isVisible,
+  }) {
+    return BasicInfoFieldsCompanion(
+      id: id ?? this.id,
+      fieldName: fieldName ?? this.fieldName,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isVisible: isVisible ?? this.isVisible,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (fieldName.present) {
+      map['field_name'] = Variable<String>(fieldName.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (isVisible.present) {
+      map['is_visible'] = Variable<bool>(isVisible.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BasicInfoFieldsCompanion(')
+          ..write('id: $id, ')
+          ..write('fieldName: $fieldName, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isVisible: $isVisible')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4070,12 +4670,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TrashTable trash = $TrashTable(this);
   late final $BackupsTable backups = $BackupsTable(this);
   late final $GraphLayoutsTable graphLayouts = $GraphLayoutsTable(this);
+  late final $SettingsTable settings = $SettingsTable(this);
+  late final $BasicInfoFieldsTable basicInfoFields = $BasicInfoFieldsTable(
+    this,
+  );
   late final WorldDao worldDao = WorldDao(this as AppDatabase);
   late final CharacterDao characterDao = CharacterDao(this as AppDatabase);
   late final RelationDao relationDao = RelationDao(this as AppDatabase);
   late final TemplateDao templateDao = TemplateDao(this as AppDatabase);
   late final TagDao tagDao = TagDao(this as AppDatabase);
   late final TrashDao trashDao = TrashDao(this as AppDatabase);
+  late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4092,6 +4697,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     trash,
     backups,
     graphLayouts,
+    settings,
+    basicInfoFields,
   ];
 }
 
@@ -7762,6 +8369,356 @@ typedef $$GraphLayoutsTableProcessedTableManager =
       GraphLayout,
       PrefetchHooks Function()
     >;
+typedef $$SettingsTableCreateCompanionBuilder =
+    SettingsCompanion Function({
+      Value<int> id,
+      required String key,
+      required String value,
+      Value<DateTime> updatedAt,
+    });
+typedef $$SettingsTableUpdateCompanionBuilder =
+    SettingsCompanion Function({
+      Value<int> id,
+      Value<String> key,
+      Value<String> value,
+      Value<DateTime> updatedAt,
+    });
+
+class $$SettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingsTable> {
+  $$SettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SettingsTable,
+          Setting,
+          $$SettingsTableFilterComposer,
+          $$SettingsTableOrderingComposer,
+          $$SettingsTableAnnotationComposer,
+          $$SettingsTableCreateCompanionBuilder,
+          $$SettingsTableUpdateCompanionBuilder,
+          (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+          Setting,
+          PrefetchHooks Function()
+        > {
+  $$SettingsTableTableManager(_$AppDatabase db, $SettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> key = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => SettingsCompanion(
+                id: id,
+                key: key,
+                value: value,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String key,
+                required String value,
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => SettingsCompanion.insert(
+                id: id,
+                key: key,
+                value: value,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SettingsTable,
+      Setting,
+      $$SettingsTableFilterComposer,
+      $$SettingsTableOrderingComposer,
+      $$SettingsTableAnnotationComposer,
+      $$SettingsTableCreateCompanionBuilder,
+      $$SettingsTableUpdateCompanionBuilder,
+      (Setting, BaseReferences<_$AppDatabase, $SettingsTable, Setting>),
+      Setting,
+      PrefetchHooks Function()
+    >;
+typedef $$BasicInfoFieldsTableCreateCompanionBuilder =
+    BasicInfoFieldsCompanion Function({
+      Value<int> id,
+      required String fieldName,
+      Value<int> sortOrder,
+      Value<bool> isVisible,
+    });
+typedef $$BasicInfoFieldsTableUpdateCompanionBuilder =
+    BasicInfoFieldsCompanion Function({
+      Value<int> id,
+      Value<String> fieldName,
+      Value<int> sortOrder,
+      Value<bool> isVisible,
+    });
+
+class $$BasicInfoFieldsTableFilterComposer
+    extends Composer<_$AppDatabase, $BasicInfoFieldsTable> {
+  $$BasicInfoFieldsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fieldName => $composableBuilder(
+    column: $table.fieldName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVisible => $composableBuilder(
+    column: $table.isVisible,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BasicInfoFieldsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BasicInfoFieldsTable> {
+  $$BasicInfoFieldsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fieldName => $composableBuilder(
+    column: $table.fieldName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isVisible => $composableBuilder(
+    column: $table.isVisible,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BasicInfoFieldsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BasicInfoFieldsTable> {
+  $$BasicInfoFieldsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fieldName =>
+      $composableBuilder(column: $table.fieldName, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get isVisible =>
+      $composableBuilder(column: $table.isVisible, builder: (column) => column);
+}
+
+class $$BasicInfoFieldsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BasicInfoFieldsTable,
+          BasicInfoField,
+          $$BasicInfoFieldsTableFilterComposer,
+          $$BasicInfoFieldsTableOrderingComposer,
+          $$BasicInfoFieldsTableAnnotationComposer,
+          $$BasicInfoFieldsTableCreateCompanionBuilder,
+          $$BasicInfoFieldsTableUpdateCompanionBuilder,
+          (
+            BasicInfoField,
+            BaseReferences<
+              _$AppDatabase,
+              $BasicInfoFieldsTable,
+              BasicInfoField
+            >,
+          ),
+          BasicInfoField,
+          PrefetchHooks Function()
+        > {
+  $$BasicInfoFieldsTableTableManager(
+    _$AppDatabase db,
+    $BasicInfoFieldsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BasicInfoFieldsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BasicInfoFieldsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BasicInfoFieldsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> fieldName = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isVisible = const Value.absent(),
+              }) => BasicInfoFieldsCompanion(
+                id: id,
+                fieldName: fieldName,
+                sortOrder: sortOrder,
+                isVisible: isVisible,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String fieldName,
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isVisible = const Value.absent(),
+              }) => BasicInfoFieldsCompanion.insert(
+                id: id,
+                fieldName: fieldName,
+                sortOrder: sortOrder,
+                isVisible: isVisible,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BasicInfoFieldsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BasicInfoFieldsTable,
+      BasicInfoField,
+      $$BasicInfoFieldsTableFilterComposer,
+      $$BasicInfoFieldsTableOrderingComposer,
+      $$BasicInfoFieldsTableAnnotationComposer,
+      $$BasicInfoFieldsTableCreateCompanionBuilder,
+      $$BasicInfoFieldsTableUpdateCompanionBuilder,
+      (
+        BasicInfoField,
+        BaseReferences<_$AppDatabase, $BasicInfoFieldsTable, BasicInfoField>,
+      ),
+      BasicInfoField,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7787,4 +8744,8 @@ class $AppDatabaseManager {
       $$BackupsTableTableManager(_db, _db.backups);
   $$GraphLayoutsTableTableManager get graphLayouts =>
       $$GraphLayoutsTableTableManager(_db, _db.graphLayouts);
+  $$SettingsTableTableManager get settings =>
+      $$SettingsTableTableManager(_db, _db.settings);
+  $$BasicInfoFieldsTableTableManager get basicInfoFields =>
+      $$BasicInfoFieldsTableTableManager(_db, _db.basicInfoFields);
 }
