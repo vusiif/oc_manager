@@ -1035,21 +1035,39 @@ class _RelationPainter extends CustomPainter {
             paint);
       }
 
-      // 从父母中点向下画竖线
-      const dropLen = 50.0;
-      final busY = parentMid.dy + dropLen;
+      // 确定 busY：在父母下方，但不能太远
+      final childYs = children.map((c) => c.dy).toList();
+      final minChildY = childYs.reduce(min);
+
+      // bus 在父母中点和子女之间
+      double busY;
+      if (minChildY > parentMid.dy) {
+        // 子女都在父母下方
+        busY = parentMid.dy + (minChildY - parentMid.dy) * 0.4;
+      } else {
+        // 子女可能在任意位置，bus 放在父母下方固定距离
+        busY = parentMid.dy + 50;
+      }
+
       final busStart = Offset(parentMid.dx, busY);
       canvas.drawLine(parentMid, busStart, paint);
 
       if (children.length == 1) {
-        // 单个子女：直接连下去
+        // 单个子女：从 bus 连到子女
         final child = children[0];
-        final cEdge = Offset(child.dx, child.dy - nodeRadius);
-        final busToChild = Offset(busStart.dx, cEdge.dy);
-        canvas.drawLine(busStart, busToChild, paint);
-        canvas.drawLine(busToChild, cEdge, paint);
+        final childDir = (child - busStart).direction;
+        final cEdge = Offset(
+            child.dx - nodeRadius * cos(childDir),
+            child.dy - nodeRadius * sin(childDir));
 
-        _drawArrowDir(canvas, cEdge, pi / 2, color);
+        // 先画到子女正上方/侧方的拐点
+        final junction = Offset(busStart.dx, busStart.dy);
+        // L 形连线：先到子女 X 坐标，再到子女边缘
+        final midPoint = Offset(cEdge.dx, busY);
+        canvas.drawLine(junction, midPoint, paint);
+        canvas.drawLine(midPoint, cEdge, paint);
+
+        _drawArrowDir(canvas, cEdge, childDir, color);
       } else {
         // 多个子女：画横线再分叉
         final childXs =
@@ -1063,12 +1081,15 @@ class _RelationPainter extends CustomPainter {
             Offset(max(busStart.dx, busRight.dx), busY),
             paint);
 
-        // 每个子女
+        // 每个子女：从 bus 竖线连到子女边缘
         for (final child in children) {
-          final cEdge = Offset(child.dx, child.dy - nodeRadius);
+          final childDir = (child - Offset(child.dx, busY)).direction;
+          final cEdge = Offset(
+              child.dx - nodeRadius * cos(childDir),
+              child.dy - nodeRadius * sin(childDir));
           final junction = Offset(child.dx, busY);
           canvas.drawLine(junction, cEdge, paint);
-          _drawArrowDir(canvas, cEdge, pi / 2, color);
+          _drawArrowDir(canvas, cEdge, childDir, color);
         }
       }
 
