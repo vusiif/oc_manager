@@ -10,6 +10,7 @@ import 'features/trash/drafts_page.dart';
 import 'features/trash/trash_page.dart';
 import 'features/relation/relation_graph_page.dart';
 import 'features/settings/settings_page.dart';
+import 'features/template/template_management_page.dart';
 import 'providers/settings_provider.dart';
 
 final _router = GoRouter(
@@ -46,6 +47,10 @@ final _router = GoRouter(
       path: '/settings',
       builder: (context, state) => const SettingsPage(),
     ),
+    GoRoute(
+      path: '/templates',
+      builder: (context, state) => const TemplateManagementPage(),
+    ),
   ],
 );
 
@@ -54,13 +59,13 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final themeModeAsync = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'OC Manager',
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
-      themeMode: themeMode,
+      themeMode: themeModeAsync.valueOrNull ?? ThemeMode.system,
       routerConfig: _router,
     );
   }

@@ -4,33 +4,26 @@ import 'database_provider.dart';
 import '../data/database/app_database.dart';
 
 // 主题模式
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  return ThemeModeNotifier(ref);
+final themeModeProvider = AsyncNotifierProvider<ThemeModeNotifier, ThemeMode>(() {
+  return ThemeModeNotifier();
 });
 
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  final Ref ref;
-
-  ThemeModeNotifier(this.ref) : super(ThemeMode.system) {
-    _load();
-  }
-
-  Future<void> _load() async {
+class ThemeModeNotifier extends AsyncNotifier<ThemeMode> {
+  @override
+  Future<ThemeMode> build() async {
     final value = await ref.read(settingsDaoProvider).getValue('theme_mode');
     switch (value) {
       case 'light':
-        state = ThemeMode.light;
-        break;
+        return ThemeMode.light;
       case 'dark':
-        state = ThemeMode.dark;
-        break;
+        return ThemeMode.dark;
       default:
-        state = ThemeMode.system;
+        return ThemeMode.system;
     }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    state = mode;
+    state = AsyncData(mode);
     await ref.read(settingsDaoProvider).setValue('theme_mode', mode.name);
   }
 }

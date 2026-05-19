@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
+import '../../providers/template_provider.dart';
+import '../../providers/database_provider.dart';
 
 const _genderOptions = [
   ('男', '♂'),
@@ -30,6 +32,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   int _status = 0;
   String _gender = '';
   bool _isCustomGender = false;
+  int? _selectedTemplateId;
 
   @override
   void initState() {
@@ -126,6 +129,13 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
                 setState(() => _status = values.first);
               },
             ),
+            if (!isEditing) ...[
+              const SizedBox(height: 16),
+              _TemplateSelector(
+                selectedId: _selectedTemplateId,
+                onChanged: (id) => setState(() => _selectedTemplateId = id),
+              ),
+            ],
           ],
         ),
       ),
@@ -142,7 +152,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,14 +175,69 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
         ),
       );
     } else {
-      actions.create(
+      final characterId = await actions.create(
         worldId: widget.worldId,
         name: name,
         status: _status,
         gender: gender,
       );
+
+      // 套用模板
+      if (_selectedTemplateId != null) {
+        final fields = await ref
+            .read(templateDaoProvider)
+            .getTemplateFields(_selectedTemplateId!);
+        for (final field in fields) {
+          await actions.updateField(
+            characterId,
+            field.fieldName,
+            field.fieldType,
+            field.defaultValue,
+          );
+        }
+      }
     }
 
     Navigator.pop(context);
+  }
+}
+
+class _TemplateSelector extends ConsumerWidget {
+  final int? selectedId;
+  final ValueChanged<int?> onChanged;
+
+  const _TemplateSelector({required this.selectedId, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final templatesAsync = ref.watch(globalTemplatesProvider);
+
+    return templatesAsync.when(
+      data: (templates) {
+        if (templates.isEmpty) return const SizedBox.shrink();
+
+        return DropdownButtonFormField<int?>(
+          initialValue: selectedId,
+          decoration: const InputDecoration(
+            labelText: '套用模板（可选）',
+            isDense: true,
+          ),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('不使用模板'),
+            ),
+            for (final t in templates)
+              DropdownMenuItem<int?>(
+                value: t.id,
+                child: Text(t.name),
+              ),
+          ],
+          onChanged: onChanged,
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
   }
 }

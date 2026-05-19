@@ -3,12 +3,12 @@
 
 [Setup]
 AppName=OC Manager
-AppVersion=1.0.0
+AppVersion=1.1.0
 AppPublisher=OC Manager
 AppPublisherURL=https://github.com/vusiif/oc_manager
 DefaultDirName={autopf}\OC Manager
 DefaultGroupName=OC Manager
-OutputBaseFilename=OCManager_Setup_v1.0.0
+OutputBaseFilename=OCManager_Setup_v1.1.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

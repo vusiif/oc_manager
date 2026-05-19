@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
 
 import '../../providers/settings_provider.dart';
+import '../../providers/database_provider.dart';
 import '../../data/database/app_database.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -9,7 +15,8 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final themeModeAsync = ref.watch(themeModeProvider);
+    final themeMode = themeModeAsync.valueOrNull ?? ThemeMode.system;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,21 +53,13 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.backup),
             title: const Text('备份数据'),
             subtitle: const Text('导出数据库文件'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('备份功能开发中...')),
-              );
-            },
+            onTap: () => _backupDatabase(context),
           ),
           ListTile(
             leading: const Icon(Icons.restore),
             title: const Text('恢复数据'),
             subtitle: const Text('从备份文件恢复'),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('恢复功能开发中...')),
-              );
-            },
+            onTap: () => _restoreDatabase(context, ref),
           ),
 
           const Divider(),
@@ -70,7 +69,7 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于 OC Manager'),
-            subtitle: const Text('版本 1.0.0'),
+            subtitle: const Text('版本 1.1.0'),
             onTap: () => _showAboutDialog(context),
           ),
         ],
@@ -149,17 +148,158 @@ class SettingsPage extends ConsumerWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('缓存已清理')),
-              );
+              await _clearCache(context);
             },
             child: const Text('确定'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _clearCache(BuildContext context) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      int fileCount = 0;
+      int totalSize = 0;
+
+      if (await tempDir.exists()) {
+        final files = tempDir.listSync(recursive: true);
+        for (final entity in files) {
+          if (entity is File) {
+            totalSize += await entity.length();
+            await entity.delete();
+            fileCount++;
+          }
+        }
+      }
+
+      if (context.mounted) {
+        final sizeStr = totalSize > 1024 * 1024
+            ? '${(totalSize / 1024 / 1024).toStringAsFixed(1)} MB'
+            : '${(totalSize / 1024).toStringAsFixed(1)} KB';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已清理 $fileCount 个文件，释放 $sizeStr')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('清理失败：$e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _backupDatabase(BuildContext context) async {
+    try {
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final dbFile = File(p.join(dbFolder.path, 'oc_manager.db'));
+
+      if (!await dbFile.exists()) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('数据库文件不存在')),
+          );
+        }
+        return;
+      }
+
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: '选择备份保存位置',
+        fileName: 'oc_manager_backup.db',
+        type: FileType.custom,
+        allowedExtensions: ['db'],
+      );
+
+      if (result == null) return;
+
+      await dbFile.copy(result);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('备份成功')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('备份失败：$e')),
+        );
+      }
+    }
+  }
+
+  void _restoreDatabase(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('恢复数据'),
+        content: const Text(
+          '恢复将覆盖当前所有数据，此操作不可撤销。\n\n建议先备份当前数据。确定继续吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _doRestore(context, ref);
+            },
+            child: const Text('选择备份文件', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _doRestore(BuildContext context, WidgetRef ref) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['db'],
+        dialogTitle: '选择备份文件',
+      );
+
+      if (result == null || result.files.single.path == null) return;
+
+      final pickedFile = File(result.files.single.path!);
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final dbFile = File(p.join(dbFolder.path, 'oc_manager.db'));
+
+      // 关闭当前数据库
+      ref.read(databaseProvider).close();
+
+      // 覆盖数据库文件
+      await pickedFile.copy(dbFile.path);
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('恢复成功'),
+            content: const Text('数据已恢复，请重启应用以生效。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('恢复失败：$e')),
+        );
+      }
+    }
   }
 
   void _showAboutDialog(BuildContext context) {
@@ -174,7 +314,7 @@ class SettingsPage extends ConsumerWidget {
             Text('OC Manager 是一个角色管理工具，'),
             Text('用于管理原创角色（OC）的世界观、人物关系等信息。'),
             SizedBox(height: 16),
-            Text('版本：1.0.0'),
+            Text('版本：1.1.0'),
             Text('技术栈：Flutter + Riverpod + drift'),
           ],
         ),

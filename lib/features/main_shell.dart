@@ -69,6 +69,13 @@ class _MainShellState extends ConsumerState<MainShell> {
                   title: Text('设置'),
                 ),
               ),
+              const PopupMenuItem(
+                value: 'templates',
+                child: ListTile(
+                  leading: Icon(Icons.description),
+                  title: Text('模板管理'),
+                ),
+              ),
             ],
             onSelected: (value) {
               if (value == 'tags') {
@@ -79,6 +86,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                 context.push('/trash');
               } else if (value == 'settings') {
                 context.push('/settings');
+              } else if (value == 'templates') {
+                context.push('/templates');
               }
             },
           ),
