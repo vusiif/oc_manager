@@ -27,6 +27,9 @@ class CharacterDao extends DatabaseAccessor<AppDatabase>
   Future<bool> updateCharacter(CharactersCompanion entry) =>
       update(characters).replace(entry);
 
+  Future<int> updatePartial(int id, CharactersCompanion entry) =>
+      (update(characters)..where((t) => t.id.equals(id))).write(entry);
+
   Future<int> deleteCharacter(int id) =>
       (delete(characters)..where((t) => t.id.equals(id))).go();
 

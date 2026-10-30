@@ -301,8 +301,14 @@ class _MainShellState extends ConsumerState<MainShell> {
     // 选中了人物，显示人物详情
     if (_selectedCharacterId != null) {
       return CharacterDetailPage(
+        key: ValueKey(_selectedCharacterId),
         worldId: _selectedWorldId!,
         characterId: _selectedCharacterId!,
+        onDeleted: () {
+          setState(() {
+            _selectedCharacterId = null;
+          });
+        },
       );
     }
 

@@ -29,12 +29,51 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
   Future<int> deleteBackup(int id) =>
       (delete(backups)..where((t) => t.id.equals(id))).go();
 
-  // 图布局
-  Future<List<GraphLayout>> getLayoutsByWorld(int worldId) =>
-      (select(graphLayouts)..where((t) => t.worldId.equals(worldId))).get();
+  // 图布局（按世界观获取，并确保单个角色仅保留最新一条有效坐标）
+  Future<List<GraphLayout>> getLayoutsByWorld(int worldId) async {
+    final rows = await (select(graphLayouts)
+          ..where((t) => t.worldId.equals(worldId))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+        .get();
+    final latestByCharacter = <int, GraphLayout>{};
+    for (final row in rows) {
+      latestByCharacter[row.characterId] = row;
+    }
+    return latestByCharacter.values.toList();
+  }
 
-  Future<int> saveLayout(GraphLayoutsCompanion entry) =>
-      into(graphLayouts).insert(entry, mode: InsertMode.insertOrReplace);
+  // 幂等保存布局坐标（存在则更新最新行并清理重复历史冗余，不存在则插入）
+  Future<int> saveLayout(GraphLayoutsCompanion entry) async {
+    final worldId = entry.worldId.value;
+    final characterId = entry.characterId.value;
+
+    final existing = await (select(graphLayouts)
+          ..where((t) =>
+              t.worldId.equals(worldId) & t.characterId.equals(characterId))
+          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+        .get();
+
+    if (existing.isNotEmpty) {
+      final latestId = existing.first.id;
+      await (update(graphLayouts)..where((t) => t.id.equals(latestId))).write(
+        GraphLayoutsCompanion(
+          x: entry.x,
+          y: entry.y,
+        ),
+      );
+      if (existing.length > 1) {
+        await (delete(graphLayouts)
+              ..where((t) =>
+                  t.worldId.equals(worldId) &
+                  t.characterId.equals(characterId) &
+                  t.id.isNotValue(latestId)))
+            .go();
+      }
+      return latestId;
+    } else {
+      return into(graphLayouts).insert(entry);
+    }
+  }
 
   Future<void> deleteLayoutsByWorld(int worldId) =>
       (delete(graphLayouts)..where((t) => t.worldId.equals(worldId))).go();

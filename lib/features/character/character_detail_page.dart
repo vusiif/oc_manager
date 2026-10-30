@@ -15,11 +15,13 @@ import 'character_dialog.dart';
 class CharacterDetailPage extends ConsumerStatefulWidget {
   final int worldId;
   final int characterId;
+  final VoidCallback? onDeleted;
 
   const CharacterDetailPage({
     super.key,
     required this.worldId,
     required this.characterId,
+    this.onDeleted,
   });
 
   @override
@@ -30,6 +32,15 @@ class CharacterDetailPage extends ConsumerStatefulWidget {
 class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
   final _descController = TextEditingController();
   bool _descInitialized = false;
+
+  @override
+  void didUpdateWidget(covariant CharacterDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.characterId != widget.characterId) {
+      _descInitialized = false;
+      _descController.clear();
+    }
+  }
 
   @override
   void dispose() {
@@ -91,7 +102,7 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
         title: characterAsync.when(
           data: (c) => Text(c.name),
           loading: () => const Text('加载中'),
-          error: (_, __) => const Text('错误'),
+          error: (err, stack) => const Text('错误'),
         ),
         actions: [
           IconButton(
@@ -393,7 +404,11 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                   .read(characterActionsProvider)
                   .delete(widget.characterId);
               Navigator.pop(context);
-              Navigator.pop(context);
+              if (widget.onDeleted != null) {
+                widget.onDeleted!();
+              } else if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             },
             child:
                 const Text('删除', style: TextStyle(color: Colors.red)),

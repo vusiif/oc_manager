@@ -554,9 +554,11 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     }
 
     if (hitRelId != null) {
-      final hitRel = relations.firstWhere((r) => r.id == hitRelId);
-      setState(() => _selectedRelationId = hitRelId);
-      _showRelationActionDialog(hitRel, characters);
+      final hitRel = relations.where((r) => r.id == hitRelId).firstOrNull;
+      if (hitRel != null) {
+        setState(() => _selectedRelationId = hitRelId);
+        _showRelationActionDialog(hitRel, characters);
+      }
     } else {
       if (_selectedRelationId != null) {
         setState(() => _selectedRelationId = null);

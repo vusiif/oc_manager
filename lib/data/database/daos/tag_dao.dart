@@ -16,8 +16,12 @@ class TagDao extends DatabaseAccessor<AppDatabase> with _$TagDaoMixin {
 
   Future<bool> updateTag(TagsCompanion entry) => update(tags).replace(entry);
 
-  Future<int> deleteTag(int id) =>
-      (delete(tags)..where((t) => t.id.equals(id))).go();
+  Future<int> deleteTag(int id) {
+    return transaction(() async {
+      await (delete(characterTags)..where((t) => t.tagId.equals(id))).go();
+      return (delete(tags)..where((t) => t.id.equals(id))).go();
+    });
+  }
 
   Future<void> addTagToCharacter(int characterId, int tagId) =>
       into(characterTags).insert(

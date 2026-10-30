@@ -94,43 +94,31 @@ class SettingsPage extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('选择主题'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<ThemeMode>(
-              title: const Text('跟随系统'),
-              value: ThemeMode.system,
-              groupValue: current,
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(themeModeProvider.notifier).setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('浅色模式'),
-              value: ThemeMode.light,
-              groupValue: current,
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(themeModeProvider.notifier).setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('深色模式'),
-              value: ThemeMode.dark,
-              groupValue: current,
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(themeModeProvider.notifier).setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+        content: RadioGroup<ThemeMode>(
+          groupValue: current,
+          onChanged: (value) {
+            if (value != null) {
+              ref.read(themeModeProvider.notifier).setThemeMode(value);
+              Navigator.pop(context);
+            }
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: Text('跟随系统'),
+                value: ThemeMode.system,
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('浅色模式'),
+                value: ThemeMode.light,
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('深色模式'),
+                value: ThemeMode.dark,
+              ),
+            ],
+          ),
         ),
       ),
     );

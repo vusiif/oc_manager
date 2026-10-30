@@ -69,32 +69,20 @@ class CharacterActions {
   }
 
   Future<void> toggleFavorite(Character character) async {
-    await _ref.read(characterDaoProvider).updateCharacter(
+    await _ref.read(characterDaoProvider).updatePartial(
+          character.id,
           CharactersCompanion(
-            id: Value(character.id),
-            worldId: Value(character.worldId),
-            name: Value(character.name),
-            avatarPath: Value(character.avatarPath),
-            status: Value(character.status),
             isFavorite: Value(!character.isFavorite),
-            isPinned: Value(character.isPinned),
-            createdAt: Value(character.createdAt),
             updatedAt: Value(DateTime.now()),
           ),
         );
   }
 
   Future<void> togglePin(Character character) async {
-    await _ref.read(characterDaoProvider).updateCharacter(
+    await _ref.read(characterDaoProvider).updatePartial(
+          character.id,
           CharactersCompanion(
-            id: Value(character.id),
-            worldId: Value(character.worldId),
-            name: Value(character.name),
-            avatarPath: Value(character.avatarPath),
-            status: Value(character.status),
-            isFavorite: Value(character.isFavorite),
             isPinned: Value(!character.isPinned),
-            createdAt: Value(character.createdAt),
             updatedAt: Value(DateTime.now()),
           ),
         );

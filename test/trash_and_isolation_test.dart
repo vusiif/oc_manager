@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:oc_manager/data/database/app_database.dart';
 import 'package:oc_manager/providers/database_provider.dart';
 import 'package:oc_manager/providers/trash_provider.dart';
+import 'package:oc_manager/providers/character_provider.dart';
 
 void main() {
   late AppDatabase db;
@@ -165,6 +166,108 @@ void main() {
       // 验证回收站已被清空
       final emptyTrashList = await db.trashDao.getAllTrash();
       expect(emptyTrashList, isEmpty);
+    });
+
+    test('toggleFavorite and togglePin should NEVER erase gender or description', () async {
+      final worldId = await db.into(db.worlds).insert(
+            WorldsCompanion.insert(name: '测试世界观'),
+          );
+      final charId = await db.into(db.characters).insert(
+            CharactersCompanion.insert(
+              worldId: worldId,
+              name: '英雄',
+              gender: const Value('男'),
+              description: const Value('背负拯救世界的命运'),
+              isFavorite: const Value(false),
+              isPinned: const Value(false),
+            ),
+          );
+
+      final char = await db.characterDao.getCharacterById(charId);
+      final charActions = container.read(characterActionsProvider);
+
+      // 切换收藏
+      await charActions.toggleFavorite(char);
+      var updated = await db.characterDao.getCharacterById(charId);
+      expect(updated.isFavorite, isTrue);
+      expect(updated.gender, equals('男'), reason: 'Gender must not be wiped by toggleFavorite');
+      expect(updated.description, equals('背负拯救世界的命运'), reason: 'Description must not be wiped by toggleFavorite');
+
+      // 切换置顶
+      await charActions.togglePin(updated);
+      updated = await db.characterDao.getCharacterById(charId);
+      expect(updated.isPinned, isTrue);
+      expect(updated.gender, equals('男'), reason: 'Gender must not be wiped by togglePin');
+      expect(updated.description, equals('背负拯救世界的命运'), reason: 'Description must not be wiped by togglePin');
+    });
+
+    test('deleteCharacter succeeds even when multiple legacy duplicate layout rows exist', () async {
+      final worldId = await db.into(db.worlds).insert(
+            WorldsCompanion.insert(name: '布局测试世界'),
+          );
+      final charId = await db.into(db.characters).insert(
+            CharactersCompanion.insert(
+              worldId: worldId,
+              name: '旅行者',
+            ),
+          );
+
+      // 模拟历史上遗留的多个重复布局行
+      await db.into(db.graphLayouts).insert(
+            GraphLayoutsCompanion.insert(worldId: worldId, characterId: charId, x: const Value(10.0), y: const Value(20.0)),
+          );
+      await db.into(db.graphLayouts).insert(
+            GraphLayoutsCompanion.insert(worldId: worldId, characterId: charId, x: const Value(15.0), y: const Value(25.0)),
+          );
+      await db.into(db.graphLayouts).insert(
+            GraphLayoutsCompanion.insert(worldId: worldId, characterId: charId, x: const Value(30.0), y: const Value(40.0)),
+          );
+
+      final char = await db.characterDao.getCharacterById(charId);
+      final trashActions = container.read(trashActionsProvider);
+
+      // 软删除该角色：不会因 getSingleOrNull 触发 StateError: Too many elements
+      await trashActions.deleteCharacter(char);
+
+      final trashList = await db.trashDao.getAllTrash();
+      expect(trashList.length, equals(1));
+    });
+
+    test('saveLayout is strictly idempotent and deduplicates rows', () async {
+      final worldId = await db.into(db.worlds).insert(
+            WorldsCompanion.insert(name: '幂等世界'),
+          );
+      final charId = 888;
+
+      final trashDao = container.read(trashDaoProvider);
+
+      // 连续保存 3 次坐标（模拟连续拖拽）
+      await trashDao.saveLayout(GraphLayoutsCompanion(
+        worldId: Value(worldId),
+        characterId: Value(charId),
+        x: const Value(100.0),
+        y: const Value(200.0),
+      ));
+      await trashDao.saveLayout(GraphLayoutsCompanion(
+        worldId: Value(worldId),
+        characterId: Value(charId),
+        x: const Value(150.0),
+        y: const Value(250.0),
+      ));
+      await trashDao.saveLayout(GraphLayoutsCompanion(
+        worldId: Value(worldId),
+        characterId: Value(charId),
+        x: const Value(300.0),
+        y: const Value(400.0),
+      ));
+
+      // 验证数据库中仅有 1 行记录，且值为最新坐标
+      final rows = await (db.select(db.graphLayouts)
+            ..where((l) => l.characterId.equals(charId)))
+          .get();
+      expect(rows.length, equals(1));
+      expect(rows.first.x, equals(300.0));
+      expect(rows.first.y, equals(400.0));
     });
   });
 }

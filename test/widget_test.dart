@@ -1,24 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/native.dart';
 
 import 'package:oc_manager/app.dart';
+import 'package:oc_manager/data/database/app_database.dart';
+import 'package:oc_manager/providers/database_provider.dart';
 
 void main() {
   testWidgets('App should render', (WidgetTester tester) async {
+    final testDb = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(() async => await testDb.close());
+
     await tester.pumpWidget(
-      const ProviderScope(
-        child: App(),
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+        ],
+        child: const App(),
       ),
     );
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('OC Manager'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
   });
 
   testWidgets('Sidebar should toggle with animation', (WidgetTester tester) async {
+    final testDb = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(() async => await testDb.close());
+
     await tester.pumpWidget(
-      const ProviderScope(
-        child: App(),
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+        ],
+        child: const App(),
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
@@ -53,6 +72,9 @@ void main() {
     alignWidget = tester.widget(animatedAlignFinder);
     expect(alignWidget.widthFactor, 1.0);
     await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
   });
 }
 

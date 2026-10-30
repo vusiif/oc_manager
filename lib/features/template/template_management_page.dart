@@ -83,7 +83,7 @@ class _TemplateTile extends ConsumerWidget {
         subtitle: fieldsAsync.when(
           data: (fields) => Text('${fields.length} 个字段'),
           loading: () => const Text('加载中...'),
-          error: (_, __) => const Text(''),
+          error: (err, stack) => const Text(''),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

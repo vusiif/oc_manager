@@ -37,7 +37,9 @@ class TrashActions {
     final tagIds = tagRows.map((r) => r.tagId).toList();
 
     final layoutRow = await (_db.select(_db.graphLayouts)
-          ..where((l) => l.characterId.equals(character.id)))
+          ..where((l) => l.characterId.equals(character.id))
+          ..orderBy([(l) => OrderingTerm.desc(l.id)])
+          ..limit(1))
         .getSingleOrNull();
 
     final fullData = {
@@ -210,6 +212,9 @@ class TrashActions {
       );
 
       // 清除该世界观下所有关联数据
+      for (final rel in relations) {
+        await (_db.delete(_db.relations)..where((r) => r.id.equals(rel.id))).go();
+      }
       for (final c in characters) {
         await (_db.delete(_db.characterFields)
               ..where((t) => t.characterId.equals(c.id)))

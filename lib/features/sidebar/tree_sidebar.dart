@@ -388,9 +388,17 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
       onLeave: (_) {
         setState(() => _isDragOver = false);
       },
-      onAcceptWithDetails: (details) {
+      onAcceptWithDetails: (details) async {
         setState(() => _isDragOver = false);
-        ref.read(groupActionsProvider).addCharacterToGroup(details.data, widget.group.id);
+        try {
+          await ref.read(groupActionsProvider).addCharacterToGroup(details.data, widget.group.id);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$e')),
+            );
+          }
+        }
       },
       builder: (context, candidateData, rejectedData) {
         return Column(

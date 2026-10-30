@@ -38,7 +38,7 @@ class WorldDetailPage extends ConsumerWidget {
         title: worldAsync.when(
           data: (world) => Text(world.name),
           loading: () => const Text('加载中'),
-          error: (_, __) => const Text('错误'),
+          error: (err, stack) => const Text('错误'),
         ),
       ),
       body: selectedGroupId != null
