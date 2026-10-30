@@ -31,6 +31,7 @@ class CharacterActions {
     required String name,
     int status = 0,
     String gender = '',
+    String? avatarPath,
   }) async {
     return _ref.read(characterDaoProvider).createCharacter(
           CharactersCompanion(
@@ -38,6 +39,7 @@ class CharacterActions {
             name: Value(name),
             status: Value(status),
             gender: Value(gender),
+            avatarPath: Value(avatarPath),
           ),
         );
   }

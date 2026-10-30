@@ -9,6 +9,7 @@ import 'features/tag/tag_management_page.dart';
 import 'features/trash/drafts_page.dart';
 import 'features/trash/trash_page.dart';
 import 'features/relation/relation_graph_page.dart';
+import 'features/character/character_detail_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/template/template_management_page.dart';
 import 'providers/settings_provider.dart';
@@ -23,8 +24,20 @@ final _router = GoRouter(
     GoRoute(
       path: '/world/:worldId/graph',
       builder: (context, state) {
-        final worldId = int.parse(state.pathParameters['worldId']!);
+        final worldId = int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
         return RelationGraphPage(worldId: worldId);
+      },
+    ),
+    GoRoute(
+      path: '/world/:worldId/character/:characterId',
+      builder: (context, state) {
+        final worldId = int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        final characterId =
+            int.tryParse(state.pathParameters['characterId'] ?? '') ?? 0;
+        return CharacterDetailPage(
+          worldId: worldId,
+          characterId: characterId,
+        );
       },
     ),
     GoRoute(

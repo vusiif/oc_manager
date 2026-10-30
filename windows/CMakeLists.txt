@@ -53,6 +53,14 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 add_subdirectory("runner")
 
 
+# Configure JNI include and library paths from JAVA_HOME environment variable
+if(DEFINED ENV{JAVA_HOME} AND EXISTS "$ENV{JAVA_HOME}/include/jni.h")
+  file(TO_CMAKE_PATH "$ENV{JAVA_HOME}" _JAVA_HOME_PATH)
+  set(JAVA_INCLUDE_PATH "${_JAVA_HOME_PATH}/include" CACHE PATH "JNI include directory" FORCE)
+  set(JAVA_INCLUDE_PATH2 "${_JAVA_HOME_PATH}/include/win32" CACHE PATH "jni_md.h include directory" FORCE)
+  set(JAVA_JVM_LIBRARY "${_JAVA_HOME_PATH}/lib/jvm.lib" CACHE FILEPATH "JVM library" FORCE)
+endif()
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)

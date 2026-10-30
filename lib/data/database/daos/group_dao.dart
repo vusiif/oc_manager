@@ -7,7 +7,7 @@ part 'group_dao.g.dart';
 @DriftAccessor(tables: [Groups, CharacterGroups])
 class GroupDao extends DatabaseAccessor<AppDatabase>
     with _$GroupDaoMixin {
-  GroupDao(AppDatabase db) : super(db);
+  GroupDao(super.db);
 
   // 获取世界观下的所有分组
   Stream<List<Group>> watchGroupsByWorld(int worldId) {
@@ -53,9 +53,22 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
     return rows.map((r) => r.groupId).toList();
   }
 
-  // 添加人物到分组
-  Future<void> addCharacterToGroup(int characterId, int groupId) {
-    return into(characterGroups).insert(
+  // 添加人物到分组（包含世界观隔离校验与去重）
+  Future<void> addCharacterToGroup(int characterId, int groupId) async {
+    final existing = await (select(characterGroups)
+          ..where((cg) =>
+              cg.characterId.equals(characterId) & cg.groupId.equals(groupId)))
+        .get();
+    if (existing.isNotEmpty) return;
+
+    final char = await db.characterDao.getCharacterById(characterId);
+    final group = await getGroupById(groupId);
+    if (char.worldId != group.worldId) {
+      throw ArgumentError(
+          '跨世界观隔离保护：角色 (worldId: ${char.worldId}) 与分组 (worldId: ${group.worldId}) 不属于同一世界观');
+    }
+
+    await into(characterGroups).insert(
       CharacterGroupsCompanion.insert(
         characterId: characterId,
         groupId: groupId,
@@ -72,14 +85,16 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
-  // 设置人物的分组（替换）
-  Future<void> setCharacterGroups(int characterId, List<int> groupIds) async {
-    await (delete(characterGroups)
-          ..where((cg) => cg.characterId.equals(characterId)))
-        .go();
-    for (final groupId in groupIds) {
-      await addCharacterToGroup(characterId, groupId);
-    }
+  // 设置人物的分组（带事务保证）
+  Future<void> setCharacterGroups(int characterId, List<int> groupIds) {
+    return transaction(() async {
+      await (delete(characterGroups)
+            ..where((cg) => cg.characterId.equals(characterId)))
+          .go();
+      for (final groupId in groupIds) {
+        await addCharacterToGroup(characterId, groupId);
+      }
+    });
   }
 
   // 获取世界观下未分组的人物 ID 列表

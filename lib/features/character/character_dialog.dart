@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:drift/drift.dart' show Value;
 
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/template_provider.dart';
 import '../../providers/database_provider.dart';
+import '../../core/storage/image_storage_service.dart';
+import '../../core/design/components/oc_avatar.dart';
 
 const _genderOptions = [
   ('男', '♂'),
@@ -33,6 +37,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   String _gender = '';
   bool _isCustomGender = false;
   int? _selectedTemplateId;
+  String? _avatarPath;
 
   @override
   void initState() {
@@ -40,6 +45,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     _nameController =
         TextEditingController(text: widget.character?.name ?? '');
     _customGenderController = TextEditingController();
+    _avatarPath = widget.character?.avatarPath;
     final g = widget.character?.gender ?? '';
     if (g.isNotEmpty &&
         !_genderOptions.any((o) => o.$1 == g)) {
@@ -59,6 +65,28 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     super.dispose();
   }
 
+  Future<void> _pickAvatar() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked != null) {
+        final relPath = await ImageStorageService.instance.saveAvatarImage(
+          sourcePath: picked.path,
+          characterId: widget.character?.id,
+        );
+        setState(() {
+          _avatarPath = relPath;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择图片失败: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.character != null;
@@ -69,13 +97,55 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 头像上传与预览
+            Center(
+              child: Stack(
+                children: [
+                  InkWell(
+                    onTap: _pickAvatar,
+                    borderRadius: BorderRadius.circular(36),
+                    child: OcAvatar(
+                      avatarPath: _avatarPath,
+                      name: _nameController.text.trim().isNotEmpty
+                          ? _nameController.text.trim()
+                          : '?',
+                      gender: _gender,
+                      size: 72,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickAvatar,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: '人物名称',
                 hintText: '例如：艾莉丝',
               ),
-              autofocus: true,
+              autofocus: !isEditing,
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
             // 性别选择
@@ -172,6 +242,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
           name: name,
           gender: gender,
           status: _status,
+          avatarPath: Value(_avatarPath),
         ),
       );
     } else {
@@ -180,6 +251,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
         name: name,
         status: _status,
         gender: gender,
+        avatarPath: _avatarPath,
       );
 
       // 套用模板
@@ -198,7 +270,9 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
       }
     }
 
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 }
 

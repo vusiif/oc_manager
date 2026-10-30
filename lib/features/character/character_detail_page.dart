@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:image_picker/image_picker.dart';
 
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../data/database/app_database.dart';
+import '../../core/storage/image_storage_service.dart';
+import '../../core/design/components/oc_avatar.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
 
@@ -48,6 +51,30 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
             character.copyWith(description: text),
           );
       ref.invalidate(characterByIdProvider(widget.characterId));
+    }
+  }
+
+  Future<void> _pickAndChangeAvatar(Character character) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked != null) {
+        final relPath = await ImageStorageService.instance.saveAvatarImage(
+          sourcePath: picked.path,
+          characterId: character.id,
+        );
+        await ref.read(characterActionsProvider).update(
+              character.copyWith(avatarPath: Value(relPath)),
+            );
+        ref.invalidate(characterByIdProvider(widget.characterId));
+        ref.invalidate(charactersByWorldProvider(widget.worldId));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('更换立绘失败: $e')),
+        );
+      }
     }
   }
 
@@ -129,6 +156,49 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const Divider(),
+                      Center(
+                        child: Stack(
+                          children: [
+                            InkWell(
+                              onTap: () => _pickAndChangeAvatar(character),
+                              borderRadius: BorderRadius.circular(44),
+                              child: OcAvatar(
+                                avatarPath: character.avatarPath,
+                                name: character.name,
+                                gender: character.gender,
+                                size: 88,
+                                isDraft: character.status == 1,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Tooltip(
+                                message: '更换立绘/头像',
+                                child: InkWell(
+                                  onTap: () => _pickAndChangeAvatar(character),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 2),
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      size: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       _InfoRow(label: '名称', value: character.name),
                       if (character.gender.isNotEmpty)
                         _InfoRow(label: '性别', value: character.gender),

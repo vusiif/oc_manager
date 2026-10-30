@@ -5,6 +5,9 @@ import '../../providers/world_provider.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../data/database/app_database.dart';
+import '../../core/design/components/empty_state.dart';
+import '../../core/design/components/oc_card.dart';
+import '../../core/design/design_tokens.dart';
 import '../character/character_dialog.dart';
 
 class WorldDetailPage extends ConsumerWidget {
@@ -41,104 +44,167 @@ class WorldDetailPage extends ConsumerWidget {
       body: selectedGroupId != null
           ? _buildGroupCharacters(context, ref, filteredCharactersAsync)
           : _buildAllCharacters(context, ref, charactersAsync, groupsAsync),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
         onPressed: () => _showCreateDialog(context, ref),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('新建人物'),
       ),
     );
   }
 
   // 显示分组下的人物
-  Widget _buildGroupCharacters(BuildContext context, WidgetRef ref, AsyncValue<List<Character>>? charactersAsync) {
+  Widget _buildGroupCharacters(BuildContext context, WidgetRef ref,
+      AsyncValue<List<Character>>? charactersAsync) {
     if (charactersAsync == null) return const SizedBox.shrink();
 
     return charactersAsync.when(
       data: (characters) {
         if (characters.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('该分组下暂无人物', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                SizedBox(height: 8),
-                Text('从左侧拖拽人物到此分组', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
+          return EmptyStateView(
+            icon: Icons.group_off_outlined,
+            title: '该分组下暂无人物',
+            description: '可以从左侧侧栏直接拖拽人物到此分组，或者直接在此创建新人物。',
+            primaryActionLabel: '创建人物',
+            onPrimaryAction: () => _showCreateDialog(context, ref),
           );
         }
 
         return ListView(
-          padding: const EdgeInsets.all(16),
-          children: characters.map((c) => _CharacterCard(
-            character: c,
-            onTap: () => onCharacterSelected?.call(c.id),
-          )).toList(),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: characters
+              .map((c) => OcCard(
+                    character: c,
+                    onTap: () => onCharacterSelected?.call(c.id),
+                    onFavoriteToggle: () {
+                      ref.read(characterActionsProvider).toggleFavorite(c);
+                    },
+                    onPinToggle: () {
+                      ref.read(characterActionsProvider).togglePin(c);
+                    },
+                  ))
+              .toList(),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('错误: $error')),
+      error: (error, _) => Center(child: Text('错误: $error')),
     );
   }
 
   // 显示所有人物（世界观视图）
-  Widget _buildAllCharacters(BuildContext context, WidgetRef ref, AsyncValue<List<Character>> charactersAsync, AsyncValue<List<Group>> groupsAsync) {
+  Widget _buildAllCharacters(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Character>> charactersAsync,
+    AsyncValue<List<Group>> groupsAsync,
+  ) {
     return charactersAsync.when(
       data: (characters) {
         if (characters.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('还没有人物', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                SizedBox(height: 8),
-                Text('点击右下角按钮创建第一个人物', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
+          return EmptyStateView(
+            icon: Icons.person_add_alt_1_outlined,
+            title: '还没有任何人物设定',
+            description: '创建属于你的第一个角色（OC），记录基本信息、附加设定与专属关系。',
+            primaryActionLabel: '创建第一个人物',
+            onPrimaryAction: () => _showCreateDialog(context, ref),
           );
         }
 
         final pinned = characters.where((c) => c.isPinned).toList();
-        final normal = characters.where((c) => !c.isPinned && c.status == 0).toList();
+        final normal =
+            characters.where((c) => !c.isPinned && c.status == 0).toList();
         final drafts = characters.where((c) => c.status == 1).toList();
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (pinned.isNotEmpty) ...[
-              const Text('置顶', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              const SizedBox(height: 8),
-              ...pinned.map((c) => _CharacterCard(
-                character: c,
-                onTap: () => onCharacterSelected?.call(c.id),
-              )),
-              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.push_pin_rounded,
+                      size: 16, color: AppColors.brand),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    '置顶 (${pinned.length})',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ...pinned.map((c) => OcCard(
+                    character: c,
+                    onTap: () => onCharacterSelected?.call(c.id),
+                    onFavoriteToggle: () {
+                      ref.read(characterActionsProvider).toggleFavorite(c);
+                    },
+                    onPinToggle: () {
+                      ref.read(characterActionsProvider).togglePin(c);
+                    },
+                  )),
+              const SizedBox(height: AppSpacing.md),
             ],
             if (normal.isNotEmpty) ...[
-              const Text('人物', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              const SizedBox(height: 8),
-              ...normal.map((c) => _CharacterCard(
-                character: c,
-                onTap: () => onCharacterSelected?.call(c.id),
-              )),
+              if (pinned.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    '角色列表',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ...normal.map((c) => OcCard(
+                    character: c,
+                    onTap: () => onCharacterSelected?.call(c.id),
+                    onFavoriteToggle: () {
+                      ref.read(characterActionsProvider).toggleFavorite(c);
+                    },
+                    onPinToggle: () {
+                      ref.read(characterActionsProvider).togglePin(c);
+                    },
+                  )),
             ],
             if (drafts.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text('草稿', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              const SizedBox(height: 8),
-              ...drafts.map((c) => _CharacterCard(
-                character: c,
-                onTap: () => onCharacterSelected?.call(c.id),
-              )),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  const Icon(Icons.edit_note, size: 16, color: Colors.grey),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    '草稿 (${drafts.length})',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ...drafts.map((c) => OcCard(
+                    character: c,
+                    onTap: () => onCharacterSelected?.call(c.id),
+                    onFavoriteToggle: () {
+                      ref.read(characterActionsProvider).toggleFavorite(c);
+                    },
+                    onPinToggle: () {
+                      ref.read(characterActionsProvider).togglePin(c);
+                    },
+                  )),
             ],
           ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('错误: $error')),
+      error: (error, _) => Center(child: Text('错误: $error')),
     );
   }
 
@@ -146,60 +212,6 @@ class WorldDetailPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => CharacterDialog(worldId: worldId),
-    );
-  }
-}
-
-class _CharacterCard extends ConsumerWidget {
-  final dynamic character;
-  final VoidCallback? onTap;
-
-  const _CharacterCard({required this.character, this.onTap});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: character.status == 1
-              ? Colors.grey.shade300
-              : Theme.of(context).colorScheme.primaryContainer,
-          child: Text(
-            character.name.isNotEmpty ? character.name[0] : '?',
-            style: TextStyle(
-              color: character.status == 1
-                  ? Colors.grey
-                  : Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ),
-        ),
-        title: Text(character.name),
-        subtitle: character.status == 1 ? const Text('草稿') : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                character.isFavorite ? Icons.star : Icons.star_border,
-                color: character.isFavorite ? Colors.amber : null,
-              ),
-              onPressed: () {
-                ref.read(characterActionsProvider).toggleFavorite(character);
-              },
-            ),
-            IconButton(
-              icon: Icon(
-                character.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-              ),
-              onPressed: () {
-                ref.read(characterActionsProvider).togglePin(character);
-              },
-            ),
-          ],
-        ),
-        onTap: onTap,
-      ),
     );
   }
 }

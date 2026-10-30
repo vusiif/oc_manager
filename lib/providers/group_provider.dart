@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../data/database/app_database.dart';
 import 'database_provider.dart';
-import 'character_provider.dart';
 
 final groupsByWorldProvider =
     StreamProvider.family<List<Group>, int>((ref, worldId) {

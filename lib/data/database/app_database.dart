@@ -51,6 +51,7 @@ part 'app_database.g.dart';
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  AppDatabase.forTesting(super.e);
 
   @override
   int get schemaVersion => 6;
@@ -78,6 +79,22 @@ class AppDatabase extends _$AppDatabase {
           }
         },
       );
+
+  Future<void> backupTo(String targetPath) async {
+    final targetFile = File(targetPath);
+    if (await targetFile.exists()) {
+      await targetFile.delete();
+    }
+    final escapedPath = targetPath.replaceAll("'", "''");
+    await customStatement('PRAGMA wal_checkpoint(FULL);');
+    await customStatement("VACUUM INTO '$escapedPath';");
+  }
+
+  Future<bool> checkIntegrity() async {
+    final result = await customSelect('PRAGMA integrity_check;').getSingle();
+    final status = result.data.values.firstOrNull?.toString();
+    return status == 'ok';
+  }
 }
 
 LazyDatabase _openConnection() {

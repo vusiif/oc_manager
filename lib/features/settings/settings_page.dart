@@ -53,7 +53,7 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.backup),
             title: const Text('备份数据'),
             subtitle: const Text('导出数据库文件'),
-            onTap: () => _backupDatabase(context),
+            onTap: () => _backupDatabase(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.restore),
@@ -193,34 +193,29 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _backupDatabase(BuildContext context) async {
+  Future<void> _backupDatabase(BuildContext context, WidgetRef ref) async {
     try {
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbFolder.path, 'oc_manager.db'));
-
-      if (!await dbFile.exists()) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('数据库文件不存在')),
-          );
-        }
-        return;
-      }
+      final now = DateTime.now();
+      final dateStr =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final defaultFileName = 'oc_manager_backup_$dateStr.db';
 
       final result = await FilePicker.platform.saveFile(
         dialogTitle: '选择备份保存位置',
-        fileName: 'oc_manager_backup.db',
+        fileName: defaultFileName,
         type: FileType.custom,
         allowedExtensions: ['db'],
       );
 
       if (result == null) return;
 
-      await dbFile.copy(result);
+      // 使用 SQLite 在线一致性备份 (VACUUM INTO)
+      final db = ref.read(databaseProvider);
+      await db.backupTo(result);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('备份成功')),
+          const SnackBar(content: Text('备份成功，已生成一致性数据库快照')),
         );
       }
     } catch (e) {
@@ -268,30 +263,66 @@ class SettingsPage extends ConsumerWidget {
       if (result == null || result.files.single.path == null) return;
 
       final pickedFile = File(result.files.single.path!);
+      if (!await pickedFile.exists() || await pickedFile.length() == 0) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('选择的备份文件无效或为空')),
+          );
+        }
+        return;
+      }
+
       final dbFolder = await getApplicationDocumentsDirectory();
       final dbFile = File(p.join(dbFolder.path, 'oc_manager.db'));
+      final walFile = File(p.join(dbFolder.path, 'oc_manager.db-wal'));
+      final shmFile = File(p.join(dbFolder.path, 'oc_manager.db-shm'));
+      final rollbackBakFile =
+          File(p.join(dbFolder.path, 'oc_manager.db.rollback_bak'));
 
-      // 关闭当前数据库
-      ref.read(databaseProvider).close();
+      // 创建还原点：在覆盖前备份当前主库
+      if (await dbFile.exists()) {
+        await dbFile.copy(rollbackBakFile.path);
+      }
 
-      // 覆盖数据库文件
-      await pickedFile.copy(dbFile.path);
+      try {
+        // 关闭当前数据库连接
+        await ref.read(databaseProvider).close();
 
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('恢复成功'),
-            content: const Text('数据已恢复，请重启应用以生效。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('确定'),
-              ),
-            ],
-          ),
-        );
+        // 覆盖数据库文件
+        await pickedFile.copy(dbFile.path);
+
+        // 清理旧的 WAL / SHM 临时缓存，防止旧日志损坏新库
+        if (await walFile.exists()) await walFile.delete();
+        if (await shmFile.exists()) await shmFile.delete();
+
+        // 成功覆盖后移除临时还原点
+        if (await rollbackBakFile.exists()) {
+          await rollbackBakFile.delete();
+        }
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('恢复成功'),
+              content: const Text('数据已安全恢复，请重启应用以生效。'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('确定'),
+                ),
+              ],
+            ),
+          );
+        }
+      } catch (innerError) {
+        // 恢复失败：自动从还原点回滚当前数据
+        if (await rollbackBakFile.exists()) {
+          await rollbackBakFile.copy(dbFile.path);
+          await rollbackBakFile.delete();
+        }
+        rethrow;
       }
     } catch (e) {
       if (context.mounted) {

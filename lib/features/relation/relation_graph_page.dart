@@ -1,11 +1,19 @@
+import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' show Value;
 
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
+import '../../core/design/design_tokens.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/design/components/confirmation_dialog.dart';
 import '../character/character_dialog.dart';
+import 'graph_geometry.dart';
 
 class RelationGraphPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -20,8 +28,14 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   final Map<int, Offset> _positions = {};
   final TransformationController _transformController =
       TransformationController();
-  bool _initialized = false;
+  final Set<int> _loadedFromDbCharacters = {};
+  int _graphRevision = 0;
   bool _showSidebar = true;
+  int? _selectedRelationId;
+
+  // 节点手柄连线交互状态
+  int? _connectingFromId;
+  Offset? _connectingCurrentPos;
 
   @override
   void dispose() {
@@ -29,15 +43,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     super.dispose();
   }
 
-  void _initPositions(List<Character> characters, List<GraphLayout> layouts) {
-    if (_initialized) return;
-    _initialized = true;
-
+  void _syncPositions(List<Character> characters, List<GraphLayout> layouts) {
+    if (layouts.isEmpty) return;
     final saved = {for (var l in layouts) l.characterId: Offset(l.x, l.y)};
+    bool changed = false;
     for (final c in characters) {
-      if (saved.containsKey(c.id)) {
+      if (!_loadedFromDbCharacters.contains(c.id) && saved.containsKey(c.id)) {
         _positions[c.id] = saved[c.id]!;
+        _loadedFromDbCharacters.add(c.id);
+        changed = true;
       }
+    }
+    if (changed) {
+      _graphRevision++;
     }
   }
 
@@ -55,6 +73,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     final canvasPos = MatrixUtils.transformPoint(inverse, screenDropPos);
     setState(() {
       _positions[characterId] = canvasPos;
+      _loadedFromDbCharacters.add(characterId);
+      _graphRevision++;
     });
     _savePosition(characterId, canvasPos);
   }
@@ -62,6 +82,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   void _removeFromCanvas(int characterId) {
     setState(() {
       _positions.remove(characterId);
+      _loadedFromDbCharacters.remove(characterId);
+      _graphRevision++;
     });
     ref.read(graphLayoutActionsProvider).removePosition(
           widget.worldId,
@@ -69,16 +91,108 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         );
   }
 
+  /// 适应画布：将所有节点自动居中并自适应缩放到视野中
+  void _fitCanvasToNodes(Size viewportSize) {
+    if (_positions.isEmpty) {
+      _transformController.value = Matrix4.identity();
+      return;
+    }
+
+    double minX = double.infinity;
+    double maxX = -double.infinity;
+    double minY = double.infinity;
+    double maxY = -double.infinity;
+
+    for (final pos in _positions.values) {
+      minX = min(minX, pos.dx);
+      maxX = max(maxX, pos.dx);
+      minY = min(minY, pos.dy);
+      maxY = max(maxY, pos.dy);
+    }
+
+    const padding = 140.0;
+    final contentWidth = (maxX - minX) + padding * 2;
+    final contentHeight = (maxY - minY) + padding * 2;
+    final contentCenterX = (minX + maxX) / 2;
+    final contentCenterY = (minY + maxY) / 2;
+
+    final scaleX = viewportSize.width / max(contentWidth, 1.0);
+    final scaleY = viewportSize.height / max(contentHeight, 1.0);
+    final scale = min(scaleX, scaleY).clamp(0.2, 1.5);
+
+    final tx = viewportSize.width / 2 - contentCenterX * scale;
+    final ty = viewportSize.height / 2 - contentCenterY * scale;
+
+    // ignore: deprecated_member_use
+    final matrix = Matrix4.identity()
+      // ignore: deprecated_member_use
+      ..translate(tx, ty)
+      // ignore: deprecated_member_use
+      ..scale(scale);
+
+    setState(() {
+      _transformController.value = matrix;
+    });
+  }
+
+  void _onStartConnecting(int characterId, Offset startPos) {
+    setState(() {
+      _connectingFromId = characterId;
+      _connectingCurrentPos = startPos;
+    });
+  }
+
+  void _onUpdateConnecting(Offset delta) {
+    if (_connectingCurrentPos == null) return;
+    final scale = _transformController.value.getMaxScaleOnAxis();
+    final sceneDelta = delta / (scale > 0 ? scale : 1.0);
+    setState(() {
+      _connectingCurrentPos = _connectingCurrentPos! + sceneDelta;
+    });
+  }
+
+  void _onEndConnecting(List<Character> characters) {
+    if (_connectingFromId == null || _connectingCurrentPos == null) {
+      setState(() {
+        _connectingFromId = null;
+        _connectingCurrentPos = null;
+      });
+      return;
+    }
+
+    int? targetId;
+    for (final entry in _positions.entries) {
+      if (entry.key != _connectingFromId) {
+        if ((entry.value - _connectingCurrentPos!).distance <= 45.0) {
+          targetId = entry.key;
+          break;
+        }
+      }
+    }
+
+    final sourceId = _connectingFromId;
+    setState(() {
+      _connectingFromId = null;
+      _connectingCurrentPos = null;
+    });
+
+    if (targetId != null && sourceId != null) {
+      _showAddRelationDialog(characters, fromId: sourceId, toId: targetId);
+    }
+  }
+
   // --- 添加关系对话框 ---
 
-  void _showAddRelationDialog(List<Character> characters, {int? fromId}) {
+  void _showAddRelationDialog(List<Character> characters,
+      {int? fromId, int? toId}) {
     if (characters.length < 2) return;
 
     int? selectedFrom = fromId ?? characters[0].id;
-    int? selectedTo = characters.firstWhere(
-      (c) => c.id != selectedFrom,
-      orElse: () => characters[0],
-    ).id;
+    int? selectedTo = toId ??
+        characters.firstWhere(
+          (c) => c.id != selectedFrom,
+          orElse: () => characters[0],
+        ).id;
     String selectedType = '朋友';
     bool isCustomType = false;
     bool isBidirectional = true;
@@ -418,6 +532,375 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     );
   }
 
+  void _handleCanvasTap(
+    Offset tapPos,
+    List<Relation> relations,
+    List<Character> characters,
+  ) {
+    final labelCenters = calculateRelationLabelCenters(
+      relations: relations,
+      positions: _positions,
+    );
+
+    int? hitRelId;
+    double minDistance = 28.0;
+
+    for (final entry in labelCenters.entries) {
+      final dist = (entry.value - tapPos).distance;
+      if (dist <= minDistance) {
+        minDistance = dist;
+        hitRelId = entry.key;
+      }
+    }
+
+    if (hitRelId != null) {
+      final hitRel = relations.firstWhere((r) => r.id == hitRelId);
+      setState(() => _selectedRelationId = hitRelId);
+      _showRelationActionDialog(hitRel, characters);
+    } else {
+      if (_selectedRelationId != null) {
+        setState(() => _selectedRelationId = null);
+      }
+    }
+  }
+
+  void _showRelationActionDialog(Relation rel, List<Character> characters) {
+    final charMap = {for (final c in characters) c.id: c};
+    final fromChar = charMap[rel.fromCharacterId];
+    final toChar = charMap[rel.toCharacterId];
+    final fromName = fromChar?.name ?? '未知人物';
+    final toName = toChar?.name ?? '未知人物';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.hub_outlined, size: 20),
+              SizedBox(width: 8),
+              Text('人物关系', style: TextStyle(fontSize: 18)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(fromName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(width: 10),
+                    Icon(
+                      rel.isBidirectional ? Icons.compare_arrows : Icons.arrow_forward,
+                      size: 20,
+                      color: rel.isBidirectional ? Colors.blue : Colors.orange,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(toName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Text('类型: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  Chip(
+                    label: Text(rel.relationType, style: const TextStyle(fontSize: 12)),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const Spacer(),
+                  Text(
+                    rel.isBidirectional ? '双向互通' : '单向指向',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (rel.note != null && rel.note!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('备注: ${rel.note}', style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ],
+          ),
+          actions: [
+            // 切换双向/单向
+            TextButton.icon(
+              icon: Icon(rel.isBidirectional ? Icons.arrow_forward : Icons.sync_alt, size: 16),
+              label: Text(rel.isBidirectional ? '设为单向' : '设为双向'),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await ref.read(relationActionsProvider).update(
+                      rel.copyWith(isBidirectional: !rel.isBidirectional),
+                    );
+                ref.invalidate(relationsByWorldProvider(widget.worldId));
+              },
+            ),
+            // 反转方向 (仅单向有效)
+            if (!rel.isBidirectional)
+              TextButton.icon(
+                icon: const Icon(Icons.swap_horiz, size: 16),
+                label: const Text('反转'),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await ref.read(relationActionsProvider).update(
+                        rel.copyWith(
+                          fromCharacterId: rel.toCharacterId,
+                          toCharacterId: rel.fromCharacterId,
+                        ),
+                      );
+                  ref.invalidate(relationsByWorldProvider(widget.worldId));
+                },
+              ),
+            // 编辑类型与备注
+            TextButton.icon(
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('编辑'),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _showEditRelationDialog(rel, fromName, toName);
+              },
+            ),
+            // 删除关系
+            TextButton.icon(
+              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+              label: const Text('删除', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                final confirmed = await showConfirmDialog(
+                  context: context,
+                  title: '删除关系',
+                  content: '确定要删除【$fromName】与【$toName】之间的“${rel.relationType}”关系吗？',
+                  confirmLabel: '删除',
+                  isDestructive: true,
+                );
+                if (confirmed == true) {
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  await ref.read(relationActionsProvider).delete(rel.id);
+                  ref.invalidate(relationsByWorldProvider(widget.worldId));
+                  setState(() => _selectedRelationId = null);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditRelationDialog(Relation rel, String fromName, String toName) {
+    String currentType = rel.relationType;
+    final noteController = TextEditingController(text: rel.note ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('编辑关系: $fromName ⇄ $toName'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('关系类型', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final t in _relationTypes)
+                    ChoiceChip(
+                      label: Text(t, style: const TextStyle(fontSize: 12)),
+                      selected: currentType == t,
+                      onSelected: (_) => setDialogState(() => currentType = t),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                decoration: const InputDecoration(labelText: '备注（可选）'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final note = noteController.text.trim();
+                await ref.read(relationActionsProvider).update(
+                      rel.copyWith(
+                        relationType: currentType,
+                        note: Value(note.isEmpty ? null : note),
+                      ),
+                    );
+                ref.invalidate(relationsByWorldProvider(widget.worldId));
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportToImage(List<Character> characters, List<Relation> relations) async {
+    if (_positions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('画布上暂无人物，无法导出')),
+      );
+      return;
+    }
+
+    double minX = double.infinity, minY = double.infinity;
+    double maxX = -double.infinity, maxY = -double.infinity;
+    for (final pos in _positions.values) {
+      minX = min(minX, pos.dx);
+      minY = min(minY, pos.dy);
+      maxX = max(maxX, pos.dx);
+      maxY = max(maxY, pos.dy);
+    }
+
+    const margin = 120.0;
+    final exportRect = Rect.fromLTRB(
+      minX - margin,
+      minY - margin,
+      maxX + margin,
+      maxY + margin,
+    );
+
+    final width = exportRect.width;
+    final height = exportRect.height;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgPaint = Paint()..color = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF8F9FA);
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), bgPaint);
+
+    canvas.translate(-exportRect.left, -exportRect.top);
+
+    final relPainter = _RelationPainter(
+      relations: relations,
+      positions: _positions,
+      characters: characters,
+      revision: _graphRevision,
+      isDark: isDark,
+    );
+    relPainter.paint(canvas, Size(maxX + margin, maxY + margin));
+
+    for (final c in characters) {
+      if (!_positions.containsKey(c.id)) continue;
+      final pos = _positions[c.id]!;
+      final color = c.status == 1 ? Colors.grey : AppColors.brand;
+      _drawNodeOnCanvas(canvas, c, pos, color, isDark);
+    }
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return;
+    final pngBytes = byteData.buffer.asUint8List();
+
+    final now = DateTime.now();
+    final dateStr =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    final defaultFileName = 'relation_graph_$dateStr.png';
+
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: '选择导出图片保存位置',
+      fileName: defaultFileName,
+      type: FileType.custom,
+      allowedExtensions: ['png'],
+    );
+
+    if (result == null) return;
+
+    var savePath = result;
+    if (!savePath.toLowerCase().endsWith('.png')) {
+      savePath += '.png';
+    }
+
+    await File(savePath).writeAsBytes(pngBytes);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('关系图已成功导出至: $savePath')),
+      );
+    }
+  }
+
+  void _drawNodeOnCanvas(
+    Canvas canvas,
+    Character c,
+    Offset pos,
+    Color color,
+    bool isDark,
+  ) {
+    final shapePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    const half = 24.0;
+    final initial = c.name.isNotEmpty ? c.name[0] : '?';
+
+    if (c.gender == '男') {
+      final rect = Rect.fromCenter(center: pos, width: half * 2, height: half * 2);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), shapePaint);
+    } else if (c.gender == '女') {
+      canvas.drawCircle(pos, half, shapePaint);
+    } else {
+      final path = Path()
+        ..moveTo(pos.dx, pos.dy - half * 1.13)
+        ..lineTo(pos.dx + half * 1.13, pos.dy)
+        ..lineTo(pos.dx, pos.dy + half * 1.13)
+        ..lineTo(pos.dx - half * 1.13, pos.dy)
+        ..close();
+      canvas.drawPath(path, shapePaint);
+    }
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: initial,
+        style: AppFonts.textStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
+
+    final nameTp = TextPainter(
+      text: TextSpan(
+        text: c.name,
+        style: AppFonts.textStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout();
+    nameTp.paint(canvas, Offset(pos.dx - nameTp.width / 2, pos.dy + half + 4));
+  }
+
   static Widget? _genderIcon(String gender) {
     if (gender == '男') return const Text('♂', style: TextStyle(fontSize: 14));
     if (gender == '女') return const Text('♀', style: TextStyle(fontSize: 14));
@@ -442,6 +925,14 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         title: const Text('关系图'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.add_link),
+            tooltip: '添加人物关系',
+            onPressed: () {
+              final chars = charactersAsync.valueOrNull ?? [];
+              _showAddRelationDialog(chars);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.family_restroom),
             tooltip: '添加家谱关系',
             onPressed: () {
@@ -450,88 +941,126 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             },
           ),
           IconButton(
-            icon: Icon(_showSidebar ? Icons.chevron_left : Icons.chevron_right),
-            tooltip: _showSidebar ? '隐藏侧栏' : '显示侧栏',
-            onPressed: () => setState(() => _showSidebar = !_showSidebar),
+            icon: const Icon(Icons.crop_free),
+            tooltip: '适应画布 / 查看全部',
+            onPressed: () {
+              final size = MediaQuery.of(context).size;
+              _fitCanvasToNodes(size);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_rounded),
+            tooltip: '导出为图片 (PNG)',
+            onPressed: () {
+              final chars = charactersAsync.valueOrNull ?? [];
+              final rels = relationsAsync.valueOrNull ?? [];
+              _exportToImage(chars, rels);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.restore),
             tooltip: '重置视图',
             onPressed: () => _transformController.value = Matrix4.identity(),
           ),
+          IconButton(
+            icon: Icon(_showSidebar ? Icons.chevron_left : Icons.chevron_right),
+            tooltip: _showSidebar ? '隐藏侧栏' : '显示侧栏',
+            onPressed: () => setState(() => _showSidebar = !_showSidebar),
+          ),
         ],
       ),
       body: charactersAsync.when(
         data: (characters) {
-          final relations = relationsAsync.valueOrNull ?? [];
-          final layouts = layoutsAsync.valueOrNull ?? [];
-
           if (characters.isEmpty) {
             return const Center(
               child: Text('暂无人物', style: TextStyle(color: Colors.grey)),
             );
           }
 
-          _initPositions(characters, layouts);
+          if (layoutsAsync.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final relations = relationsAsync.valueOrNull ?? [];
+          final layouts = layoutsAsync.valueOrNull ?? [];
+
+          _syncPositions(characters, layouts);
 
           return Row(
             children: [
-              if (_showSidebar)
-                Container(
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHigh,
-                    border: Border(
-                      right: BorderSide(
-                        color: theme.colorScheme.outlineVariant,
+              ClipRect(
+                child: AnimatedAlign(
+                  alignment: Alignment.centerLeft,
+                  heightFactor: 1.0,
+                  widthFactor: _showSidebar ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOutCubic,
+                  child: ExcludeFocus(
+                    excluding: !_showSidebar,
+                    child: IgnorePointer(
+                      ignoring: !_showSidebar,
+                      child: SizedBox(
+                        width: 120,
+                        child: Container(
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHigh,
+                            border: Border(
+                              right: BorderSide(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(
+                                  '人物列表',
+                                  style: theme.textTheme.labelLarge,
+                                ),
+                              ),
+                              const Divider(height: 1),
+                              Expanded(
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  itemCount: characters.length,
+                                  itemBuilder: (context, index) {
+                                    final c = characters[index];
+                                    final placed = _positions.containsKey(c.id);
+                                    final color = c.status == 1
+                                        ? Colors.grey
+                                        : theme.colorScheme.primary;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      child: Draggable<int>(
+                                        data: c.id,
+                                        feedback: Material(
+                                          elevation: 6,
+                                          child: _buildShape(
+                                            c.gender, 28, color, c.name),
+                                        ),
+                                        childWhenDragging: Opacity(
+                                          opacity: 0.3,
+                                          child: _SidebarItem(
+                                              character: c, placed: placed),
+                                        ),
+                                        child: _SidebarItem(
+                                            character: c, placed: placed),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          '人物列表',
-                          style: theme.textTheme.labelLarge,
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: characters.length,
-                          itemBuilder: (context, index) {
-                            final c = characters[index];
-                            final placed = _positions.containsKey(c.id);
-                            final color = c.status == 1
-                                ? Colors.grey
-                                : theme.colorScheme.primary;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              child: Draggable<int>(
-                                data: c.id,
-                                feedback: Material(
-                                  elevation: 6,
-                                  child: _buildShape(
-                                    c.gender, 28, color, c.name),
-                                ),
-                                childWhenDragging: Opacity(
-                                  opacity: 0.3,
-                                  child: _SidebarItem(
-                                      character: c, placed: placed),
-                                ),
-                                child: _SidebarItem(
-                                    character: c, placed: placed),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
+              ),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -556,30 +1085,55 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                           boundaryMargin: const EdgeInsets.all(500),
                           minScale: 0.1,
                           maxScale: 3.0,
-                          child: Container(
-                            width: canvasSize.width,
-                            height: canvasSize.height,
-                            color: theme
-                                .colorScheme.surfaceContainerLowest,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: CustomPaint(
-                                    painter: _GridPainter(
-                                      color: theme
-                                          .colorScheme.outlineVariant
-                                          .withValues(alpha: 0.3),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTapUp: (details) {
+                              _handleCanvasTap(
+                                details.localPosition,
+                                relations,
+                                characters,
+                              );
+                            },
+                            child: Container(
+                              width: canvasSize.width,
+                              height: canvasSize.height,
+                              color: theme
+                                  .colorScheme.surfaceContainerLowest,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: _GridPainter(
+                                        color: theme
+                                            .colorScheme.outlineVariant
+                                            .withValues(alpha: 0.3),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                CustomPaint(
-                                  size: canvasSize,
-                                  painter: _RelationPainter(
-                                    relations: relations,
-                                    positions: _positions,
-                                    characters: characters,
+                                  CustomPaint(
+                                    size: canvasSize,
+                                    painter: _RelationPainter(
+                                      relations: relations,
+                                      positions: _positions,
+                                      characters: characters,
+                                      revision: _graphRevision,
+                                      selectedRelationId: _selectedRelationId,
+                                      isDark:
+                                          theme.brightness == Brightness.dark,
+                                    ),
                                   ),
-                                ),
+                                // 拖拽创建关系时的实时连线预览
+                                if (_connectingFromId != null &&
+                                    _connectingCurrentPos != null &&
+                                    _positions.containsKey(_connectingFromId))
+                                  CustomPaint(
+                                    size: canvasSize,
+                                    painter: _ConnectingLinePainter(
+                                      from: _positions[_connectingFromId]!,
+                                      to: _connectingCurrentPos!,
+                                      color: AppColors.brand,
+                                    ),
+                                  ),
                                 for (var character in characters)
                                   if (_positions.containsKey(character.id))
                                     _DraggableNode(
@@ -592,12 +1146,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                                         setState(() {
                                           _positions[character.id] =
                                               newPos;
+                                          _graphRevision++;
                                         });
                                       },
                                       onDragEnd: (newPos) {
                                         _savePosition(
                                             character.id, newPos);
                                       },
+                                      onConnectStart: (startPos) =>
+                                          _onStartConnecting(
+                                              character.id, startPos),
+                                      onConnectUpdate: _onUpdateConnecting,
+                                      onConnectEnd: () =>
+                                          _onEndConnecting(characters),
                                       onRemove: () =>
                                           _removeFromCanvas(character.id),
                                       onManageRelations: () =>
@@ -645,7 +1206,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                               ],
                             ),
                           ),
-                        );
+                        ),
+                      );
                       },
                     );
                   },
@@ -767,6 +1329,9 @@ class _DraggableNode extends StatefulWidget {
   final List<Relation> relations;
   final ValueChanged<Offset> onDragUpdate;
   final ValueChanged<Offset> onDragEnd;
+  final ValueChanged<Offset>? onConnectStart;
+  final ValueChanged<Offset>? onConnectUpdate;
+  final VoidCallback? onConnectEnd;
   final VoidCallback onRemove;
   final VoidCallback onManageRelations;
   final VoidCallback onEdit;
@@ -778,6 +1343,9 @@ class _DraggableNode extends StatefulWidget {
     required this.relations,
     required this.onDragUpdate,
     required this.onDragEnd,
+    this.onConnectStart,
+    this.onConnectUpdate,
+    this.onConnectEnd,
     required this.onRemove,
     required this.onManageRelations,
     required this.onEdit,
@@ -789,6 +1357,7 @@ class _DraggableNode extends StatefulWidget {
 
 class _DraggableNodeState extends State<_DraggableNode> {
   late Offset _pos;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -863,43 +1432,132 @@ class _DraggableNodeState extends State<_DraggableNode> {
     return Positioned(
       left: _pos.dx - 30,
       top: _pos.dy - 30,
-      child: GestureDetector(
-        onSecondaryTapDown: _showContextMenu,
-        onLongPressStart: (details) => _showContextMenu(
-          TapDownDetails(
-            globalPosition: details.globalPosition,
-            localPosition: details.localPosition,
-          ),
-        ),
-        onPanUpdate: (details) {
-          setState(() {
-            _pos += details.delta;
-          });
-          widget.onDragUpdate(_pos);
-        },
-        onPanEnd: (_) {
-          widget.onDragEnd(_pos);
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            _buildShape(widget.character.gender, 24, color, name),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: 64,
-              child: Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            GestureDetector(
+              onSecondaryTapDown: _showContextMenu,
+              onLongPressStart: (details) => _showContextMenu(
+                TapDownDetails(
+                  globalPosition: details.globalPosition,
+                  localPosition: details.localPosition,
+                ),
+              ),
+              onPanUpdate: (details) {
+                setState(() {
+                  _pos += details.delta;
+                });
+                widget.onDragUpdate(_pos);
+              },
+              onPanEnd: (_) {
+                widget.onDragEnd(_pos);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildShape(widget.character.gender, 24, color, name),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
+            // 节点连接手柄：鼠标悬停在节点上时浮现
+            if (_isHovered)
+              Positioned(
+                right: -6,
+                top: 15,
+                child: Tooltip(
+                  message: '拖拽到另一人物创建关系',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: (details) {
+                      widget.onConnectStart?.call(_pos);
+                    },
+                    onPanUpdate: (details) {
+                      widget.onConnectUpdate?.call(details.delta);
+                    },
+                    onPanEnd: (_) {
+                      widget.onConnectEnd?.call();
+                    },
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        size: 11,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+// --- 实时连接预览线 ---
+
+class _ConnectingLinePainter extends CustomPainter {
+  final Offset from;
+  final Offset to;
+  final Color color;
+
+  _ConnectingLinePainter({
+    required this.from,
+    required this.to,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final haloPaint = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..strokeWidth = 6.0
+      ..style = PaintingStyle.stroke;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(from, to, haloPaint);
+    canvas.drawLine(from, to, paint);
+
+    final endCircle = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(to, 5.0, endCircle);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConnectingLinePainter old) =>
+      old.from != from || old.to != to || old.color != color;
 }
 
 // --- 网格背景 ---
@@ -930,15 +1588,23 @@ class _GridPainter extends CustomPainter {
 
 // --- 关系连线绘制 ---
 
+// --- 关系连线绘制 ---
+
 class _RelationPainter extends CustomPainter {
   final List<Relation> relations;
   final Map<int, Offset> positions;
   final List<Character> characters;
+  final int revision;
+  final int? selectedRelationId;
+  final bool isDark;
 
   _RelationPainter({
     required this.relations,
     required this.positions,
     required this.characters,
+    required this.revision,
+    this.selectedRelationId,
+    this.isDark = false,
   });
 
   @override
@@ -952,7 +1618,7 @@ class _RelationPainter extends CustomPainter {
       textAlign: TextAlign.center,
     );
 
-    const nodeRadius = 28.0;
+    final characterMap = {for (final c in characters) c.id: c};
 
     // 分离家谱组和普通组
     final familyGroups = <String, List<Relation>>{};
@@ -976,19 +1642,24 @@ class _RelationPainter extends CustomPainter {
 
     // 绘制家谱
     for (final entry in familyGroups.entries) {
-      _drawFamilyGroup(canvas, textPainter, linePaint, entry.value, nodeRadius);
+      _drawFamilyGroup(canvas, textPainter, linePaint, entry.value, characterMap);
     }
 
     // 绘制普通关系
     for (final entry in normalGroups.entries) {
-      _drawNormalGroup(canvas, textPainter, linePaint, entry.value, nodeRadius);
+      _drawNormalGroup(canvas, textPainter, linePaint, entry.value, characterMap);
     }
   }
 
   // --- 家谱图：遗传图风格 ---
 
-  void _drawFamilyGroup(Canvas canvas, TextPainter tp, Paint paint,
-      List<Relation> group, double nodeRadius) {
+  void _drawFamilyGroup(
+    Canvas canvas,
+    TextPainter tp,
+    Paint paint,
+    List<Relation> group,
+    Map<int, Character> characterMap,
+  ) {
     // 收集父母和子女
     final parentIds = <int>{};
     final childIds = <int>{};
@@ -1001,119 +1672,159 @@ class _RelationPainter extends CustomPainter {
       }
     }
 
-    final parents = parentIds.map((id) => positions[id]).whereType<Offset>().toList();
-    final children = childIds.map((id) => positions[id]).whereType<Offset>().toList();
+    final parents =
+        parentIds.map((id) => positions[id]).whereType<Offset>().toList();
+    final children =
+        childIds.map((id) => positions[id]).whereType<Offset>().toList();
 
     if (parents.isEmpty || children.isEmpty) return;
 
     final color = Colors.blue.shade300;
     paint.color = color;
+    paint.strokeWidth = 2.0;
 
+    final childYs = children.map((c) => c.dy).toList();
+    final minChildY = childYs.reduce(min);
+
+    final Offset parentMid;
     if (parents.length >= 2) {
-      // 父母之间连线
       final p1 = parents[0];
       final p2 = parents[1];
-      final dir = (p2 - p1).direction;
-      final edge1 = Offset(
-          p1.dx + nodeRadius * cos(dir), p1.dy + nodeRadius * sin(dir));
-      final edge2 = Offset(
-          p2.dx - nodeRadius * cos(dir), p2.dy - nodeRadius * sin(dir));
+      final p1Id = parentIds.first;
+      final p2Id = parentIds.skip(1).first;
+
+      final edge1 = GraphGeometry.getExitPoint(
+        fromCenter: p1,
+        toCenter: p2,
+        fromGender: characterMap[p1Id]?.gender ?? '',
+      );
+      final edge2 = GraphGeometry.getEntryPoint(
+        fromCenter: p1,
+        toCenter: p2,
+        toGender: characterMap[p2Id]?.gender ?? '',
+      );
       canvas.drawLine(edge1, edge2, paint);
 
       // 父母中点
-      final parentMid = Offset(
-          (edge1.dx + edge2.dx) / 2, (edge1.dy + edge2.dy) / 2);
+      parentMid = Offset((edge1.dx + edge2.dx) / 2, (edge1.dy + edge2.dy) / 2);
 
-      // 如果有更多父母（罕见），都连到中点
+      // 更多父母连到中点
       for (var i = 2; i < parents.length; i++) {
         final pi = parents[i];
-        final d = (pi - parentMid).direction;
-        canvas.drawLine(
-            Offset(pi.dx - nodeRadius * cos(d),
-                pi.dy - nodeRadius * sin(d)),
-            parentMid,
-            paint);
+        final pid = parentIds.skip(i).first;
+        final edge = GraphGeometry.getExitPoint(
+          fromCenter: pi,
+          toCenter: parentMid,
+          fromGender: characterMap[pid]?.gender ?? '',
+        );
+        canvas.drawLine(edge, parentMid, paint);
       }
-
-      // 确定 busY：在父母下方，但不能太远
-      final childYs = children.map((c) => c.dy).toList();
-      final minChildY = childYs.reduce(min);
-
-      // bus 在父母中点和子女之间
-      double busY;
-      if (minChildY > parentMid.dy) {
-        // 子女都在父母下方
-        busY = parentMid.dy + (minChildY - parentMid.dy) * 0.4;
-      } else {
-        // 子女可能在任意位置，bus 放在父母下方固定距离
-        busY = parentMid.dy + 50;
-      }
-
-      final busStart = Offset(parentMid.dx, busY);
-      canvas.drawLine(parentMid, busStart, paint);
-
-      if (children.length == 1) {
-        // 单个子女：从 bus 连到子女
-        final child = children[0];
-        final childDir = (child - busStart).direction;
-        final cEdge = Offset(
-            child.dx - nodeRadius * cos(childDir),
-            child.dy - nodeRadius * sin(childDir));
-
-        // 先画到子女正上方/侧方的拐点
-        final junction = Offset(busStart.dx, busStart.dy);
-        // L 形连线：先到子女 X 坐标，再到子女边缘
-        final midPoint = Offset(cEdge.dx, busY);
-        canvas.drawLine(junction, midPoint, paint);
-        canvas.drawLine(midPoint, cEdge, paint);
-
-        _drawArrowDir(canvas, cEdge, childDir, color);
-      } else {
-        // 多个子女：画横线再分叉
-        final childXs =
-            children.map((c) => c.dx).toList()..sort();
-        final busLeft = Offset(childXs.first, busY);
-        final busRight = Offset(childXs.last, busY);
-
-        // 横线
-        canvas.drawLine(
-            Offset(min(busStart.dx, busLeft.dx), busY),
-            Offset(max(busStart.dx, busRight.dx), busY),
-            paint);
-
-        // 每个子女：从 bus 竖线连到子女边缘
-        for (final child in children) {
-          final childDir = (child - Offset(child.dx, busY)).direction;
-          final cEdge = Offset(
-              child.dx - nodeRadius * cos(childDir),
-              child.dy - nodeRadius * sin(childDir));
-          final junction = Offset(child.dx, busY);
-          canvas.drawLine(junction, cEdge, paint);
-          _drawArrowDir(canvas, cEdge, childDir, color);
-        }
-      }
-
-      // 标签
-      final relType = group.first.relationType;
-      _drawLabel(canvas, tp, relType,
-          Offset(parentMid.dx, parentMid.dy + 16));
+    } else {
+      // 单亲家庭支持
+      parentMid = parents[0];
     }
+
+    // 确定 busY：在 parentMid 下方
+    double busY;
+    if (minChildY > parentMid.dy) {
+      busY = parentMid.dy + (minChildY - parentMid.dy) * 0.4;
+    } else {
+      busY = parentMid.dy + 50;
+    }
+
+    final busStart = Offset(parentMid.dx, busY);
+    final topPoint = parents.length >= 2
+        ? parentMid
+        : GraphGeometry.calculateBoundaryIntersection(
+            nodeCenter: parentMid,
+            gender: characterMap[parentIds.first]?.gender ?? '',
+            angle: pi / 2,
+          );
+    canvas.drawLine(topPoint, busStart, paint);
+
+    if (children.length == 1) {
+      final child = children[0];
+      final childId = childIds.first;
+      final junction = Offset(busStart.dx, busStart.dy);
+      final midPoint = Offset(child.dx, busY);
+      final cEdge = GraphGeometry.getEntryPoint(
+        fromCenter: midPoint,
+        toCenter: child,
+        toGender: characterMap[childId]?.gender ?? '',
+      );
+
+      canvas.drawLine(junction, midPoint, paint);
+      canvas.drawLine(midPoint, cEdge, paint);
+
+      final childDir = (child - midPoint).direction;
+      _drawArrowDir(canvas, cEdge, childDir, color);
+    } else {
+      final childXs = children.map((c) => c.dx).toList()..sort();
+      final busLeft = Offset(childXs.first, busY);
+      final busRight = Offset(childXs.last, busY);
+
+      canvas.drawLine(
+        Offset(min(busStart.dx, busLeft.dx), busY),
+        Offset(max(busStart.dx, busRight.dx), busY),
+        paint,
+      );
+
+      for (var i = 0; i < children.length; i++) {
+        final child = children[i];
+        final childId = childIds.skip(i).first;
+        final junction = Offset(child.dx, busY);
+        final cEdge = GraphGeometry.getEntryPoint(
+          fromCenter: junction,
+          toCenter: child,
+          toGender: characterMap[childId]?.gender ?? '',
+        );
+        canvas.drawLine(junction, cEdge, paint);
+        final childDir = (child - junction).direction;
+        _drawArrowDir(canvas, cEdge, childDir, color);
+      }
+    }
+
+    final isSelected = group.any((r) => r.id == selectedRelationId);
+    final relType = group.first.relationType;
+    _drawLabel(
+      canvas,
+      tp,
+      relType,
+      Offset(parentMid.dx, parentMid.dy + 16),
+      isSelected: isSelected,
+      isDark: isDark,
+    );
   }
 
   // --- 普通关系：弧线/直线 ---
 
-  void _drawNormalGroup(Canvas canvas, TextPainter tp, Paint paint,
-      List<Relation> group, double nodeRadius) {
-    final from = positions[group.first.fromCharacterId]!;
-    final to = positions[group.first.toCharacterId]!;
+  void _drawNormalGroup(
+    Canvas canvas,
+    TextPainter tp,
+    Paint paint,
+    List<Relation> group,
+    Map<int, Character> characterMap,
+  ) {
+    final baseFromId = group.first.fromCharacterId;
+    final baseToId = group.first.toCharacterId;
+    final from = positions[baseFromId]!;
+    final to = positions[baseToId]!;
+    final fromGender = characterMap[baseFromId]?.gender ?? '';
+    final toGender = characterMap[baseToId]?.gender ?? '';
     final count = group.length;
 
     for (var i = 0; i < count; i++) {
       final rel = group[i];
-      final color = rel.isBidirectional
-          ? Colors.blue.shade300
-          : Colors.orange.shade300;
+      final isSelected = (rel.id == selectedRelationId);
+      final color = isSelected
+          ? AppColors.brand
+          : (rel.isBidirectional
+              ? Colors.blue.shade300
+              : Colors.orange.shade300);
       paint.color = color;
+      paint.strokeWidth = isSelected ? 3.0 : 2.0;
+
+      final isReversed = (rel.fromCharacterId != baseFromId);
 
       final offset = count == 1 ? 0.0 : (i - (count - 1) / 2) * 40.0;
       final dx = to.dx - from.dx;
@@ -1123,22 +1834,47 @@ class _RelationPainter extends CustomPainter {
       final ny = dist > 0 ? dx / dist : 0.0;
 
       if (count == 1) {
-        final dir = dist > 0 ? Offset(dx / dist, dy / dist) : Offset.zero;
-        final p1 = Offset(
-            from.dx + dir.dx * nodeRadius, from.dy + dir.dy * nodeRadius);
-        final p2 = Offset(
-            to.dx - dir.dx * nodeRadius, to.dy - dir.dy * nodeRadius);
+        final p1 = GraphGeometry.getExitPoint(
+          fromCenter: from,
+          toCenter: to,
+          fromGender: fromGender,
+        );
+        final p2 = GraphGeometry.getEntryPoint(
+          fromCenter: from,
+          toCenter: to,
+          toGender: toGender,
+        );
+
+        if (isSelected) {
+          final haloPaint = Paint()
+            ..color = AppColors.brand.withValues(alpha: 0.35)
+            ..strokeWidth = 7.0
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(p1, p2, haloPaint);
+        }
+
         canvas.drawLine(p1, p2, paint);
 
         if (rel.isBidirectional) {
           _drawArrow(canvas, p1, p2, color);
           _drawArrow(canvas, p2, p1, color);
         } else {
-          _drawArrow(canvas, p1, p2, color);
+          if (isReversed) {
+            _drawArrow(canvas, p2, p1, color);
+          } else {
+            _drawArrow(canvas, p1, p2, color);
+          }
         }
 
         final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-        _drawLabel(canvas, tp, rel.relationType, mid);
+        _drawLabel(
+          canvas,
+          tp,
+          rel.relationType,
+          mid,
+          isSelected: isSelected,
+          isDark: isDark,
+        );
       } else {
         final cp = Offset(
           (from.dx + to.dx) / 2 + nx * offset,
@@ -1148,12 +1884,16 @@ class _RelationPainter extends CustomPainter {
         final tStart = Offset(cp.dx - from.dx, cp.dy - from.dy).direction;
         final tEnd = Offset(to.dx - cp.dx, to.dy - cp.dy).direction;
 
-        final p1 = Offset(
-            from.dx + nodeRadius * cos(tStart),
-            from.dy + nodeRadius * sin(tStart));
-        final p2 = Offset(
-            to.dx - nodeRadius * cos(tEnd),
-            to.dy - nodeRadius * sin(tEnd));
+        final p1 = GraphGeometry.calculateBoundaryIntersection(
+          nodeCenter: from,
+          gender: fromGender,
+          angle: tStart,
+        );
+        final p2 = GraphGeometry.calculateBoundaryIntersection(
+          nodeCenter: to,
+          gender: toGender,
+          angle: tEnd + pi,
+        );
 
         final adjCp = Offset(
           (p1.dx + p2.dx) / 2 + nx * offset,
@@ -1163,23 +1903,43 @@ class _RelationPainter extends CustomPainter {
         final path = Path()
           ..moveTo(p1.dx, p1.dy)
           ..quadraticBezierTo(adjCp.dx, adjCp.dy, p2.dx, p2.dy);
+
+        if (isSelected) {
+          final haloPaint = Paint()
+            ..color = AppColors.brand.withValues(alpha: 0.35)
+            ..strokeWidth = 7.0
+            ..style = PaintingStyle.stroke;
+          canvas.drawPath(path, haloPaint);
+        }
+
         canvas.drawPath(path, paint);
 
         if (rel.isBidirectional) {
           _drawArrowDir(canvas, p2, tEnd, color);
           _drawArrowDir(canvas, p1, tStart + pi, color);
         } else {
-          _drawArrowDir(canvas, p2, tEnd, color);
+          if (isReversed) {
+            _drawArrowDir(canvas, p1, tStart + pi, color);
+          } else {
+            _drawArrowDir(canvas, p2, tEnd, color);
+          }
         }
 
-        final t = 0.5;
+        const t = 0.5;
         final labelX = (1 - t) * (1 - t) * p1.dx +
             2 * (1 - t) * t * adjCp.dx +
             t * t * p2.dx;
         final labelY = (1 - t) * (1 - t) * p1.dy +
             2 * (1 - t) * t * adjCp.dy +
             t * t * p2.dy;
-        _drawLabel(canvas, tp, rel.relationType, Offset(labelX, labelY));
+        _drawLabel(
+          canvas,
+          tp,
+          rel.relationType,
+          Offset(labelX, labelY),
+          isSelected: isSelected,
+          isDark: isDark,
+        );
       }
     }
   }
@@ -1190,18 +1950,70 @@ class _RelationPainter extends CustomPainter {
     return '$minId-$maxId';
   }
 
-  void _drawLabel(Canvas canvas, TextPainter tp, String text, Offset center) {
+  void _drawLabel(
+    Canvas canvas,
+    TextPainter tp,
+    String text,
+    Offset center, {
+    bool isSelected = false,
+    bool isDark = false,
+  }) {
+    final textColor = isSelected
+        ? AppColors.brand
+        : (isDark ? Colors.white70 : Colors.grey.shade800);
+    final bgColor = isSelected
+        ? (isDark ? AppColors.brand.withValues(alpha: 0.25) : AppColors.brandLight)
+        : (isDark ? const Color(0xFF2C2C2E) : Colors.white);
+    final borderColor = isSelected
+        ? AppColors.brand
+        : (isDark ? const Color(0xFF3A3A3C) : Colors.grey.shade300);
+
     tp.text = TextSpan(
       text: text,
-      style: TextStyle(
-        color: Colors.grey.shade700,
+      style: AppFonts.textStyle(
+        color: textColor,
         fontSize: 11,
-        backgroundColor: Colors.white.withValues(alpha: 0.8),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
     tp.layout();
-    tp.paint(canvas,
-        Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+
+    final rect = Rect.fromCenter(
+      center: center,
+      width: tp.width + 12,
+      height: tp.height + 6,
+    );
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
+
+    if (isSelected) {
+      final shadowPaint = Paint()
+        ..color = AppColors.brand.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 4);
+      canvas.drawRRect(rrect, shadowPaint);
+    }
+
+    // Badge background
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = bgColor
+        ..style = PaintingStyle.fill,
+    );
+
+    // Badge border
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = borderColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isSelected ? 1.5 : 1.0,
+    );
+
+    // Label text
+    tp.paint(
+      canvas,
+      Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
+    );
   }
 
   void _drawArrow(Canvas canvas, Offset from, Offset to, Color color) {
@@ -1236,7 +2048,91 @@ class _RelationPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RelationPainter old) =>
-      old.relations != relations || old.positions != positions;
+      old.revision != revision ||
+      old.relations != relations ||
+      old.positions != positions ||
+      old.selectedRelationId != selectedRelationId ||
+      old.isDark != isDark;
+}
+
+/// Helper function to calculate label centers for each relation in scene space.
+Map<int, Offset> calculateRelationLabelCenters({
+  required List<Relation> relations,
+  required Map<int, Offset> positions,
+}) {
+  final centers = <int, Offset>{};
+  final familyGroups = <String, List<Relation>>{};
+  final normalGroups = <String, List<Relation>>{};
+
+  for (final rel in relations) {
+    if (!positions.containsKey(rel.fromCharacterId) ||
+        !positions.containsKey(rel.toCharacterId)) {
+      continue;
+    }
+    final minId = min(rel.fromCharacterId, rel.toCharacterId);
+    final maxId = max(rel.fromCharacterId, rel.toCharacterId);
+    final key = '$minId-$maxId';
+
+    if (rel.relationGroupId != null && _familyTypes.contains(rel.relationType)) {
+      familyGroups.putIfAbsent(rel.relationGroupId!, () => []).add(rel);
+    } else {
+      normalGroups.putIfAbsent(key, () => []).add(rel);
+    }
+  }
+
+  for (final entry in familyGroups.entries) {
+    final group = entry.value;
+    final parentIds = <int>{};
+    for (final rel in group) {
+      if (rel.fromCharacterId != rel.toCharacterId) {
+        parentIds.add(rel.fromCharacterId);
+      }
+    }
+    final parents = parentIds.map((id) => positions[id]).whereType<Offset>().toList();
+    if (parents.isEmpty) continue;
+
+    final parentMid = parents.length >= 2
+        ? Offset((parents[0].dx + parents[1].dx) / 2, (parents[0].dy + parents[1].dy) / 2)
+        : parents[0];
+    final labelOffset = Offset(parentMid.dx, parentMid.dy + 16);
+    for (final rel in group) {
+      centers[rel.id] = labelOffset;
+    }
+  }
+
+  for (final entry in normalGroups.entries) {
+    final group = entry.value;
+    final baseFromId = group.first.fromCharacterId;
+    final baseToId = group.first.toCharacterId;
+    final from = positions[baseFromId]!;
+    final to = positions[baseToId]!;
+    final count = group.length;
+
+    for (var i = 0; i < count; i++) {
+      final rel = group[i];
+      final offset = count == 1 ? 0.0 : (i - (count - 1) / 2) * 40.0;
+      final dx = to.dx - from.dx;
+      final dy = to.dy - from.dy;
+      final dist = sqrt(dx * dx + dy * dy);
+      final nx = dist > 0 ? -dy / dist : 0.0;
+      final ny = dist > 0 ? dx / dist : 0.0;
+
+      if (count == 1) {
+        centers[rel.id] = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2);
+      } else {
+        final cp = Offset(
+          (from.dx + to.dx) / 2 + nx * offset,
+          (from.dy + to.dy) / 2 + ny * offset,
+        );
+        const t = 0.5;
+        final labelX = (1 - t) * (1 - t) * from.dx + 2 * (1 - t) * t * cp.dx + t * t * to.dx;
+        final labelY = (1 - t) * (1 - t) * from.dy + 2 * (1 - t) * t * cp.dy + t * t * to.dy;
+        centers[rel.id] = Offset(labelX, labelY);
+      }
+    }
+  }
+
+  return centers;
 }
 
 const _familyTypes = ['亲子', '父母', '父女', '父子', '母子', '母女', '家人'];
