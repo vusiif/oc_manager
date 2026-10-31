@@ -12,6 +12,7 @@ import '../../core/design/components/oc_avatar.dart';
 import '../../core/design/components/radar_chart.dart';
 import 'character_gallery_section.dart';
 import 'character_timeline_section.dart';
+import 'character_description_section.dart';
 import 'character_poster_dialog.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
@@ -34,41 +35,6 @@ class CharacterDetailPage extends ConsumerStatefulWidget {
 }
 
 class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
-  final _descController = TextEditingController();
-  bool _descInitialized = false;
-
-  @override
-  void didUpdateWidget(covariant CharacterDetailPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.characterId != widget.characterId) {
-      _descInitialized = false;
-      _descController.clear();
-    }
-  }
-
-  @override
-  void dispose() {
-    _descController.dispose();
-    super.dispose();
-  }
-
-  void _initDesc(Character character) {
-    if (!_descInitialized) {
-      _descInitialized = true;
-      _descController.text = character.description;
-    }
-  }
-
-  void _saveDescription(Character character) {
-    final text = _descController.text;
-    if (text != character.description) {
-      ref.read(characterActionsProvider).update(
-            character.copyWith(description: text),
-          );
-      ref.invalidate(characterByIdProvider(widget.characterId));
-    }
-  }
-
   Future<void> _pickAndChangeAvatar(Character character) async {
     try {
       final picker = ImagePicker();
@@ -190,7 +156,6 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
       ),
       body: characterAsync.when(
         data: (character) {
-          _initDesc(character);
           final fields = fieldsAsync.valueOrNull ?? [];
 
           return ListView(
@@ -336,32 +301,10 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
               ),
               const SizedBox(height: 16),
 
-              // === 详细描述 ===
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('详细描述',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      const Divider(),
-                      TextField(
-                        controller: _descController,
-                        maxLines: null,
-                        minLines: 6,
-                        decoration: const InputDecoration(
-                          hintText: '输入人物的详细描述…',
-                          border: InputBorder.none,
-                        ),
-                        style: const TextStyle(fontSize: 14, height: 1.6),
-                        onSubmitted: (_) =>
-                            _saveDescription(character),
-                      ),
-                    ],
-                  ),
-                ),
+              // === 详细设定与双向链接小传 ===
+              CharacterDescriptionSection(
+                worldId: widget.worldId,
+                character: character,
               ),
               const SizedBox(height: 16),
 
