@@ -11,6 +11,7 @@ import 'character/character_detail_page.dart';
 import 'sidebar/tree_sidebar.dart';
 import 'world/world_detail_page.dart';
 import 'world/world_dialog.dart';
+import 'world/world_analytics_dialog.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -55,6 +56,21 @@ class _MainShellState extends ConsumerState<MainShell> {
               tooltip: '关系图谱',
               onPressed: () =>
                   context.push('/world/$_selectedWorldId/graph'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.insights_rounded),
+              tooltip: '全景数据大盘与网络分析',
+              onPressed: () {
+                final world =
+                    ref.read(worldByIdProvider(_selectedWorldId!)).valueOrNull;
+                showDialog(
+                  context: context,
+                  builder: (_) => WorldAnalyticsDialog(
+                    worldId: _selectedWorldId!,
+                    worldName: world?.name ?? '世界观',
+                  ),
+                );
+              },
             ),
           ],
           IconButton(

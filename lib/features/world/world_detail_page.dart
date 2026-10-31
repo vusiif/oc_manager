@@ -12,6 +12,7 @@ import '../../core/design/design_tokens.dart';
 import '../character/character_dialog.dart';
 import 'views/world_kanban_view.dart';
 import 'views/world_table_view.dart';
+import 'world_analytics_dialog.dart';
 
 enum WorldViewMode {
   cards,
@@ -92,6 +93,20 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             ),
             const SizedBox(width: 8),
           ],
+          IconButton(
+            icon: const Icon(Icons.insights_rounded),
+            tooltip: '全景数据大盘与人际网络分析',
+            onPressed: () {
+              final world = worldAsync.valueOrNull;
+              showDialog(
+                context: context,
+                builder: (_) => WorldAnalyticsDialog(
+                  worldId: widget.worldId,
+                  worldName: world?.name ?? '世界观',
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history_edu_rounded),
             tooltip: '编年史大事件',
