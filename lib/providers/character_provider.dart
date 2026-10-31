@@ -98,6 +98,16 @@ class CharacterActions {
         );
   }
 
+  Future<void> updateStatus(int characterId, int newStatus) async {
+    await _ref.read(characterDaoProvider).updatePartial(
+          characterId,
+          CharactersCompanion(
+            status: Value(newStatus),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+  }
+
   Future<void> updateField(
       int characterId, String fieldName, String fieldType, String? value) async {
     final fields = await _ref
