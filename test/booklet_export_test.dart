@@ -209,5 +209,43 @@ void main() {
       expect(charContent, contains('| 力量 | 90.0 | 100.0 | 90% |'));
       expect(charContent, contains('[[兰斯洛特]]'));
     });
+
+    test('should properly escape HTML and defend against XSS in character names and relations', () async {
+      // Add character with XSS payload in name
+      await db.into(db.characters).insert(CharactersCompanion.insert(
+            id: const drift.Value(99),
+            worldId: 1,
+            name: '<script>alert("xss")</script>',
+            gender: const drift.Value('未知'),
+            description: const drift.Value('潜伏者'),
+          ));
+
+      await db.into(db.relations).insert(RelationsCompanion.insert(
+            fromCharacterId: 1,
+            toCharacterId: 99,
+            relationType: '<b onmouseover="evil()">敌对</b>',
+            isBidirectional: const drift.Value(false),
+          ));
+
+      final outputPath = '${tempDir.path}/booklet_xss.html';
+      const options = BookletExportOptions(
+        format: BookletFormat.html,
+        includeCharacters: true,
+        includeRelations: true,
+      );
+
+      await service.exportBooklet(
+        worldId: 1,
+        outputPath: outputPath,
+        options: options,
+      );
+
+      final content = File(outputPath).readAsStringSync();
+      // Must not contain raw unescaped script tag
+      expect(content, isNot(contains('<script>alert("xss")</script>')));
+      expect(content, contains('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'));
+      // Relation chip must escape otherName and relationType
+      expect(content, isNot(contains('<b onmouseover=')));
+    });
   });
 }

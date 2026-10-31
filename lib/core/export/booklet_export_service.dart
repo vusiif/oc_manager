@@ -385,7 +385,7 @@ class BookletExportService {
             final otherId = r.fromCharacterId == c.id ? r.toCharacterId : r.fromCharacterId;
             final otherName = charNameMap[otherId] ?? '未知角色';
             final arrow = r.isBidirectional ? '⮀' : (r.fromCharacterId == c.id ? '➔' : '⬅');
-            sb.writeln('<div class="rel-chip"><strong>$otherName</strong> $arrow <span class="rel-badge">${_escapeHtml(r.relationType)}</span> ${r.note != null && r.note!.isNotEmpty ? '<span class="text-muted">(${_escapeHtml(r.note!)})</span>' : ''}</div>');
+            sb.writeln('<div class="rel-chip"><strong>${_escapeHtml(otherName)}</strong> $arrow <span class="rel-badge">${_escapeHtml(r.relationType)}</span> ${r.note != null && r.note!.isNotEmpty ? '<span class="text-muted">(${_escapeHtml(r.note!)})</span>' : ''}</div>');
           }
           sb.writeln('</div></div>');
         }

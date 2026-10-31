@@ -209,24 +209,29 @@ class _GroupKanbanColumnWrapper extends ConsumerWidget {
           final currentGroupIds =
               await groupDao.getGroupIdsByCharacter(char.id);
           if (!currentGroupIds.contains(col.groupId!)) {
-            final updated = [...currentGroupIds, col.groupId!];
-            await groupDao.setCharacterGroups(char.id, updated);
-            ref.invalidate(charactersByGroupProvider(col.groupId!));
+            await groupDao.setCharacterGroups(char.id, [col.groupId!]);
+            ref.invalidate(charactersByGroupProvider);
+            ref.invalidate(unassignedCharactersByWorldProvider(worldId));
           }
         },
       );
     } else {
-      // 未分组人物筛选
+      // 未分组人物筛选与响应式展示
+      final unassignedAsync = ref.watch(unassignedCharactersByWorldProvider(worldId));
+      final unassignedChars = unassignedAsync.valueOrNull ?? [];
+
       return _KanbanColumn(
         title: col.title,
         icon: Icons.help_outline_rounded,
         color: Colors.grey,
-        count: 0,
-        characters: const [],
+        count: unassignedChars.length,
+        characters: unassignedChars,
         onCharacterSelected: onCharacterSelected,
         onAcceptCharacter: (char) async {
           final groupDao = ref.read(groupDaoProvider);
           await groupDao.setCharacterGroups(char.id, []);
+          ref.invalidate(charactersByGroupProvider);
+          ref.invalidate(unassignedCharactersByWorldProvider(worldId));
         },
       );
     }

@@ -34,6 +34,8 @@ class ImportResult {
   final int importedRelations;
   final int importedGalleries;
   final int importedGroups;
+  final int importedFields;
+  final int importedTags;
   final List<String> createdCharacterNames;
   final List<String> skippedCharacterNames;
 
@@ -43,6 +45,8 @@ class ImportResult {
     required this.importedRelations,
     required this.importedGalleries,
     required this.importedGroups,
+    this.importedFields = 0,
+    this.importedTags = 0,
     required this.createdCharacterNames,
     required this.skippedCharacterNames,
   });
@@ -552,6 +556,22 @@ class OcPackageService {
         }
       }
 
+      // Handle Character Fields
+      int importedFieldsCount = 0;
+      for (final fJson in bundle.characterFields) {
+        final oldCharId = (fJson['characterId'] as num).toInt();
+        final newCharId = oldCharIdToNew[oldCharId];
+        if (newCharId != null) {
+          await db.into(db.characterFields).insert(CharacterFieldsCompanion.insert(
+                characterId: newCharId,
+                fieldName: fJson['fieldName'] as String? ?? '',
+                fieldType: fJson['fieldType'] as String? ?? 'text',
+                value: Value(fJson['value'] as String?),
+              ));
+          importedFieldsCount++;
+        }
+      }
+
       // Handle Character Stats
       for (final sJson in bundle.characterStats) {
         final oldCharId = (sJson['characterId'] as num).toInt();
@@ -637,12 +657,51 @@ class OcPackageService {
         }
       }
 
+      // Handle Tags & Character Tags
+      final oldTagIdToNew = <int, int>{};
+      int importedTagsCount = 0;
+      final existingTags = await db.select(db.tags).get();
+      final existingTagMap = {for (final t in existingTags) t.name: t.id};
+
+      for (final tJson in bundle.tags) {
+        final oldTagId = (tJson['id'] as num).toInt();
+        final tagName = tJson['name'] as String? ?? '未命名标签';
+        final tagColor = tJson['color'] as String? ?? '#6366F1';
+
+        if (existingTagMap.containsKey(tagName)) {
+          oldTagIdToNew[oldTagId] = existingTagMap[tagName]!;
+        } else {
+          final newTagId = await db.into(db.tags).insert(TagsCompanion.insert(
+                name: tagName,
+                color: tagColor,
+              ));
+          existingTagMap[tagName] = newTagId;
+          oldTagIdToNew[oldTagId] = newTagId;
+          importedTagsCount++;
+        }
+      }
+
+      for (final ctJson in bundle.characterTags) {
+        final oldCharId = (ctJson['characterId'] as num).toInt();
+        final oldTagId = (ctJson['tagId'] as num).toInt();
+        final newCharId = oldCharIdToNew[oldCharId];
+        final newTagId = oldTagIdToNew[oldTagId];
+        if (newCharId != null && newTagId != null) {
+          await db.into(db.characterTags).insertOnConflictUpdate(CharacterTagsCompanion.insert(
+                characterId: newCharId,
+                tagId: newTagId,
+              ));
+        }
+      }
+
       return ImportResult(
         importedCharacters: createdNames.length,
         importedTimelineEvents: importedTimelineCount,
         importedRelations: importedRelationsCount,
         importedGalleries: importedGalleriesCount,
         importedGroups: importedGroupsCount,
+        importedFields: importedFieldsCount,
+        importedTags: importedTagsCount,
         createdCharacterNames: createdNames,
         skippedCharacterNames: skippedNames,
       );

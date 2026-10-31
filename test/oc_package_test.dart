@@ -94,6 +94,23 @@ void main() {
             characterId: 101,
             groupId: 201,
           ));
+
+      await db.into(db.characterFields).insert(CharacterFieldsCompanion.insert(
+            characterId: 101,
+            fieldName: '所属流派',
+            fieldType: 'text',
+            value: const drift.Value('独狼黑客'),
+          ));
+
+      await db.into(db.tags).insert(TagsCompanion.insert(
+            id: const drift.Value(301),
+            name: '赛博义体',
+            color: '#00F0FF',
+          ));
+      await db.into(db.characterTags).insert(CharacterTagsCompanion.insert(
+            characterId: 101,
+            tagId: 301,
+          ));
     });
 
     tearDown(() async {
@@ -162,6 +179,21 @@ void main() {
         final johnnyChar = importedChars.firstWhere((c) => c.name == '强尼·银手');
         expect(importedRels.first.fromCharacterId, equals(vChar.id));
         expect(importedRels.first.toCharacterId, equals(johnnyChar.id));
+
+        // Verify fields and tags are completely restored (P0 regression check)
+        final importedFields = await targetDb.select(targetDb.characterFields).get();
+        expect(importedFields.length, equals(1));
+        expect(importedFields.first.fieldName, equals('所属流派'));
+        expect(importedFields.first.value, equals('独狼黑客'));
+        expect(importedFields.first.characterId, equals(vChar.id));
+
+        final importedTags = await targetDb.select(targetDb.tags).get();
+        expect(importedTags.length, equals(1));
+        expect(importedTags.first.name, equals('赛博义体'));
+
+        final importedCharTags = await targetDb.select(targetDb.characterTags).get();
+        expect(importedCharTags.length, equals(1));
+        expect(importedCharTags.first.characterId, equals(vChar.id));
       } finally {
         await targetDb.close();
       }

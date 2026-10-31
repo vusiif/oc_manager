@@ -294,26 +294,18 @@ class TrashActions {
         ),
       );
 
-      // 清除该世界观下所有关联数据
-      for (final rel in relations) {
-        await (_db.delete(_db.relations)..where((r) => r.id.equals(rel.id))).go();
+      // 清除该世界观下所有关联数据（批量清除，避免 N+1 级联操作）
+      if (relations.isNotEmpty) {
+        final relIds = relations.map((r) => r.id).toSet();
+        await (_db.delete(_db.relations)..where((r) => r.id.isIn(relIds))).go();
       }
-      for (final c in characters) {
-        await (_db.delete(_db.characterFields)
-              ..where((t) => t.characterId.equals(c.id)))
-            .go();
-        await (_db.delete(_db.characterStats)
-              ..where((t) => t.characterId.equals(c.id)))
-            .go();
-        await (_db.delete(_db.characterGalleries)
-              ..where((t) => t.characterId.equals(c.id)))
-            .go();
-        await (_db.delete(_db.characterTags)
-              ..where((t) => t.characterId.equals(c.id)))
-            .go();
-        await (_db.delete(_db.characterGroups)
-              ..where((t) => t.characterId.equals(c.id)))
-            .go();
+      if (characters.isNotEmpty) {
+        final charIds = characters.map((c) => c.id).toSet();
+        await (_db.delete(_db.characterFields)..where((t) => t.characterId.isIn(charIds))).go();
+        await (_db.delete(_db.characterStats)..where((t) => t.characterId.isIn(charIds))).go();
+        await (_db.delete(_db.characterGalleries)..where((t) => t.characterId.isIn(charIds))).go();
+        await (_db.delete(_db.characterTags)..where((t) => t.characterId.isIn(charIds))).go();
+        await (_db.delete(_db.characterGroups)..where((t) => t.characterId.isIn(charIds))).go();
       }
 
       await (_db.delete(_db.characters)
@@ -352,12 +344,29 @@ class TrashActions {
     final charId = charData['id'] as int;
     final worldId = charData['worldId'] as int;
 
+    // 校验世界观存在性，若已被物理删除则自动降级归属，防止外键约束崩溃
+    int effectiveWorldId = worldId;
+    final worldExists = await (_db.select(_db.worlds)..where((w) => w.id.equals(worldId))).getSingleOrNull();
+    if (worldExists == null) {
+      final availableWorlds = await _db.select(_db.worlds).get();
+      if (availableWorlds.isNotEmpty) {
+        effectiveWorldId = availableWorlds.first.id;
+      } else {
+        effectiveWorldId = await _db.into(_db.worlds).insert(
+              WorldsCompanion.insert(
+                name: '恢复人物收纳世界',
+                description: const Value('自动创建用于收纳已失去归属世界观的人物'),
+              ),
+            );
+      }
+    }
+
     await _db.transaction(() async {
       // 1. 还原人物主表
       await _db.into(_db.characters).insertOnConflictUpdate(
             CharactersCompanion(
               id: Value(charId),
-              worldId: Value(worldId),
+              worldId: Value(effectiveWorldId),
               name: Value(charData['name'] as String),
               avatarPath: Value(charData['avatarPath'] as String?),
               gender: Value(charData['gender'] as String? ?? ''),
@@ -421,7 +430,7 @@ class TrashActions {
         final tm = t as Map<String, dynamic>;
         await _db.into(_db.timelineEvents).insert(
               TimelineEventsCompanion.insert(
-                worldId: tm['worldId'] as int? ?? worldId,
+                worldId: effectiveWorldId,
                 characterId: Value(charId),
                 year: tm['year'] as String,
                 sortOrder: Value((tm['sortOrder'] as num?)?.toDouble() ?? 0.0),

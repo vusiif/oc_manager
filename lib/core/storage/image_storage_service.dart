@@ -81,37 +81,63 @@ class ImageStorageService {
   }
 
   /// Resolves a stored path (relative or absolute) to a concrete [File].
-  /// Returns null if the file does not exist.
+  /// Enforces sandbox boundary for relative paths and validates image extensions.
+  /// Returns null if the file does not exist or violates security constraints.
   Future<File?> resolveImageFile(String? storedPath) async {
     if (storedPath == null || storedPath.trim().isEmpty) return null;
 
     final trimmed = storedPath.trim();
-
-    // 1. If absolute and exists
-    final absFile = File(trimmed);
-    if (absFile.isAbsolute && absFile.existsSync()) {
-      return absFile;
-    }
-
-    // 2. Resolve relative path against oc_manager base directory
     final base = await getBaseDir();
-    final resolvedFile = File(p.join(base.path, trimmed));
-    if (resolvedFile.existsSync()) {
-      return resolvedFile;
+    final baseCanonical = p.canonicalize(base.path);
+    const validExtensions = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'};
+
+    // 1. If absolute, verify existence and ensure it is an image file
+    if (p.isAbsolute(trimmed)) {
+      final absCanonical = p.canonicalize(trimmed);
+      final absFile = File(absCanonical);
+      if (absFile.existsSync()) {
+        final ext = p.extension(absCanonical).toLowerCase();
+        if (validExtensions.contains(ext)) {
+          return absFile;
+        }
+      }
+      return null;
     }
 
-    return null;
+    // 2. Relative path must stay strictly inside oc_manager sandbox (prevent Path Traversal)
+    final targetPath = p.join(base.path, trimmed);
+    final targetCanonical = p.canonicalize(targetPath);
+    if (!p.isWithin(baseCanonical, targetCanonical) && targetCanonical != baseCanonical) {
+      return null;
+    }
+
+    final resolvedFile = File(targetCanonical);
+    return resolvedFile.existsSync() ? resolvedFile : null;
   }
 
-  /// Synchronously checks if an absolute path exists (fast fallback).
+  /// Synchronously checks if a path exists within sandbox (fast fallback).
   static File? tryResolveSync(String? storedPath, String? baseDirPath) {
     if (storedPath == null || storedPath.trim().isEmpty) return null;
     final trimmed = storedPath.trim();
-    final absFile = File(trimmed);
-    if (absFile.isAbsolute && absFile.existsSync()) return absFile;
+    const validExtensions = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'};
+
+    if (p.isAbsolute(trimmed)) {
+      final absCanonical = p.canonicalize(trimmed);
+      final absFile = File(absCanonical);
+      if (absFile.existsSync()) {
+        final ext = p.extension(absCanonical).toLowerCase();
+        if (validExtensions.contains(ext)) return absFile;
+      }
+      return null;
+    }
 
     if (baseDirPath != null) {
-      final relFile = File(p.join(baseDirPath, trimmed));
+      final baseCanonical = p.canonicalize(baseDirPath);
+      final targetCanonical = p.canonicalize(p.join(baseDirPath, trimmed));
+      if (!p.isWithin(baseCanonical, targetCanonical) && targetCanonical != baseCanonical) {
+        return null;
+      }
+      final relFile = File(targetCanonical);
       if (relFile.existsSync()) return relFile;
     }
     return null;

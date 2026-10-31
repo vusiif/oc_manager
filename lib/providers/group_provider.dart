@@ -22,6 +22,16 @@ final charactersByGroupProvider =
   return allChars;
 });
 
+// 获取世界观下未加入任何分组的人物列表
+final unassignedCharactersByWorldProvider =
+    FutureProvider.family<List<Character>, int>((ref, worldId) async {
+  final db = ref.read(databaseProvider);
+  final allWorldChars = await (db.select(db.characters)..where((c) => c.worldId.equals(worldId))).get();
+  final allCharGroups = await db.select(db.characterGroups).get();
+  final assignedCharIds = allCharGroups.map((cg) => cg.characterId).toSet();
+  return allWorldChars.where((c) => !assignedCharIds.contains(c.id)).toList();
+});
+
 // 获取人物所属的分组 ID 列表
 final characterGroupIdsProvider =
     FutureProvider.family<List<int>, int>((ref, characterId) async {

@@ -8,6 +8,7 @@ import '../../providers/relation_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../data/database/app_database.dart';
 import '../../core/storage/image_storage_service.dart';
+import '../../core/constants/character_status.dart';
 import '../../core/design/components/oc_avatar.dart';
 import '../../core/design/components/radar_chart.dart';
 import 'character_gallery_section.dart';
@@ -221,7 +222,7 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                         _InfoRow(label: '性别', value: character.gender),
                       _InfoRow(
                         label: '状态',
-                        value: character.status == 0 ? '正式' : '草稿',
+                        value: CharacterCreationStatus.find(character.status).label,
                       ),
                       _InfoRow(
                         label: '创建时间',

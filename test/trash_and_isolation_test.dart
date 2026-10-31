@@ -269,5 +269,38 @@ void main() {
       expect(rows.first.x, equals(300.0));
       expect(rows.first.y, equals(400.0));
     });
+
+    test('restoreCharacter succeeds gracefully without FOREIGN KEY crash even if original world is deleted', () async {
+      // 1. 创建世界与人物
+      final origWorldId = await db.into(db.worlds).insert(
+            WorldsCompanion.insert(name: '即将覆灭的古纪元'),
+          );
+      final charId = await db.into(db.characters).insert(
+            CharactersCompanion.insert(
+              worldId: origWorldId,
+              name: '流浪遗民',
+              gender: const Value('男'),
+            ),
+          );
+
+      final character = await db.characterDao.getCharacterById(charId);
+      final trashActions = container.read(trashActionsProvider);
+
+      // 2. 软删除该角色
+      await trashActions.deleteCharacter(character);
+      final trashRows = await db.trashDao.getAllTrash();
+      expect(trashRows.length, equals(1));
+
+      // 3. 模拟极端情况：将原世界彻底从数据库物理删除
+      await (db.delete(db.worlds)..where((w) => w.id.equals(origWorldId))).go();
+
+      // 4. 尝试恢复该孤儿角色：绝不应抛出 SQLite FOREIGN KEY 崩溃！
+      await expectLater(trashActions.restoreCharacter(trashRows.first), completes);
+
+      // 5. 验证角色已成功复活并自动降级收纳到了新分配的世界
+      final restoredChar = await (db.select(db.characters)..where((c) => c.id.equals(charId))).getSingle();
+      expect(restoredChar.name, equals('流浪遗民'));
+      expect(restoredChar.worldId, isNot(equals(origWorldId)));
+    });
   });
 }
