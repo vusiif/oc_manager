@@ -33,6 +33,8 @@ class AppFonts {
     FontWeight? fontWeight,
     Color? color,
     double? height,
+    FontStyle? fontStyle,
+    double? letterSpacing,
   }) {
     return TextStyle(
       fontFamily: primaryFont,
@@ -41,6 +43,8 @@ class AppFonts {
       fontWeight: fontWeight,
       color: color,
       height: height,
+      fontStyle: fontStyle,
+      letterSpacing: letterSpacing,
     );
   }
 }

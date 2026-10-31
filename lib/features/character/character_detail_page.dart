@@ -11,6 +11,7 @@ import '../../core/storage/image_storage_service.dart';
 import '../../core/design/components/oc_avatar.dart';
 import '../../core/design/components/radar_chart.dart';
 import 'character_gallery_section.dart';
+import 'character_poster_dialog.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
 
@@ -108,6 +109,22 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.art_track_rounded),
+            tooltip: '生成人设长图海报',
+            onPressed: () {
+              final character = characterAsync.valueOrNull;
+              if (character != null) {
+                showDialog(
+                  context: context,
+                  builder: (_) => CharacterPosterDialog(
+                    character: character,
+                    worldId: widget.worldId,
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
               final character = characterAsync.valueOrNull;
@@ -130,6 +147,16 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
           PopupMenuButton(
             itemBuilder: (context) => [
               const PopupMenuItem(
+                value: 'export_poster',
+                child: Row(
+                  children: [
+                    Icon(Icons.art_track_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text('生成长图海报'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'add_field',
                 child: Text('添加字段'),
               ),
@@ -140,7 +167,18 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
               ),
             ],
             onSelected: (value) {
-              if (value == 'add_field') {
+              if (value == 'export_poster') {
+                final character = characterAsync.valueOrNull;
+                if (character != null) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => CharacterPosterDialog(
+                      character: character,
+                      worldId: widget.worldId,
+                    ),
+                  );
+                }
+              } else if (value == 'add_field') {
                 _showAddFieldDialog(context, ref);
               } else if (value == 'delete') {
                 _confirmDelete(context, ref);
