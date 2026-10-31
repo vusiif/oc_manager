@@ -24,6 +24,11 @@ final characterStatsProvider =
   return ref.watch(characterDaoProvider).watchCharacterStats(characterId);
 });
 
+final characterGalleriesProvider =
+    StreamProvider.family<List<CharacterGallery>, int>((ref, characterId) {
+  return ref.watch(characterDaoProvider).watchCharacterGalleries(characterId);
+});
+
 final characterActionsProvider = Provider((ref) => CharacterActions(ref));
 
 class CharacterActions {
@@ -141,5 +146,58 @@ class CharacterActions {
 
   Future<void> deleteStat(int statId) async {
     await _ref.read(characterDaoProvider).deleteCharacterStat(statId);
+  }
+
+  Future<int> addGalleryImage({
+    required int characterId,
+    required String imagePath,
+    String caption = '',
+    bool isPrimary = false,
+  }) async {
+    final dao = _ref.read(characterDaoProvider);
+    final count = (await dao.getCharacterGalleries(characterId)).length;
+    final id = await dao.addGalleryImage(
+      CharacterGalleriesCompanion.insert(
+        characterId: characterId,
+        imagePath: imagePath,
+        caption: Value(caption),
+        isPrimary: Value(isPrimary),
+        sortOrder: Value(count),
+      ),
+    );
+    if (isPrimary) {
+      await dao.setPrimaryGalleryImage(characterId, id);
+    }
+    return id;
+  }
+
+  Future<void> updateGalleryCaption(int galleryId, String caption) async {
+    final dao = _ref.read(characterDaoProvider);
+    final item = await (dao.select(dao.characterGalleries)
+          ..where((t) => t.id.equals(galleryId)))
+        .getSingleOrNull();
+    if (item != null) {
+      await dao.updateGalleryImage(
+        CharacterGalleriesCompanion(
+          id: Value(item.id),
+          characterId: Value(item.characterId),
+          imagePath: Value(item.imagePath),
+          caption: Value(caption),
+          isPrimary: Value(item.isPrimary),
+          sortOrder: Value(item.sortOrder),
+          createdAt: Value(item.createdAt),
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteGalleryImage(int galleryId) async {
+    await _ref.read(characterDaoProvider).deleteGalleryImage(galleryId);
+  }
+
+  Future<void> setPrimaryGalleryImage(int characterId, int galleryId) async {
+    await _ref
+        .read(characterDaoProvider)
+        .setPrimaryGalleryImage(characterId, galleryId);
   }
 }

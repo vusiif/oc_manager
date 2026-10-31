@@ -29,6 +29,8 @@ class TrashActions {
   Future<void> deleteCharacter(Character character) async {
     final fields = await _db.characterDao.getCharacterFields(character.id);
     final stats = await _db.characterDao.getCharacterStats(character.id);
+    final galleries =
+        await _db.characterDao.getCharacterGalleries(character.id);
     final groupIds =
         await _db.groupDao.getGroupIdsByCharacter(character.id);
 
@@ -74,6 +76,16 @@ class TrashActions {
             'sortOrder': s.sortOrder,
           }
       ],
+      'galleries': [
+        for (final g in galleries)
+          {
+            'imagePath': g.imagePath,
+            'caption': g.caption,
+            'isPrimary': g.isPrimary,
+            'sortOrder': g.sortOrder,
+            'createdAt': g.createdAt.toIso8601String(),
+          }
+      ],
       'tagIds': tagIds,
       'groupIds': groupIds,
       'layout': layoutRow != null
@@ -100,6 +112,9 @@ class TrashActions {
             ..where((t) => t.characterId.equals(character.id)))
           .go();
       await (_db.delete(_db.characterStats)
+            ..where((t) => t.characterId.equals(character.id)))
+          .go();
+      await (_db.delete(_db.characterGalleries)
             ..where((t) => t.characterId.equals(character.id)))
           .go();
       await (_db.delete(_db.characterTags)
@@ -142,6 +157,8 @@ class TrashActions {
     for (final c in characters) {
       final fields = await _db.characterDao.getCharacterFields(c.id);
       final stats = await _db.characterDao.getCharacterStats(c.id);
+      final galleries =
+          await _db.characterDao.getCharacterGalleries(c.id);
       final groupIds = await _db.groupDao.getGroupIdsByCharacter(c.id);
       final tagRows = await (_db.select(_db.characterTags)
             ..where((t) => t.characterId.equals(c.id)))
@@ -176,6 +193,16 @@ class TrashActions {
               'value': s.value,
               'maxValue': s.maxValue,
               'sortOrder': s.sortOrder,
+            }
+        ],
+        'galleries': [
+          for (final g in galleries)
+            {
+              'imagePath': g.imagePath,
+              'caption': g.caption,
+              'isPrimary': g.isPrimary,
+              'sortOrder': g.sortOrder,
+              'createdAt': g.createdAt.toIso8601String(),
             }
         ],
         'tagIds': tagRows.map((r) => r.tagId).toList(),
@@ -245,6 +272,9 @@ class TrashActions {
         await (_db.delete(_db.characterStats)
               ..where((t) => t.characterId.equals(c.id)))
             .go();
+        await (_db.delete(_db.characterGalleries)
+              ..where((t) => t.characterId.equals(c.id)))
+            .go();
         await (_db.delete(_db.characterTags)
               ..where((t) => t.characterId.equals(c.id)))
             .go();
@@ -279,6 +309,7 @@ class TrashActions {
 
     final fieldsData = (parsed['fields'] as List<dynamic>?) ?? [];
     final statsData = (parsed['stats'] as List<dynamic>?) ?? [];
+    final galleryData = (parsed['galleries'] as List<dynamic>?) ?? [];
     final tagIds = (parsed['tagIds'] as List<dynamic>?) ?? [];
     final groupIds = (parsed['groupIds'] as List<dynamic>?) ?? [];
     final layoutData = parsed['layout'] as Map<String, dynamic>?;
@@ -329,6 +360,23 @@ class TrashActions {
                 value: Value((statMap['value'] as num).toDouble()),
                 maxValue: Value((statMap['maxValue'] as num?)?.toDouble() ?? 100.0),
                 sortOrder: Value(statMap['sortOrder'] as int? ?? 0),
+              ),
+            );
+      }
+
+      // 2.2 还原画廊立绘
+      for (final g in galleryData) {
+        final gm = g as Map<String, dynamic>;
+        await _db.into(_db.characterGalleries).insert(
+              CharacterGalleriesCompanion.insert(
+                characterId: charId,
+                imagePath: gm['imagePath'] as String,
+                caption: Value(gm['caption'] as String? ?? ''),
+                isPrimary: Value(gm['isPrimary'] as bool? ?? false),
+                sortOrder: Value(gm['sortOrder'] as int? ?? 0),
+                createdAt: Value(gm['createdAt'] != null
+                    ? DateTime.parse(gm['createdAt'] as String)
+                    : DateTime.now()),
               ),
             );
       }
@@ -472,6 +520,23 @@ class TrashActions {
                   value: Value((sm['value'] as num).toDouble()),
                   maxValue: Value((sm['maxValue'] as num?)?.toDouble() ?? 100.0),
                   sortOrder: Value(sm['sortOrder'] as int? ?? 0),
+                ),
+              );
+        }
+
+        final galleries = (cm['galleries'] as List<dynamic>?) ?? [];
+        for (final g in galleries) {
+          final gm = g as Map<String, dynamic>;
+          await _db.into(_db.characterGalleries).insert(
+                CharacterGalleriesCompanion.insert(
+                  characterId: cId,
+                  imagePath: gm['imagePath'] as String,
+                  caption: Value(gm['caption'] as String? ?? ''),
+                  isPrimary: Value(gm['isPrimary'] as bool? ?? false),
+                  sortOrder: Value(gm['sortOrder'] as int? ?? 0),
+                  createdAt: Value(gm['createdAt'] != null
+                      ? DateTime.parse(gm['createdAt'] as String)
+                      : DateTime.now()),
                 ),
               );
         }

@@ -4,7 +4,7 @@ import '../tables/characters.dart';
 
 part 'character_dao.g.dart';
 
-@DriftAccessor(tables: [Characters, CharacterFields, CharacterStats])
+@DriftAccessor(tables: [Characters, CharacterFields, CharacterStats, CharacterGalleries])
 class CharacterDao extends DatabaseAccessor<AppDatabase>
     with _$CharacterDaoMixin {
   CharacterDao(super.db);
@@ -105,5 +105,54 @@ class CharacterDao extends DatabaseAccessor<AppDatabase>
             sortOrder: Value(i),
           ));
         }
+      });
+
+  Future<List<CharacterGallery>> getCharacterGalleries(int characterId) =>
+      (select(characterGalleries)
+            ..where((t) => t.characterId.equals(characterId))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+          .get();
+
+  Stream<List<CharacterGallery>> watchCharacterGalleries(int characterId) =>
+      (select(characterGalleries)
+            ..where((t) => t.characterId.equals(characterId))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+          .watch();
+
+  Future<int> addGalleryImage(CharacterGalleriesCompanion entry) =>
+      into(characterGalleries).insert(entry);
+
+  Future<void> updateGalleryImage(CharacterGalleriesCompanion entry) =>
+      update(characterGalleries).replace(entry);
+
+  Future<int> deleteGalleryImage(int id) =>
+      (delete(characterGalleries)..where((t) => t.id.equals(id))).go();
+
+  Future<void> deleteAllGalleryImages(int characterId) =>
+      (delete(characterGalleries)
+            ..where((t) => t.characterId.equals(characterId)))
+          .go();
+
+  Future<void> setPrimaryGalleryImage(int characterId, int galleryId) =>
+      transaction(() async {
+        final item = await (select(characterGalleries)
+              ..where((t) => t.id.equals(galleryId)))
+            .getSingleOrNull();
+        if (item == null) return;
+
+        await (update(characterGalleries)
+              ..where((t) => t.characterId.equals(characterId)))
+            .write(const CharacterGalleriesCompanion(isPrimary: Value(false)));
+
+        await (update(characterGalleries)..where((t) => t.id.equals(galleryId)))
+            .write(const CharacterGalleriesCompanion(isPrimary: Value(true)));
+
+        await updatePartial(
+          characterId,
+          CharactersCompanion(
+            avatarPath: Value(item.imagePath),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
       });
 }

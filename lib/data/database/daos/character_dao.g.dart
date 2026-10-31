@@ -8,6 +8,8 @@ mixin _$CharacterDaoMixin on DatabaseAccessor<AppDatabase> {
   $CharactersTable get characters => attachedDatabase.characters;
   $CharacterFieldsTable get characterFields => attachedDatabase.characterFields;
   $CharacterStatsTable get characterStats => attachedDatabase.characterStats;
+  $CharacterGalleriesTable get characterGalleries =>
+      attachedDatabase.characterGalleries;
   CharacterDaoManager get managers => CharacterDaoManager(this);
 }
 
@@ -27,5 +29,10 @@ class CharacterDaoManager {
       $$CharacterStatsTableTableManager(
         _db.attachedDatabase,
         _db.characterStats,
+      );
+  $$CharacterGalleriesTableTableManager get characterGalleries =>
+      $$CharacterGalleriesTableTableManager(
+        _db.attachedDatabase,
+        _db.characterGalleries,
       );
 }

@@ -32,6 +32,34 @@ class ImageStorageService {
     return avatarsDir;
   }
 
+  /// Returns the directory where character gallery/costume images are stored.
+  Future<Directory> getGalleryDir() async {
+    final base = await getBaseDir();
+    final galleryDir = Directory(p.join(base.path, 'gallery'));
+    if (!galleryDir.existsSync()) {
+      await galleryDir.create(recursive: true);
+    }
+    return galleryDir;
+  }
+
+  /// Copies an image from [sourcePath] into the app's gallery directory.
+  /// Returns a portable relative path, e.g. "gallery/char_1_1697481234.png".
+  Future<String> saveGalleryImage({
+    required String sourcePath,
+    required int characterId,
+  }) async {
+    final galleryDir = await getGalleryDir();
+    final ext = p.extension(sourcePath).isNotEmpty ? p.extension(sourcePath) : '.jpg';
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = 'char_${characterId}_$timestamp$ext';
+    final targetPath = p.join(galleryDir.path, fileName);
+
+    final sourceFile = File(sourcePath);
+    await sourceFile.copy(targetPath);
+
+    return p.join('gallery', fileName).replaceAll(r'\', '/');
+  }
+
   /// Copies an image from [sourcePath] into the app's avatars directory.
   /// Returns a portable relative path, e.g. "avatars/char_1_1697481234.png".
   Future<String> saveAvatarImage({

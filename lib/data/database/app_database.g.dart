@@ -1829,6 +1829,468 @@ class CharacterStatsCompanion extends UpdateCompanion<CharacterStat> {
   }
 }
 
+class $CharacterGalleriesTable extends CharacterGalleries
+    with TableInfo<$CharacterGalleriesTable, CharacterGallery> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterGalleriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES characters (id)',
+    ),
+  );
+  static const VerificationMeta _imagePathMeta = const VerificationMeta(
+    'imagePath',
+  );
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+    'image_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _captionMeta = const VerificationMeta(
+    'caption',
+  );
+  @override
+  late final GeneratedColumn<String> caption = GeneratedColumn<String>(
+    'caption',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _isPrimaryMeta = const VerificationMeta(
+    'isPrimary',
+  );
+  @override
+  late final GeneratedColumn<bool> isPrimary = GeneratedColumn<bool>(
+    'is_primary',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_primary" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    characterId,
+    imagePath,
+    caption,
+    isPrimary,
+    sortOrder,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_galleries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterGallery> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(
+        _imagePathMeta,
+        imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_imagePathMeta);
+    }
+    if (data.containsKey('caption')) {
+      context.handle(
+        _captionMeta,
+        caption.isAcceptableOrUnknown(data['caption']!, _captionMeta),
+      );
+    }
+    if (data.containsKey('is_primary')) {
+      context.handle(
+        _isPrimaryMeta,
+        isPrimary.isAcceptableOrUnknown(data['is_primary']!, _isPrimaryMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CharacterGallery map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterGallery(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      imagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path'],
+      )!,
+      caption: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}caption'],
+      )!,
+      isPrimary: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_primary'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CharacterGalleriesTable createAlias(String alias) {
+    return $CharacterGalleriesTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterGallery extends DataClass
+    implements Insertable<CharacterGallery> {
+  final int id;
+  final int characterId;
+  final String imagePath;
+  final String caption;
+  final bool isPrimary;
+  final int sortOrder;
+  final DateTime createdAt;
+  const CharacterGallery({
+    required this.id,
+    required this.characterId,
+    required this.imagePath,
+    required this.caption,
+    required this.isPrimary,
+    required this.sortOrder,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['image_path'] = Variable<String>(imagePath);
+    map['caption'] = Variable<String>(caption);
+    map['is_primary'] = Variable<bool>(isPrimary);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CharacterGalleriesCompanion toCompanion(bool nullToAbsent) {
+    return CharacterGalleriesCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      imagePath: Value(imagePath),
+      caption: Value(caption),
+      isPrimary: Value(isPrimary),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CharacterGallery.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterGallery(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      imagePath: serializer.fromJson<String>(json['imagePath']),
+      caption: serializer.fromJson<String>(json['caption']),
+      isPrimary: serializer.fromJson<bool>(json['isPrimary']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'imagePath': serializer.toJson<String>(imagePath),
+      'caption': serializer.toJson<String>(caption),
+      'isPrimary': serializer.toJson<bool>(isPrimary),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CharacterGallery copyWith({
+    int? id,
+    int? characterId,
+    String? imagePath,
+    String? caption,
+    bool? isPrimary,
+    int? sortOrder,
+    DateTime? createdAt,
+  }) => CharacterGallery(
+    id: id ?? this.id,
+    characterId: characterId ?? this.characterId,
+    imagePath: imagePath ?? this.imagePath,
+    caption: caption ?? this.caption,
+    isPrimary: isPrimary ?? this.isPrimary,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CharacterGallery copyWithCompanion(CharacterGalleriesCompanion data) {
+    return CharacterGallery(
+      id: data.id.present ? data.id.value : this.id,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+      caption: data.caption.present ? data.caption.value : this.caption,
+      isPrimary: data.isPrimary.present ? data.isPrimary.value : this.isPrimary,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterGallery(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('caption: $caption, ')
+          ..write('isPrimary: $isPrimary, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    characterId,
+    imagePath,
+    caption,
+    isPrimary,
+    sortOrder,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterGallery &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.imagePath == this.imagePath &&
+          other.caption == this.caption &&
+          other.isPrimary == this.isPrimary &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class CharacterGalleriesCompanion extends UpdateCompanion<CharacterGallery> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<String> imagePath;
+  final Value<String> caption;
+  final Value<bool> isPrimary;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  const CharacterGalleriesCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.imagePath = const Value.absent(),
+    this.caption = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  CharacterGalleriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required String imagePath,
+    this.caption = const Value.absent(),
+    this.isPrimary = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : characterId = Value(characterId),
+       imagePath = Value(imagePath);
+  static Insertable<CharacterGallery> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<String>? imagePath,
+    Expression<String>? caption,
+    Expression<bool>? isPrimary,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (imagePath != null) 'image_path': imagePath,
+      if (caption != null) 'caption': caption,
+      if (isPrimary != null) 'is_primary': isPrimary,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  CharacterGalleriesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? characterId,
+    Value<String>? imagePath,
+    Value<String>? caption,
+    Value<bool>? isPrimary,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+  }) {
+    return CharacterGalleriesCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      imagePath: imagePath ?? this.imagePath,
+      caption: caption ?? this.caption,
+      isPrimary: isPrimary ?? this.isPrimary,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
+    if (caption.present) {
+      map['caption'] = Variable<String>(caption.value);
+    }
+    if (isPrimary.present) {
+      map['is_primary'] = Variable<bool>(isPrimary.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterGalleriesCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('caption: $caption, ')
+          ..write('isPrimary: $isPrimary, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RelationsTable extends Relations
     with TableInfo<$RelationsTable, Relation> {
   @override
@@ -5679,6 +6141,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $CharacterStatsTable characterStats = $CharacterStatsTable(this);
+  late final $CharacterGalleriesTable characterGalleries =
+      $CharacterGalleriesTable(this);
   late final $RelationsTable relations = $RelationsTable(this);
   late final $TemplatesTable templates = $TemplatesTable(this);
   late final $TemplateFieldsTable templateFields = $TemplateFieldsTable(this);
@@ -5712,6 +6176,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     characters,
     characterFields,
     characterStats,
+    characterGalleries,
     relations,
     templates,
     templateFields,
@@ -6326,6 +6791,30 @@ final class $$CharactersTableReferences
     );
   }
 
+  static MultiTypedResultKey<$CharacterGalleriesTable, List<CharacterGallery>>
+  _characterGalleriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.characterGalleries,
+        aliasName: $_aliasNameGenerator(
+          db.characters.id,
+          db.characterGalleries.characterId,
+        ),
+      );
+
+  $$CharacterGalleriesTableProcessedTableManager get characterGalleriesRefs {
+    final manager = $$CharacterGalleriesTableTableManager(
+      $_db,
+      $_db.characterGalleries,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _characterGalleriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$CharacterTagsTable, List<CharacterTag>>
   _characterTagsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.characterTags,
@@ -6494,6 +6983,31 @@ class $$CharactersTableFilterComposer
           }) => $$CharacterStatsTableFilterComposer(
             $db: $db,
             $table: $db.characterStats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> characterGalleriesRefs(
+    Expression<bool> Function($$CharacterGalleriesTableFilterComposer f) f,
+  ) {
+    final $$CharacterGalleriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.characterGalleries,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharacterGalleriesTableFilterComposer(
+            $db: $db,
+            $table: $db.characterGalleries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6755,6 +7269,32 @@ class $$CharactersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> characterGalleriesRefs<T extends Object>(
+    Expression<T> Function($$CharacterGalleriesTableAnnotationComposer a) f,
+  ) {
+    final $$CharacterGalleriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.characterGalleries,
+          getReferencedColumn: (t) => t.characterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CharacterGalleriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.characterGalleries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> characterTagsRefs<T extends Object>(
     Expression<T> Function($$CharacterTagsTableAnnotationComposer a) f,
   ) {
@@ -6823,6 +7363,7 @@ class $$CharactersTableTableManager
             bool worldId,
             bool characterFieldsRefs,
             bool characterStatsRefs,
+            bool characterGalleriesRefs,
             bool characterTagsRefs,
             bool characterGroupsRefs,
           })
@@ -6903,6 +7444,7 @@ class $$CharactersTableTableManager
                 worldId = false,
                 characterFieldsRefs = false,
                 characterStatsRefs = false,
+                characterGalleriesRefs = false,
                 characterTagsRefs = false,
                 characterGroupsRefs = false,
               }) {
@@ -6911,6 +7453,7 @@ class $$CharactersTableTableManager
                   explicitlyWatchedTables: [
                     if (characterFieldsRefs) db.characterFields,
                     if (characterStatsRefs) db.characterStats,
+                    if (characterGalleriesRefs) db.characterGalleries,
                     if (characterTagsRefs) db.characterTags,
                     if (characterGroupsRefs) db.characterGroups,
                   ],
@@ -6991,6 +7534,27 @@ class $$CharactersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (characterGalleriesRefs)
+                        await $_getPrefetchedData<
+                          Character,
+                          $CharactersTable,
+                          CharacterGallery
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CharactersTableReferences
+                              ._characterGalleriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).characterGalleriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (characterTagsRefs)
                         await $_getPrefetchedData<
                           Character,
@@ -7057,6 +7621,7 @@ typedef $$CharactersTableProcessedTableManager =
         bool worldId,
         bool characterFieldsRefs,
         bool characterStatsRefs,
+        bool characterGalleriesRefs,
         bool characterTagsRefs,
         bool characterGroupsRefs,
       })
@@ -7720,6 +8285,376 @@ typedef $$CharacterStatsTableProcessedTableManager =
       $$CharacterStatsTableUpdateCompanionBuilder,
       (CharacterStat, $$CharacterStatsTableReferences),
       CharacterStat,
+      PrefetchHooks Function({bool characterId})
+    >;
+typedef $$CharacterGalleriesTableCreateCompanionBuilder =
+    CharacterGalleriesCompanion Function({
+      Value<int> id,
+      required int characterId,
+      required String imagePath,
+      Value<String> caption,
+      Value<bool> isPrimary,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+    });
+typedef $$CharacterGalleriesTableUpdateCompanionBuilder =
+    CharacterGalleriesCompanion Function({
+      Value<int> id,
+      Value<int> characterId,
+      Value<String> imagePath,
+      Value<String> caption,
+      Value<bool> isPrimary,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+    });
+
+final class $$CharacterGalleriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CharacterGalleriesTable,
+          CharacterGallery
+        > {
+  $$CharacterGalleriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias(
+        $_aliasNameGenerator(
+          db.characterGalleries.characterId,
+          db.characters.id,
+        ),
+      );
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager(
+      $_db,
+      $_db.characters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CharacterGalleriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterGalleriesTable> {
+  $$CharacterGalleriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get caption => $composableBuilder(
+    column: $table.caption,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterGalleriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterGalleriesTable> {
+  $$CharacterGalleriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get caption => $composableBuilder(
+    column: $table.caption,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPrimary => $composableBuilder(
+    column: $table.isPrimary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterGalleriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterGalleriesTable> {
+  $$CharacterGalleriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  GeneratedColumn<String> get caption =>
+      $composableBuilder(column: $table.caption, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPrimary =>
+      $composableBuilder(column: $table.isPrimary, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterGalleriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CharacterGalleriesTable,
+          CharacterGallery,
+          $$CharacterGalleriesTableFilterComposer,
+          $$CharacterGalleriesTableOrderingComposer,
+          $$CharacterGalleriesTableAnnotationComposer,
+          $$CharacterGalleriesTableCreateCompanionBuilder,
+          $$CharacterGalleriesTableUpdateCompanionBuilder,
+          (CharacterGallery, $$CharacterGalleriesTableReferences),
+          CharacterGallery,
+          PrefetchHooks Function({bool characterId})
+        > {
+  $$CharacterGalleriesTableTableManager(
+    _$AppDatabase db,
+    $CharacterGalleriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterGalleriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CharacterGalleriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CharacterGalleriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String> imagePath = const Value.absent(),
+                Value<String> caption = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => CharacterGalleriesCompanion(
+                id: id,
+                characterId: characterId,
+                imagePath: imagePath,
+                caption: caption,
+                isPrimary: isPrimary,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int characterId,
+                required String imagePath,
+                Value<String> caption = const Value.absent(),
+                Value<bool> isPrimary = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => CharacterGalleriesCompanion.insert(
+                id: id,
+                characterId: characterId,
+                imagePath: imagePath,
+                caption: caption,
+                isPrimary: isPrimary,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CharacterGalleriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (characterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.characterId,
+                                referencedTable:
+                                    $$CharacterGalleriesTableReferences
+                                        ._characterIdTable(db),
+                                referencedColumn:
+                                    $$CharacterGalleriesTableReferences
+                                        ._characterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CharacterGalleriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CharacterGalleriesTable,
+      CharacterGallery,
+      $$CharacterGalleriesTableFilterComposer,
+      $$CharacterGalleriesTableOrderingComposer,
+      $$CharacterGalleriesTableAnnotationComposer,
+      $$CharacterGalleriesTableCreateCompanionBuilder,
+      $$CharacterGalleriesTableUpdateCompanionBuilder,
+      (CharacterGallery, $$CharacterGalleriesTableReferences),
+      CharacterGallery,
       PrefetchHooks Function({bool characterId})
     >;
 typedef $$RelationsTableCreateCompanionBuilder =
@@ -11162,6 +12097,8 @@ class $AppDatabaseManager {
       $$CharacterFieldsTableTableManager(_db, _db.characterFields);
   $$CharacterStatsTableTableManager get characterStats =>
       $$CharacterStatsTableTableManager(_db, _db.characterStats);
+  $$CharacterGalleriesTableTableManager get characterGalleries =>
+      $$CharacterGalleriesTableTableManager(_db, _db.characterGalleries);
   $$RelationsTableTableManager get relations =>
       $$RelationsTableTableManager(_db, _db.relations);
   $$TemplatesTableTableManager get templates =>

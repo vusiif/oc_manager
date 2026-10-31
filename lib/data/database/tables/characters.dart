@@ -32,3 +32,13 @@ class CharacterStats extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 }
 
+class CharacterGalleries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get characterId => integer().references(Characters, #id)();
+  TextColumn get imagePath => text()();
+  TextColumn get caption => text().withLength(min: 0, max: 100).withDefault(const Constant(''))();
+  BoolColumn get isPrimary => boolean().withDefault(const Constant(false))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
