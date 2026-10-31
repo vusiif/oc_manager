@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers/world_provider.dart';
 import '../../providers/character_provider.dart';
@@ -40,6 +41,13 @@ class WorldDetailPage extends ConsumerWidget {
           loading: () => const Text('加载中'),
           error: (err, stack) => const Text('错误'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_edu_rounded),
+            tooltip: '编年史大事件',
+            onPressed: () => context.push('/world/$worldId/chronicle'),
+          ),
+        ],
       ),
       body: selectedGroupId != null
           ? _buildGroupCharacters(context, ref, filteredCharactersAsync)

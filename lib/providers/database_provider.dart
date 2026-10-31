@@ -21,3 +21,5 @@ final settingsDaoProvider =
     Provider((ref) => ref.watch(databaseProvider).settingsDao);
 final groupDaoProvider =
     Provider((ref) => ref.watch(databaseProvider).groupDao);
+final timelineDaoProvider =
+    Provider((ref) => ref.watch(databaseProvider).timelineDao);

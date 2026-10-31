@@ -43,13 +43,20 @@ class _MainShellState extends ConsumerState<MainShell> {
         ),
         title: _buildBreadcrumbs(ref),
         actions: [
-          if (_selectedWorldId != null)
+          if (_selectedWorldId != null) ...[
+            IconButton(
+              icon: const Icon(Icons.history_edu_rounded),
+              tooltip: '世界编年史',
+              onPressed: () =>
+                  context.push('/world/$_selectedWorldId/chronicle'),
+            ),
             IconButton(
               icon: const Icon(Icons.hub_outlined),
               tooltip: '关系图谱',
               onPressed: () =>
                   context.push('/world/$_selectedWorldId/graph'),
             ),
+          ],
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: '全局搜索',

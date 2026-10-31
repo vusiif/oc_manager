@@ -12,6 +12,7 @@ import 'tables/tags.dart';
 import 'tables/trash.dart';
 import 'tables/settings.dart';
 import 'tables/groups.dart';
+import 'tables/timeline.dart';
 import 'daos/world_dao.dart';
 import 'daos/character_dao.dart';
 import 'daos/relation_dao.dart';
@@ -20,6 +21,7 @@ import 'daos/tag_dao.dart';
 import 'daos/trash_dao.dart';
 import 'daos/settings_dao.dart';
 import 'daos/group_dao.dart';
+import 'daos/timeline_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -41,6 +43,7 @@ part 'app_database.g.dart';
   BasicInfoFields,
   Groups,
   CharacterGroups,
+  TimelineEvents,
 ], daos: [
   WorldDao,
   CharacterDao,
@@ -50,13 +53,14 @@ part 'app_database.g.dart';
   TrashDao,
   SettingsDao,
   GroupDao,
+  TimelineDao,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +88,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.createTable(characterGalleries);
+          }
+          if (from < 9) {
+            await m.createTable(timelineEvents);
           }
         },
       );

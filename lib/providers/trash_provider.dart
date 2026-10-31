@@ -7,6 +7,7 @@ import 'database_provider.dart';
 import 'group_provider.dart';
 import 'relation_provider.dart';
 import 'world_provider.dart';
+import 'timeline_provider.dart';
 
 final trashListProvider = FutureProvider<List<TrashData>>((ref) {
   ref.watch(trashRefreshProvider);
@@ -31,6 +32,8 @@ class TrashActions {
     final stats = await _db.characterDao.getCharacterStats(character.id);
     final galleries =
         await _db.characterDao.getCharacterGalleries(character.id);
+    final timelineEvents =
+        await _db.timelineDao.getEventsByCharacter(character.id);
     final groupIds =
         await _db.groupDao.getGroupIdsByCharacter(character.id);
 
@@ -86,6 +89,20 @@ class TrashActions {
             'createdAt': g.createdAt.toIso8601String(),
           }
       ],
+      'timelineEvents': [
+        for (final t in timelineEvents)
+          {
+            'worldId': t.worldId,
+            'characterId': t.characterId,
+            'year': t.year,
+            'sortOrder': t.sortOrder,
+            'title': t.title,
+            'description': t.description,
+            'category': t.category,
+            'importance': t.importance,
+            'createdAt': t.createdAt.toIso8601String(),
+          }
+      ],
       'tagIds': tagIds,
       'groupIds': groupIds,
       'layout': layoutRow != null
@@ -117,6 +134,7 @@ class TrashActions {
       await (_db.delete(_db.characterGalleries)
             ..where((t) => t.characterId.equals(character.id)))
           .go();
+      await _db.timelineDao.deleteAllEventsByCharacter(character.id);
       await (_db.delete(_db.characterTags)
             ..where((t) => t.characterId.equals(character.id)))
           .go();
@@ -151,6 +169,8 @@ class TrashActions {
     final layouts = await (_db.select(_db.graphLayouts)
           ..where((l) => l.worldId.equals(world.id)))
         .get();
+    final timelineEvents =
+        await _db.timelineDao.getEventsByWorld(world.id);
 
     // 收集所有人物的完整子数据
     final characterSnapshots = <Map<String, dynamic>>[];
@@ -250,6 +270,19 @@ class TrashActions {
             'y': l.y,
           }
       ],
+      'timelineEvents': [
+        for (final t in timelineEvents)
+          {
+            'characterId': t.characterId,
+            'year': t.year,
+            'sortOrder': t.sortOrder,
+            'title': t.title,
+            'description': t.description,
+            'category': t.category,
+            'importance': t.importance,
+            'createdAt': t.createdAt.toIso8601String(),
+          }
+      ],
     };
 
     await _db.transaction(() async {
@@ -289,6 +322,7 @@ class TrashActions {
       await (_db.delete(_db.groups)
             ..where((g) => g.worldId.equals(world.id)))
           .go();
+      await _db.timelineDao.deleteAllEventsByWorld(world.id);
       await (_db.delete(_db.graphLayouts)
             ..where((l) => l.worldId.equals(world.id)))
           .go();
@@ -310,6 +344,7 @@ class TrashActions {
     final fieldsData = (parsed['fields'] as List<dynamic>?) ?? [];
     final statsData = (parsed['stats'] as List<dynamic>?) ?? [];
     final galleryData = (parsed['galleries'] as List<dynamic>?) ?? [];
+    final timelineData = (parsed['timelineEvents'] as List<dynamic>?) ?? [];
     final tagIds = (parsed['tagIds'] as List<dynamic>?) ?? [];
     final groupIds = (parsed['groupIds'] as List<dynamic>?) ?? [];
     final layoutData = parsed['layout'] as Map<String, dynamic>?;
@@ -381,6 +416,26 @@ class TrashActions {
             );
       }
 
+      // 2.3 还原个人生平时间线
+      for (final t in timelineData) {
+        final tm = t as Map<String, dynamic>;
+        await _db.into(_db.timelineEvents).insert(
+              TimelineEventsCompanion.insert(
+                worldId: tm['worldId'] as int? ?? worldId,
+                characterId: Value(charId),
+                year: tm['year'] as String,
+                sortOrder: Value((tm['sortOrder'] as num?)?.toDouble() ?? 0.0),
+                title: tm['title'] as String,
+                description: Value(tm['description'] as String? ?? ''),
+                category: Value(tm['category'] as String? ?? 'general'),
+                importance: Value(tm['importance'] as int? ?? 1),
+                createdAt: Value(tm['createdAt'] != null
+                    ? DateTime.parse(tm['createdAt'] as String)
+                    : DateTime.now()),
+              ),
+            );
+      }
+
       // 3. 还原标签（确保标签库仍有该 tagId）
       for (final tid in tagIds) {
         final tagId = tid as int;
@@ -444,6 +499,7 @@ class TrashActions {
     final groupsData = (parsed['groups'] as List<dynamic>?) ?? [];
     final relationsData = (parsed['relations'] as List<dynamic>?) ?? [];
     final layoutsData = (parsed['layouts'] as List<dynamic>?) ?? [];
+    final timelineData = (parsed['timelineEvents'] as List<dynamic>?) ?? [];
 
     await _db.transaction(() async {
       // 1. 恢复世界观
@@ -591,6 +647,26 @@ class TrashActions {
             );
       }
 
+      // 5.1 恢复编年史时间线
+      for (final t in timelineData) {
+        final tm = t as Map<String, dynamic>;
+        await _db.into(_db.timelineEvents).insert(
+              TimelineEventsCompanion.insert(
+                worldId: worldId,
+                characterId: Value(tm['characterId'] as int?),
+                year: tm['year'] as String,
+                sortOrder: Value((tm['sortOrder'] as num?)?.toDouble() ?? 0.0),
+                title: tm['title'] as String,
+                description: Value(tm['description'] as String? ?? ''),
+                category: Value(tm['category'] as String? ?? 'general'),
+                importance: Value(tm['importance'] as int? ?? 1),
+                createdAt: Value(tm['createdAt'] != null
+                    ? DateTime.parse(tm['createdAt'] as String)
+                    : DateTime.now()),
+              ),
+            );
+      }
+
       // 6. 移除回收站
       await _db.trashDao.removeFromTrash(trashItem.id);
     });
@@ -617,6 +693,7 @@ class TrashActions {
     _ref.invalidate(groupsByWorldProvider(worldId));
     _ref.invalidate(relationsByWorldProvider(worldId));
     _ref.invalidate(graphLayoutsProvider(worldId));
+    _ref.invalidate(worldTimelineEventsProvider(worldId));
     _refresh();
   }
 

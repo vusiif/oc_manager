@@ -11,6 +11,7 @@ import '../../core/storage/image_storage_service.dart';
 import '../../core/design/components/oc_avatar.dart';
 import '../../core/design/components/radar_chart.dart';
 import 'character_gallery_section.dart';
+import 'character_timeline_section.dart';
 import 'character_poster_dialog.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
@@ -312,6 +313,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
 
               // === 立绘画廊与差分 ===
               CharacterGallerySection(
+                worldId: widget.worldId,
+                characterId: widget.characterId,
+              ),
+              const SizedBox(height: 16),
+
+              // === 生平大事记与时间线 ===
+              CharacterTimelineSection(
                 worldId: widget.worldId,
                 characterId: widget.characterId,
               ),

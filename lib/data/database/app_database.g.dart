@@ -6132,6 +6132,621 @@ class CharacterGroupsCompanion extends UpdateCompanion<CharacterGroup> {
   }
 }
 
+class $TimelineEventsTable extends TimelineEvents
+    with TableInfo<$TimelineEventsTable, TimelineEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TimelineEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES characters (id)',
+    ),
+  );
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<String> year = GeneratedColumn<String>(
+    'year',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<double> sortOrder = GeneratedColumn<double>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('general'),
+  );
+  static const VerificationMeta _importanceMeta = const VerificationMeta(
+    'importance',
+  );
+  @override
+  late final GeneratedColumn<int> importance = GeneratedColumn<int>(
+    'importance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    characterId,
+    year,
+    sortOrder,
+    title,
+    description,
+    category,
+    importance,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'timeline_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TimelineEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+        _yearMeta,
+        year.isAcceptableOrUnknown(data['year']!, _yearMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yearMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    }
+    if (data.containsKey('importance')) {
+      context.handle(
+        _importanceMeta,
+        importance.isAcceptableOrUnknown(data['importance']!, _importanceMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TimelineEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TimelineEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      ),
+      year: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}year'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      importance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}importance'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TimelineEventsTable createAlias(String alias) {
+    return $TimelineEventsTable(attachedDatabase, alias);
+  }
+}
+
+class TimelineEvent extends DataClass implements Insertable<TimelineEvent> {
+  final int id;
+  final int worldId;
+  final int? characterId;
+  final String year;
+  final double sortOrder;
+  final String title;
+  final String description;
+  final String category;
+  final int importance;
+  final DateTime createdAt;
+  const TimelineEvent({
+    required this.id,
+    required this.worldId,
+    this.characterId,
+    required this.year,
+    required this.sortOrder,
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.importance,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    if (!nullToAbsent || characterId != null) {
+      map['character_id'] = Variable<int>(characterId);
+    }
+    map['year'] = Variable<String>(year);
+    map['sort_order'] = Variable<double>(sortOrder);
+    map['title'] = Variable<String>(title);
+    map['description'] = Variable<String>(description);
+    map['category'] = Variable<String>(category);
+    map['importance'] = Variable<int>(importance);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TimelineEventsCompanion toCompanion(bool nullToAbsent) {
+    return TimelineEventsCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      characterId: characterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(characterId),
+      year: Value(year),
+      sortOrder: Value(sortOrder),
+      title: Value(title),
+      description: Value(description),
+      category: Value(category),
+      importance: Value(importance),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TimelineEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TimelineEvent(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      characterId: serializer.fromJson<int?>(json['characterId']),
+      year: serializer.fromJson<String>(json['year']),
+      sortOrder: serializer.fromJson<double>(json['sortOrder']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String>(json['description']),
+      category: serializer.fromJson<String>(json['category']),
+      importance: serializer.fromJson<int>(json['importance']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'characterId': serializer.toJson<int?>(characterId),
+      'year': serializer.toJson<String>(year),
+      'sortOrder': serializer.toJson<double>(sortOrder),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String>(description),
+      'category': serializer.toJson<String>(category),
+      'importance': serializer.toJson<int>(importance),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TimelineEvent copyWith({
+    int? id,
+    int? worldId,
+    Value<int?> characterId = const Value.absent(),
+    String? year,
+    double? sortOrder,
+    String? title,
+    String? description,
+    String? category,
+    int? importance,
+    DateTime? createdAt,
+  }) => TimelineEvent(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    characterId: characterId.present ? characterId.value : this.characterId,
+    year: year ?? this.year,
+    sortOrder: sortOrder ?? this.sortOrder,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    category: category ?? this.category,
+    importance: importance ?? this.importance,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TimelineEvent copyWithCompanion(TimelineEventsCompanion data) {
+    return TimelineEvent(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      year: data.year.present ? data.year.value : this.year,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      category: data.category.present ? data.category.value : this.category,
+      importance: data.importance.present
+          ? data.importance.value
+          : this.importance,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimelineEvent(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('characterId: $characterId, ')
+          ..write('year: $year, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('category: $category, ')
+          ..write('importance: $importance, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    characterId,
+    year,
+    sortOrder,
+    title,
+    description,
+    category,
+    importance,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TimelineEvent &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.characterId == this.characterId &&
+          other.year == this.year &&
+          other.sortOrder == this.sortOrder &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.category == this.category &&
+          other.importance == this.importance &&
+          other.createdAt == this.createdAt);
+}
+
+class TimelineEventsCompanion extends UpdateCompanion<TimelineEvent> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<int?> characterId;
+  final Value<String> year;
+  final Value<double> sortOrder;
+  final Value<String> title;
+  final Value<String> description;
+  final Value<String> category;
+  final Value<int> importance;
+  final Value<DateTime> createdAt;
+  const TimelineEventsCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.year = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.category = const Value.absent(),
+    this.importance = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  TimelineEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    this.characterId = const Value.absent(),
+    required String year,
+    this.sortOrder = const Value.absent(),
+    required String title,
+    this.description = const Value.absent(),
+    this.category = const Value.absent(),
+    this.importance = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       year = Value(year),
+       title = Value(title);
+  static Insertable<TimelineEvent> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<int>? characterId,
+    Expression<String>? year,
+    Expression<double>? sortOrder,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<String>? category,
+    Expression<int>? importance,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (characterId != null) 'character_id': characterId,
+      if (year != null) 'year': year,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (category != null) 'category': category,
+      if (importance != null) 'importance': importance,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  TimelineEventsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<int?>? characterId,
+    Value<String>? year,
+    Value<double>? sortOrder,
+    Value<String>? title,
+    Value<String>? description,
+    Value<String>? category,
+    Value<int>? importance,
+    Value<DateTime>? createdAt,
+  }) {
+    return TimelineEventsCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      characterId: characterId ?? this.characterId,
+      year: year ?? this.year,
+      sortOrder: sortOrder ?? this.sortOrder,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      importance: importance ?? this.importance,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<String>(year.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<double>(sortOrder.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (importance.present) {
+      map['importance'] = Variable<int>(importance.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimelineEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('characterId: $characterId, ')
+          ..write('year: $year, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('category: $category, ')
+          ..write('importance: $importance, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6159,6 +6774,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CharacterGroupsTable characterGroups = $CharacterGroupsTable(
     this,
   );
+  late final $TimelineEventsTable timelineEvents = $TimelineEventsTable(this);
   late final WorldDao worldDao = WorldDao(this as AppDatabase);
   late final CharacterDao characterDao = CharacterDao(this as AppDatabase);
   late final RelationDao relationDao = RelationDao(this as AppDatabase);
@@ -6167,6 +6783,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final TrashDao trashDao = TrashDao(this as AppDatabase);
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final GroupDao groupDao = GroupDao(this as AppDatabase);
+  late final TimelineDao timelineDao = TimelineDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6189,6 +6806,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     basicInfoFields,
     groups,
     characterGroups,
+    timelineEvents,
   ];
 }
 
@@ -6265,6 +6883,24 @@ final class $$WorldsTableReferences
     ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_groupsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TimelineEventsTable, List<TimelineEvent>>
+  _timelineEventsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.timelineEvents,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.timelineEvents.worldId),
+  );
+
+  $$TimelineEventsTableProcessedTableManager get timelineEventsRefs {
+    final manager = $$TimelineEventsTableTableManager(
+      $_db,
+      $_db.timelineEvents,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_timelineEventsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6376,6 +7012,31 @@ class $$WorldsTableFilterComposer
           }) => $$GroupsTableFilterComposer(
             $db: $db,
             $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> timelineEventsRefs(
+    Expression<bool> Function($$TimelineEventsTableFilterComposer f) f,
+  ) {
+    final $$TimelineEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.timelineEvents,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TimelineEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.timelineEvents,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6529,6 +7190,31 @@ class $$WorldsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> timelineEventsRefs<T extends Object>(
+    Expression<T> Function($$TimelineEventsTableAnnotationComposer a) f,
+  ) {
+    final $$TimelineEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.timelineEvents,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TimelineEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.timelineEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$WorldsTableTableManager
@@ -6548,6 +7234,7 @@ class $$WorldsTableTableManager
             bool charactersRefs,
             bool templatesRefs,
             bool groupsRefs,
+            bool timelineEventsRefs,
           })
         > {
   $$WorldsTableTableManager(_$AppDatabase db, $WorldsTable table)
@@ -6604,6 +7291,7 @@ class $$WorldsTableTableManager
                 charactersRefs = false,
                 templatesRefs = false,
                 groupsRefs = false,
+                timelineEventsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6611,6 +7299,7 @@ class $$WorldsTableTableManager
                     if (charactersRefs) db.characters,
                     if (templatesRefs) db.templates,
                     if (groupsRefs) db.groups,
+                    if (timelineEventsRefs) db.timelineEvents,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -6670,6 +7359,27 @@ class $$WorldsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (timelineEventsRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          TimelineEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._timelineEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).timelineEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6694,6 +7404,7 @@ typedef $$WorldsTableProcessedTableManager =
         bool charactersRefs,
         bool templatesRefs,
         bool groupsRefs,
+        bool timelineEventsRefs,
       })
     >;
 typedef $$CharactersTableCreateCompanionBuilder =
@@ -6854,6 +7565,27 @@ final class $$CharactersTableReferences
     final cache = $_typedResult.readTableOrNull(
       _characterGroupsRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TimelineEventsTable, List<TimelineEvent>>
+  _timelineEventsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.timelineEvents,
+    aliasName: $_aliasNameGenerator(
+      db.characters.id,
+      db.timelineEvents.characterId,
+    ),
+  );
+
+  $$TimelineEventsTableProcessedTableManager get timelineEventsRefs {
+    final manager = $$TimelineEventsTableTableManager(
+      $_db,
+      $_db.timelineEvents,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_timelineEventsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7058,6 +7790,31 @@ class $$CharactersTableFilterComposer
           }) => $$CharacterGroupsTableFilterComposer(
             $db: $db,
             $table: $db.characterGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> timelineEventsRefs(
+    Expression<bool> Function($$TimelineEventsTableFilterComposer f) f,
+  ) {
+    final $$TimelineEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.timelineEvents,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TimelineEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.timelineEvents,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7344,6 +8101,31 @@ class $$CharactersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> timelineEventsRefs<T extends Object>(
+    Expression<T> Function($$TimelineEventsTableAnnotationComposer a) f,
+  ) {
+    final $$TimelineEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.timelineEvents,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TimelineEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.timelineEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager
@@ -7366,6 +8148,7 @@ class $$CharactersTableTableManager
             bool characterGalleriesRefs,
             bool characterTagsRefs,
             bool characterGroupsRefs,
+            bool timelineEventsRefs,
           })
         > {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
@@ -7447,6 +8230,7 @@ class $$CharactersTableTableManager
                 characterGalleriesRefs = false,
                 characterTagsRefs = false,
                 characterGroupsRefs = false,
+                timelineEventsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7456,6 +8240,7 @@ class $$CharactersTableTableManager
                     if (characterGalleriesRefs) db.characterGalleries,
                     if (characterTagsRefs) db.characterTags,
                     if (characterGroupsRefs) db.characterGroups,
+                    if (timelineEventsRefs) db.timelineEvents,
                   ],
                   addJoins:
                       <
@@ -7597,6 +8382,27 @@ class $$CharactersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (timelineEventsRefs)
+                        await $_getPrefetchedData<
+                          Character,
+                          $CharactersTable,
+                          TimelineEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CharactersTableReferences
+                              ._timelineEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).timelineEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -7624,6 +8430,7 @@ typedef $$CharactersTableProcessedTableManager =
         bool characterGalleriesRefs,
         bool characterTagsRefs,
         bool characterGroupsRefs,
+        bool timelineEventsRefs,
       })
     >;
 typedef $$CharacterFieldsTableCreateCompanionBuilder =
@@ -12085,6 +12892,513 @@ typedef $$CharacterGroupsTableProcessedTableManager =
       CharacterGroup,
       PrefetchHooks Function({bool characterId, bool groupId})
     >;
+typedef $$TimelineEventsTableCreateCompanionBuilder =
+    TimelineEventsCompanion Function({
+      Value<int> id,
+      required int worldId,
+      Value<int?> characterId,
+      required String year,
+      Value<double> sortOrder,
+      required String title,
+      Value<String> description,
+      Value<String> category,
+      Value<int> importance,
+      Value<DateTime> createdAt,
+    });
+typedef $$TimelineEventsTableUpdateCompanionBuilder =
+    TimelineEventsCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<int?> characterId,
+      Value<String> year,
+      Value<double> sortOrder,
+      Value<String> title,
+      Value<String> description,
+      Value<String> category,
+      Value<int> importance,
+      Value<DateTime> createdAt,
+    });
+
+final class $$TimelineEventsTableReferences
+    extends BaseReferences<_$AppDatabase, $TimelineEventsTable, TimelineEvent> {
+  $$TimelineEventsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.timelineEvents.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias(
+        $_aliasNameGenerator(db.timelineEvents.characterId, db.characters.id),
+      );
+
+  $$CharactersTableProcessedTableManager? get characterId {
+    final $_column = $_itemColumn<int>('character_id');
+    if ($_column == null) return null;
+    final manager = $$CharactersTableTableManager(
+      $_db,
+      $_db.characters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TimelineEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get importance => $composableBuilder(
+    column: $table.importance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get year => $composableBuilder(
+    column: $table.year,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get importance => $composableBuilder(
+    column: $table.importance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<double> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<int> get importance => $composableBuilder(
+    column: $table.importance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TimelineEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TimelineEventsTable,
+          TimelineEvent,
+          $$TimelineEventsTableFilterComposer,
+          $$TimelineEventsTableOrderingComposer,
+          $$TimelineEventsTableAnnotationComposer,
+          $$TimelineEventsTableCreateCompanionBuilder,
+          $$TimelineEventsTableUpdateCompanionBuilder,
+          (TimelineEvent, $$TimelineEventsTableReferences),
+          TimelineEvent,
+          PrefetchHooks Function({bool worldId, bool characterId})
+        > {
+  $$TimelineEventsTableTableManager(
+    _$AppDatabase db,
+    $TimelineEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TimelineEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TimelineEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TimelineEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<int?> characterId = const Value.absent(),
+                Value<String> year = const Value.absent(),
+                Value<double> sortOrder = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<int> importance = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => TimelineEventsCompanion(
+                id: id,
+                worldId: worldId,
+                characterId: characterId,
+                year: year,
+                sortOrder: sortOrder,
+                title: title,
+                description: description,
+                category: category,
+                importance: importance,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                Value<int?> characterId = const Value.absent(),
+                required String year,
+                Value<double> sortOrder = const Value.absent(),
+                required String title,
+                Value<String> description = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<int> importance = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => TimelineEventsCompanion.insert(
+                id: id,
+                worldId: worldId,
+                characterId: characterId,
+                year: year,
+                sortOrder: sortOrder,
+                title: title,
+                description: description,
+                category: category,
+                importance: importance,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TimelineEventsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({worldId = false, characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (worldId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.worldId,
+                                referencedTable: $$TimelineEventsTableReferences
+                                    ._worldIdTable(db),
+                                referencedColumn:
+                                    $$TimelineEventsTableReferences
+                                        ._worldIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (characterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.characterId,
+                                referencedTable: $$TimelineEventsTableReferences
+                                    ._characterIdTable(db),
+                                referencedColumn:
+                                    $$TimelineEventsTableReferences
+                                        ._characterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TimelineEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TimelineEventsTable,
+      TimelineEvent,
+      $$TimelineEventsTableFilterComposer,
+      $$TimelineEventsTableOrderingComposer,
+      $$TimelineEventsTableAnnotationComposer,
+      $$TimelineEventsTableCreateCompanionBuilder,
+      $$TimelineEventsTableUpdateCompanionBuilder,
+      (TimelineEvent, $$TimelineEventsTableReferences),
+      TimelineEvent,
+      PrefetchHooks Function({bool worldId, bool characterId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12122,4 +13436,6 @@ class $AppDatabaseManager {
       $$GroupsTableTableManager(_db, _db.groups);
   $$CharacterGroupsTableTableManager get characterGroups =>
       $$CharacterGroupsTableTableManager(_db, _db.characterGroups);
+  $$TimelineEventsTableTableManager get timelineEvents =>
+      $$TimelineEventsTableTableManager(_db, _db.timelineEvents);
 }
