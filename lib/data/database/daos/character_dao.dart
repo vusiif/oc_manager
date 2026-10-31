@@ -4,7 +4,7 @@ import '../tables/characters.dart';
 
 part 'character_dao.g.dart';
 
-@DriftAccessor(tables: [Characters, CharacterFields])
+@DriftAccessor(tables: [Characters, CharacterFields, CharacterStats])
 class CharacterDao extends DatabaseAccessor<AppDatabase>
     with _$CharacterDaoMixin {
   CharacterDao(super.db);
@@ -65,4 +65,45 @@ class CharacterDao extends DatabaseAccessor<AppDatabase>
 
   Future<List<Character>> getDraftCharacters() =>
       (select(characters)..where((t) => t.status.equals(1))).get();
+
+  Future<List<CharacterStat>> getCharacterStats(int characterId) =>
+      (select(characterStats)
+            ..where((t) => t.characterId.equals(characterId))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+          .get();
+
+  Stream<List<CharacterStat>> watchCharacterStats(int characterId) =>
+      (select(characterStats)
+            ..where((t) => t.characterId.equals(characterId))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+          .watch();
+
+  Future<int> createCharacterStat(CharacterStatsCompanion entry) =>
+      into(characterStats).insert(entry);
+
+  Future<void> updateCharacterStat(CharacterStatsCompanion entry) =>
+      update(characterStats).replace(entry);
+
+  Future<int> deleteCharacterStat(int id) =>
+      (delete(characterStats)..where((t) => t.id.equals(id))).go();
+
+  Future<void> deleteAllCharacterStats(int characterId) =>
+      (delete(characterStats)
+            ..where((t) => t.characterId.equals(characterId)))
+          .go();
+
+  Future<void> setCharacterStats(
+    int characterId,
+    List<CharacterStatsCompanion> stats,
+  ) =>
+      transaction(() async {
+        await deleteAllCharacterStats(characterId);
+        for (var i = 0; i < stats.length; i++) {
+          final s = stats[i];
+          await into(characterStats).insert(s.copyWith(
+            characterId: Value(characterId),
+            sortOrder: Value(i),
+          ));
+        }
+      });
 }

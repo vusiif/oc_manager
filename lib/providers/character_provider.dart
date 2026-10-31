@@ -19,6 +19,11 @@ final characterFieldsProvider =
   return ref.watch(characterDaoProvider).watchCharacterFields(characterId);
 });
 
+final characterStatsProvider =
+    StreamProvider.family<List<CharacterStat>, int>((ref, characterId) {
+  return ref.watch(characterDaoProvider).watchCharacterStats(characterId);
+});
+
 final characterActionsProvider = Provider((ref) => CharacterActions(ref));
 
 class CharacterActions {
@@ -115,5 +120,26 @@ class CharacterActions {
             ),
           );
     }
+  }
+
+  Future<void> setStats(
+    int characterId,
+    List<CharacterStatsCompanion> stats,
+  ) async {
+    await _ref
+        .read(characterDaoProvider)
+        .setCharacterStats(characterId, stats);
+  }
+
+  Future<void> updateStat(CharacterStatsCompanion stat) async {
+    await _ref.read(characterDaoProvider).updateCharacterStat(stat);
+  }
+
+  Future<int> addStat(CharacterStatsCompanion stat) async {
+    return _ref.read(characterDaoProvider).createCharacterStat(stat);
+  }
+
+  Future<void> deleteStat(int statId) async {
+    await _ref.read(characterDaoProvider).deleteCharacterStat(statId);
   }
 }

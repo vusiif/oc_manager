@@ -22,3 +22,13 @@ class CharacterFields extends Table {
   TextColumn get fieldType => text().withLength(min: 1, max: 20)();
   TextColumn get value => text().nullable()();
 }
+
+class CharacterStats extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get characterId => integer().references(Characters, #id)();
+  TextColumn get label => text().withLength(min: 1, max: 50)();
+  RealColumn get value => real().withDefault(const Constant(0.0))();
+  RealColumn get maxValue => real().withDefault(const Constant(100.0))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+}
+

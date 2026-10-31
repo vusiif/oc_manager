@@ -1427,6 +1427,408 @@ class CharacterFieldsCompanion extends UpdateCompanion<CharacterField> {
   }
 }
 
+class $CharacterStatsTable extends CharacterStats
+    with TableInfo<$CharacterStatsTable, CharacterStat> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CharacterStatsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES characters (id)',
+    ),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<double> value = GeneratedColumn<double>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _maxValueMeta = const VerificationMeta(
+    'maxValue',
+  );
+  @override
+  late final GeneratedColumn<double> maxValue = GeneratedColumn<double>(
+    'max_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(100.0),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    characterId,
+    label,
+    value,
+    maxValue,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'character_stats';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterStat> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    }
+    if (data.containsKey('max_value')) {
+      context.handle(
+        _maxValueMeta,
+        maxValue.isAcceptableOrUnknown(data['max_value']!, _maxValueMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CharacterStat map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterStat(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}value'],
+      )!,
+      maxValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}max_value'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $CharacterStatsTable createAlias(String alias) {
+    return $CharacterStatsTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterStat extends DataClass implements Insertable<CharacterStat> {
+  final int id;
+  final int characterId;
+  final String label;
+  final double value;
+  final double maxValue;
+  final int sortOrder;
+  const CharacterStat({
+    required this.id,
+    required this.characterId,
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['character_id'] = Variable<int>(characterId);
+    map['label'] = Variable<String>(label);
+    map['value'] = Variable<double>(value);
+    map['max_value'] = Variable<double>(maxValue);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  CharacterStatsCompanion toCompanion(bool nullToAbsent) {
+    return CharacterStatsCompanion(
+      id: Value(id),
+      characterId: Value(characterId),
+      label: Value(label),
+      value: Value(value),
+      maxValue: Value(maxValue),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory CharacterStat.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterStat(
+      id: serializer.fromJson<int>(json['id']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      label: serializer.fromJson<String>(json['label']),
+      value: serializer.fromJson<double>(json['value']),
+      maxValue: serializer.fromJson<double>(json['maxValue']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'characterId': serializer.toJson<int>(characterId),
+      'label': serializer.toJson<String>(label),
+      'value': serializer.toJson<double>(value),
+      'maxValue': serializer.toJson<double>(maxValue),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  CharacterStat copyWith({
+    int? id,
+    int? characterId,
+    String? label,
+    double? value,
+    double? maxValue,
+    int? sortOrder,
+  }) => CharacterStat(
+    id: id ?? this.id,
+    characterId: characterId ?? this.characterId,
+    label: label ?? this.label,
+    value: value ?? this.value,
+    maxValue: maxValue ?? this.maxValue,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  CharacterStat copyWithCompanion(CharacterStatsCompanion data) {
+    return CharacterStat(
+      id: data.id.present ? data.id.value : this.id,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      label: data.label.present ? data.label.value : this.label,
+      value: data.value.present ? data.value.value : this.value,
+      maxValue: data.maxValue.present ? data.maxValue.value : this.maxValue,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterStat(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('label: $label, ')
+          ..write('value: $value, ')
+          ..write('maxValue: $maxValue, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, characterId, label, value, maxValue, sortOrder);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterStat &&
+          other.id == this.id &&
+          other.characterId == this.characterId &&
+          other.label == this.label &&
+          other.value == this.value &&
+          other.maxValue == this.maxValue &&
+          other.sortOrder == this.sortOrder);
+}
+
+class CharacterStatsCompanion extends UpdateCompanion<CharacterStat> {
+  final Value<int> id;
+  final Value<int> characterId;
+  final Value<String> label;
+  final Value<double> value;
+  final Value<double> maxValue;
+  final Value<int> sortOrder;
+  const CharacterStatsCompanion({
+    this.id = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.value = const Value.absent(),
+    this.maxValue = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  });
+  CharacterStatsCompanion.insert({
+    this.id = const Value.absent(),
+    required int characterId,
+    required String label,
+    this.value = const Value.absent(),
+    this.maxValue = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  }) : characterId = Value(characterId),
+       label = Value(label);
+  static Insertable<CharacterStat> custom({
+    Expression<int>? id,
+    Expression<int>? characterId,
+    Expression<String>? label,
+    Expression<double>? value,
+    Expression<double>? maxValue,
+    Expression<int>? sortOrder,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (characterId != null) 'character_id': characterId,
+      if (label != null) 'label': label,
+      if (value != null) 'value': value,
+      if (maxValue != null) 'max_value': maxValue,
+      if (sortOrder != null) 'sort_order': sortOrder,
+    });
+  }
+
+  CharacterStatsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? characterId,
+    Value<String>? label,
+    Value<double>? value,
+    Value<double>? maxValue,
+    Value<int>? sortOrder,
+  }) {
+    return CharacterStatsCompanion(
+      id: id ?? this.id,
+      characterId: characterId ?? this.characterId,
+      label: label ?? this.label,
+      value: value ?? this.value,
+      maxValue: maxValue ?? this.maxValue,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<double>(value.value);
+    }
+    if (maxValue.present) {
+      map['max_value'] = Variable<double>(maxValue.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterStatsCompanion(')
+          ..write('id: $id, ')
+          ..write('characterId: $characterId, ')
+          ..write('label: $label, ')
+          ..write('value: $value, ')
+          ..write('maxValue: $maxValue, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RelationsTable extends Relations
     with TableInfo<$RelationsTable, Relation> {
   @override
@@ -5276,6 +5678,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CharacterFieldsTable characterFields = $CharacterFieldsTable(
     this,
   );
+  late final $CharacterStatsTable characterStats = $CharacterStatsTable(this);
   late final $RelationsTable relations = $RelationsTable(this);
   late final $TemplatesTable templates = $TemplatesTable(this);
   late final $TemplateFieldsTable templateFields = $TemplateFieldsTable(this);
@@ -5308,6 +5711,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     worlds,
     characters,
     characterFields,
+    characterStats,
     relations,
     templates,
     templateFields,
@@ -5901,6 +6305,27 @@ final class $$CharactersTableReferences
     );
   }
 
+  static MultiTypedResultKey<$CharacterStatsTable, List<CharacterStat>>
+  _characterStatsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.characterStats,
+    aliasName: $_aliasNameGenerator(
+      db.characters.id,
+      db.characterStats.characterId,
+    ),
+  );
+
+  $$CharacterStatsTableProcessedTableManager get characterStatsRefs {
+    final manager = $$CharacterStatsTableTableManager(
+      $_db,
+      $_db.characterStats,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_characterStatsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$CharacterTagsTable, List<CharacterTag>>
   _characterTagsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.characterTags,
@@ -6044,6 +6469,31 @@ class $$CharactersTableFilterComposer
           }) => $$CharacterFieldsTableFilterComposer(
             $db: $db,
             $table: $db.characterFields,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> characterStatsRefs(
+    Expression<bool> Function($$CharacterStatsTableFilterComposer f) f,
+  ) {
+    final $$CharacterStatsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.characterStats,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharacterStatsTableFilterComposer(
+            $db: $db,
+            $table: $db.characterStats,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6280,6 +6730,31 @@ class $$CharactersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> characterStatsRefs<T extends Object>(
+    Expression<T> Function($$CharacterStatsTableAnnotationComposer a) f,
+  ) {
+    final $$CharacterStatsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.characterStats,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharacterStatsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characterStats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> characterTagsRefs<T extends Object>(
     Expression<T> Function($$CharacterTagsTableAnnotationComposer a) f,
   ) {
@@ -6347,6 +6822,7 @@ class $$CharactersTableTableManager
           PrefetchHooks Function({
             bool worldId,
             bool characterFieldsRefs,
+            bool characterStatsRefs,
             bool characterTagsRefs,
             bool characterGroupsRefs,
           })
@@ -6426,6 +6902,7 @@ class $$CharactersTableTableManager
               ({
                 worldId = false,
                 characterFieldsRefs = false,
+                characterStatsRefs = false,
                 characterTagsRefs = false,
                 characterGroupsRefs = false,
               }) {
@@ -6433,6 +6910,7 @@ class $$CharactersTableTableManager
                   db: db,
                   explicitlyWatchedTables: [
                     if (characterFieldsRefs) db.characterFields,
+                    if (characterStatsRefs) db.characterStats,
                     if (characterTagsRefs) db.characterTags,
                     if (characterGroupsRefs) db.characterGroups,
                   ],
@@ -6486,6 +6964,27 @@ class $$CharactersTableTableManager
                                 table,
                                 p0,
                               ).characterFieldsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (characterStatsRefs)
+                        await $_getPrefetchedData<
+                          Character,
+                          $CharactersTable,
+                          CharacterStat
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CharactersTableReferences
+                              ._characterStatsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).characterStatsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.characterId == item.id,
@@ -6557,6 +7056,7 @@ typedef $$CharactersTableProcessedTableManager =
       PrefetchHooks Function({
         bool worldId,
         bool characterFieldsRefs,
+        bool characterStatsRefs,
         bool characterTagsRefs,
         bool characterGroupsRefs,
       })
@@ -6881,6 +7381,345 @@ typedef $$CharacterFieldsTableProcessedTableManager =
       $$CharacterFieldsTableUpdateCompanionBuilder,
       (CharacterField, $$CharacterFieldsTableReferences),
       CharacterField,
+      PrefetchHooks Function({bool characterId})
+    >;
+typedef $$CharacterStatsTableCreateCompanionBuilder =
+    CharacterStatsCompanion Function({
+      Value<int> id,
+      required int characterId,
+      required String label,
+      Value<double> value,
+      Value<double> maxValue,
+      Value<int> sortOrder,
+    });
+typedef $$CharacterStatsTableUpdateCompanionBuilder =
+    CharacterStatsCompanion Function({
+      Value<int> id,
+      Value<int> characterId,
+      Value<String> label,
+      Value<double> value,
+      Value<double> maxValue,
+      Value<int> sortOrder,
+    });
+
+final class $$CharacterStatsTableReferences
+    extends BaseReferences<_$AppDatabase, $CharacterStatsTable, CharacterStat> {
+  $$CharacterStatsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias(
+        $_aliasNameGenerator(db.characterStats.characterId, db.characters.id),
+      );
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager(
+      $_db,
+      $_db.characters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CharacterStatsTableFilterComposer
+    extends Composer<_$AppDatabase, $CharacterStatsTable> {
+  $$CharacterStatsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get maxValue => $composableBuilder(
+    column: $table.maxValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterStatsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharacterStatsTable> {
+  $$CharacterStatsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get maxValue => $composableBuilder(
+    column: $table.maxValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterStatsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharacterStatsTable> {
+  $$CharacterStatsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<double> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<double> get maxValue =>
+      $composableBuilder(column: $table.maxValue, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CharacterStatsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CharacterStatsTable,
+          CharacterStat,
+          $$CharacterStatsTableFilterComposer,
+          $$CharacterStatsTableOrderingComposer,
+          $$CharacterStatsTableAnnotationComposer,
+          $$CharacterStatsTableCreateCompanionBuilder,
+          $$CharacterStatsTableUpdateCompanionBuilder,
+          (CharacterStat, $$CharacterStatsTableReferences),
+          CharacterStat,
+          PrefetchHooks Function({bool characterId})
+        > {
+  $$CharacterStatsTableTableManager(
+    _$AppDatabase db,
+    $CharacterStatsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CharacterStatsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CharacterStatsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CharacterStatsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<double> value = const Value.absent(),
+                Value<double> maxValue = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CharacterStatsCompanion(
+                id: id,
+                characterId: characterId,
+                label: label,
+                value: value,
+                maxValue: maxValue,
+                sortOrder: sortOrder,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int characterId,
+                required String label,
+                Value<double> value = const Value.absent(),
+                Value<double> maxValue = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CharacterStatsCompanion.insert(
+                id: id,
+                characterId: characterId,
+                label: label,
+                value: value,
+                maxValue: maxValue,
+                sortOrder: sortOrder,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CharacterStatsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({characterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (characterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.characterId,
+                                referencedTable: $$CharacterStatsTableReferences
+                                    ._characterIdTable(db),
+                                referencedColumn:
+                                    $$CharacterStatsTableReferences
+                                        ._characterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CharacterStatsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CharacterStatsTable,
+      CharacterStat,
+      $$CharacterStatsTableFilterComposer,
+      $$CharacterStatsTableOrderingComposer,
+      $$CharacterStatsTableAnnotationComposer,
+      $$CharacterStatsTableCreateCompanionBuilder,
+      $$CharacterStatsTableUpdateCompanionBuilder,
+      (CharacterStat, $$CharacterStatsTableReferences),
+      CharacterStat,
       PrefetchHooks Function({bool characterId})
     >;
 typedef $$RelationsTableCreateCompanionBuilder =
@@ -10321,6 +11160,8 @@ class $AppDatabaseManager {
       $$CharactersTableTableManager(_db, _db.characters);
   $$CharacterFieldsTableTableManager get characterFields =>
       $$CharacterFieldsTableTableManager(_db, _db.characterFields);
+  $$CharacterStatsTableTableManager get characterStats =>
+      $$CharacterStatsTableTableManager(_db, _db.characterStats);
   $$RelationsTableTableManager get relations =>
       $$RelationsTableTableManager(_db, _db.relations);
   $$TemplatesTableTableManager get templates =>

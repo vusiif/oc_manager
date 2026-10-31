@@ -28,6 +28,7 @@ class TrashActions {
   /// 软删除人物：完整快照（包含字段、标签、分组与关系图坐标）后事务删除
   Future<void> deleteCharacter(Character character) async {
     final fields = await _db.characterDao.getCharacterFields(character.id);
+    final stats = await _db.characterDao.getCharacterStats(character.id);
     final groupIds =
         await _db.groupDao.getGroupIdsByCharacter(character.id);
 
@@ -64,6 +65,15 @@ class TrashActions {
             'value': f.value,
           }
       ],
+      'stats': [
+        for (final s in stats)
+          {
+            'label': s.label,
+            'value': s.value,
+            'maxValue': s.maxValue,
+            'sortOrder': s.sortOrder,
+          }
+      ],
       'tagIds': tagIds,
       'groupIds': groupIds,
       'layout': layoutRow != null
@@ -87,6 +97,9 @@ class TrashActions {
 
       // 2. 清除相关子表与关联
       await (_db.delete(_db.characterFields)
+            ..where((t) => t.characterId.equals(character.id)))
+          .go();
+      await (_db.delete(_db.characterStats)
             ..where((t) => t.characterId.equals(character.id)))
           .go();
       await (_db.delete(_db.characterTags)
@@ -128,6 +141,7 @@ class TrashActions {
     final characterSnapshots = <Map<String, dynamic>>[];
     for (final c in characters) {
       final fields = await _db.characterDao.getCharacterFields(c.id);
+      final stats = await _db.characterDao.getCharacterStats(c.id);
       final groupIds = await _db.groupDao.getGroupIdsByCharacter(c.id);
       final tagRows = await (_db.select(_db.characterTags)
             ..where((t) => t.characterId.equals(c.id)))
@@ -153,6 +167,15 @@ class TrashActions {
               'fieldName': f.fieldName,
               'fieldType': f.fieldType,
               'value': f.value,
+            }
+        ],
+        'stats': [
+          for (final s in stats)
+            {
+              'label': s.label,
+              'value': s.value,
+              'maxValue': s.maxValue,
+              'sortOrder': s.sortOrder,
             }
         ],
         'tagIds': tagRows.map((r) => r.tagId).toList(),
@@ -219,6 +242,9 @@ class TrashActions {
         await (_db.delete(_db.characterFields)
               ..where((t) => t.characterId.equals(c.id)))
             .go();
+        await (_db.delete(_db.characterStats)
+              ..where((t) => t.characterId.equals(c.id)))
+            .go();
         await (_db.delete(_db.characterTags)
               ..where((t) => t.characterId.equals(c.id)))
             .go();
@@ -252,6 +278,7 @@ class TrashActions {
         : parsed;
 
     final fieldsData = (parsed['fields'] as List<dynamic>?) ?? [];
+    final statsData = (parsed['stats'] as List<dynamic>?) ?? [];
     final tagIds = (parsed['tagIds'] as List<dynamic>?) ?? [];
     final groupIds = (parsed['groupIds'] as List<dynamic>?) ?? [];
     final layoutData = parsed['layout'] as Map<String, dynamic>?;
@@ -288,6 +315,20 @@ class TrashActions {
                 fieldName: fieldMap['fieldName'] as String,
                 fieldType: fieldMap['fieldType'] as String,
                 value: Value(fieldMap['value'] as String?),
+              ),
+            );
+      }
+
+      // 2.1 还原属性数值
+      for (final s in statsData) {
+        final statMap = s as Map<String, dynamic>;
+        await _db.into(_db.characterStats).insert(
+              CharacterStatsCompanion.insert(
+                characterId: charId,
+                label: statMap['label'] as String,
+                value: Value((statMap['value'] as num).toDouble()),
+                maxValue: Value((statMap['maxValue'] as num?)?.toDouble() ?? 100.0),
+                sortOrder: Value(statMap['sortOrder'] as int? ?? 0),
               ),
             );
       }
@@ -417,6 +458,20 @@ class TrashActions {
                   fieldName: fm['fieldName'] as String,
                   fieldType: fm['fieldType'] as String,
                   value: Value(fm['value'] as String?),
+                ),
+              );
+        }
+
+        final stats = (cm['stats'] as List<dynamic>?) ?? [];
+        for (final s in stats) {
+          final sm = s as Map<String, dynamic>;
+          await _db.into(_db.characterStats).insert(
+                CharacterStatsCompanion.insert(
+                  characterId: cId,
+                  label: sm['label'] as String,
+                  value: Value((sm['value'] as num).toDouble()),
+                  maxValue: Value((sm['maxValue'] as num?)?.toDouble() ?? 100.0),
+                  sortOrder: Value(sm['sortOrder'] as int? ?? 0),
                 ),
               );
         }

@@ -7,6 +7,7 @@ mixin _$CharacterDaoMixin on DatabaseAccessor<AppDatabase> {
   $WorldsTable get worlds => attachedDatabase.worlds;
   $CharactersTable get characters => attachedDatabase.characters;
   $CharacterFieldsTable get characterFields => attachedDatabase.characterFields;
+  $CharacterStatsTable get characterStats => attachedDatabase.characterStats;
   CharacterDaoManager get managers => CharacterDaoManager(this);
 }
 
@@ -21,5 +22,10 @@ class CharacterDaoManager {
       $$CharacterFieldsTableTableManager(
         _db.attachedDatabase,
         _db.characterFields,
+      );
+  $$CharacterStatsTableTableManager get characterStats =>
+      $$CharacterStatsTableTableManager(
+        _db.attachedDatabase,
+        _db.characterStats,
       );
 }
