@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../data/database/app_database.dart';
+import '../world/oc_package_dialogs.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -61,6 +62,12 @@ class SettingsPage extends ConsumerWidget {
             subtitle: const Text('从备份文件恢复'),
             onTap: () => _restoreDatabase(context, ref),
           ),
+          ListTile(
+            leading: const Icon(Icons.unarchive_outlined),
+            title: const Text('导入数据分享包 (.ocpkg)'),
+            subtitle: const Text('解析并合并外部角色与世界观'),
+            onTap: () => OcPackageImportDialog.show(context),
+          ),
 
           const Divider(),
 
@@ -69,7 +76,7 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于 OC Manager'),
-            subtitle: const Text('版本 1.1.0'),
+            subtitle: const Text('版本 1.5.0'),
             onTap: () => _showAboutDialog(context),
           ),
         ],
@@ -333,7 +340,7 @@ class SettingsPage extends ConsumerWidget {
             Text('OC Manager 是一个角色管理工具，'),
             Text('用于管理原创角色（OC）的世界观、人物关系等信息。'),
             SizedBox(height: 16),
-            Text('版本：1.1.0'),
+            Text('版本：1.5.0'),
             Text('技术栈：Flutter + Riverpod + drift'),
           ],
         ),

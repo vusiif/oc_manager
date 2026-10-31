@@ -13,6 +13,8 @@ import '../character/character_dialog.dart';
 import 'views/world_kanban_view.dart';
 import 'views/world_table_view.dart';
 import 'world_analytics_dialog.dart';
+import 'booklet_export_dialog.dart';
+import 'oc_package_dialogs.dart';
 
 enum WorldViewMode {
   cards,
@@ -112,6 +114,51 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             tooltip: '编年史大事件',
             onPressed: () =>
                 context.push('/world/${widget.worldId}/chronicle'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.menu_book_rounded),
+            tooltip: '生成世界设定集 (Booklet)',
+            onPressed: () {
+              final world = worldAsync.valueOrNull;
+              if (world != null) {
+                BookletExportDialog.show(context, world);
+              }
+            },
+          ),
+          PopupMenuButton<String>(
+            tooltip: '数据分享包与更多',
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              final world = worldAsync.valueOrNull;
+              if (world == null) return;
+              if (value == 'export_ocpkg') {
+                OcPackageExportDialog.show(context, world);
+              } else if (value == 'import_ocpkg') {
+                OcPackageImportDialog.show(context, targetWorldId: world.id);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'export_ocpkg',
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('导出数据分享包 (.ocpkg)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'import_ocpkg',
+                child: Row(
+                  children: [
+                    Icon(Icons.unarchive_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('导入数据分享包 (.ocpkg)'),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
         ],
