@@ -39,7 +39,8 @@ class WikiLinkParser {
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
 
-      if (trimmed.contains('[[$cleanTarget]]') || trimmed.contains(cleanTarget)) {
+      if (trimmed.contains('[[$cleanTarget]]') ||
+          trimmed.contains(cleanTarget)) {
         // 如果该行过长，截取包含关键词的前后 80 个字符
         final idx = trimmed.indexOf(cleanTarget);
         if (trimmed.length > 120 && idx >= 0) {
@@ -58,18 +59,21 @@ class WikiLinkParser {
     return snippets;
   }
 
-  /// 将包含 [[角色名]] 的文本解析为可在 RichText 或 Text.rich 中展示的 InlineSpan 列表
+  /// 将包含 [[词条名]] 的文本解析为可在 RichText 或 Text.rich 中展示的 InlineSpan 列表（支持角色与世界观百科实体）
   static List<InlineSpan> buildWikiSpans({
     required String text,
     required Map<String, Character> nameToCharacterMap,
+    Map<String, LoreEntity>? nameToLoreEntityMap,
     required void Function(Character target) onCharacterTap,
+    void Function(LoreEntity target)? onLoreEntityTap,
     required BuildContext context,
     TextStyle? defaultStyle,
   }) {
     if (text.isEmpty) return const [];
 
     final theme = Theme.of(context);
-    final baseStyle = defaultStyle ??
+    final baseStyle =
+        defaultStyle ??
         TextStyle(
           fontSize: 14,
           height: 1.6,
@@ -82,15 +86,18 @@ class WikiLinkParser {
     for (final match in wikiLinkRegex.allMatches(text)) {
       // 1. 匹配前的纯文本
       if (match.start > lastEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastEnd, match.start),
-          style: baseStyle,
-        ));
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: baseStyle,
+          ),
+        );
       }
 
-      // 2. 双向链接 [[角色名]]
+      // 2. 双向链接 [[实体名]]
       final rawTargetName = match.group(1)?.trim() ?? '';
       final targetChar = nameToCharacterMap[rawTargetName];
+      final targetLore = nameToLoreEntityMap?[rawTargetName];
 
       if (targetChar != null) {
         // 匹配到有效角色：高保真胶囊式可点击链接
@@ -102,11 +109,18 @@ class WikiLinkParser {
               child: GestureDetector(
                 onTap: () => onCharacterTap(targetChar),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1.5,
+                  ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.55),
+                    color: theme.colorScheme.primaryContainer.withValues(
+                      alpha: 0.55,
+                    ),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: theme.colorScheme.primary.withValues(alpha: 0.35),
@@ -137,19 +151,69 @@ class WikiLinkParser {
             ),
           ),
         );
+      } else if (targetLore != null) {
+        // 匹配到百科实体：类型特异性主题色胶囊
+        final loreColor = _getLoreColor(targetLore.entityType);
+        final loreIcon = _getLoreIcon(targetLore.entityType);
+
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => onLoreEntityTap?.call(targetLore),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1.5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: loreColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: loreColor.withValues(alpha: 0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(loreIcon, size: 13, color: loreColor),
+                      const SizedBox(width: 3),
+                      Text(
+                        rawTargetName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: loreColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
       } else {
-        // 未在世界观中匹配到该角色（不存在或拼写错误）：灰底虚线提醒
+        // 未在世界观中匹配到该实体（不存在或拼写错误）：灰底虚线提醒
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Tooltip(
-              message: '未在该世界观中找到人物 “$rawTargetName”',
+              message: '未在该世界观中找到设定或角色 “$rawTargetName”',
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: theme.colorScheme.outlineVariant,
@@ -186,12 +250,43 @@ class WikiLinkParser {
 
     // 3. 尾部纯文本
     if (lastEnd < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastEnd),
-        style: baseStyle,
-      ));
+      spans.add(TextSpan(text: text.substring(lastEnd), style: baseStyle));
     }
 
     return spans;
+  }
+
+  static Color _getLoreColor(String type) {
+    switch (type) {
+      case 'location':
+        return const Color(0xFF10B981);
+      case 'faction':
+        return const Color(0xFF6366F1);
+      case 'race':
+        return const Color(0xFFF59E0B);
+      case 'item':
+        return const Color(0xFFEC4899);
+      case 'ability':
+        return const Color(0xFF8B5CF6);
+      default:
+        return const Color(0xFF64748B);
+    }
+  }
+
+  static IconData _getLoreIcon(String type) {
+    switch (type) {
+      case 'location':
+        return Icons.location_on;
+      case 'faction':
+        return Icons.shield;
+      case 'race':
+        return Icons.diversity_3;
+      case 'item':
+        return Icons.diamond;
+      case 'ability':
+        return Icons.auto_awesome;
+      default:
+        return Icons.menu_book;
+    }
   }
 }

@@ -25,34 +25,28 @@ class TagDao extends DatabaseAccessor<AppDatabase> with _$TagDaoMixin {
 
   Future<void> addTagToCharacter(int characterId, int tagId) =>
       into(characterTags).insert(
-        CharacterTagsCompanion.insert(
-          characterId: characterId,
-          tagId: tagId,
-        ),
+        CharacterTagsCompanion.insert(characterId: characterId, tagId: tagId),
         mode: InsertMode.insertOrIgnore,
       );
 
   Future<void> removeTagFromCharacter(int characterId, int tagId) =>
-      (delete(characterTags)
-            ..where((t) =>
-                t.characterId.equals(characterId) &
-                t.tagId.equals(tagId)))
+      (delete(characterTags)..where(
+            (t) => t.characterId.equals(characterId) & t.tagId.equals(tagId),
+          ))
           .go();
 
   Future<List<Tag>> getTagsByCharacter(int characterId) async {
     final query = select(tags).join([
-      innerJoin(
-          characterTags, characterTags.tagId.equalsExp(tags.id)),
-    ])
-      ..where(characterTags.characterId.equals(characterId));
+      innerJoin(characterTags, characterTags.tagId.equalsExp(tags.id)),
+    ])..where(characterTags.characterId.equals(characterId));
     final results = await query.get();
     return results.map((row) => row.readTable(tags)).toList();
   }
 
   Future<List<int>> getCharacterIdsByTag(int tagId) async {
-    final results = await (select(characterTags)
-          ..where((t) => t.tagId.equals(tagId)))
-        .get();
+    final results = await (select(
+      characterTags,
+    )..where((t) => t.tagId.equals(tagId))).get();
     return results.map((row) => row.characterId).toList();
   }
 }

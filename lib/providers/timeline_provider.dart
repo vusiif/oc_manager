@@ -59,24 +59,21 @@ class TimelineCategoryConfig {
   ];
 
   static TimelineCategoryConfig find(String? key) {
-    return all.firstWhere(
-      (c) => c.key == key,
-      orElse: () => all.last,
-    );
+    return all.firstWhere((c) => c.key == key, orElse: () => all.last);
   }
 }
 
 /// 监听某世界观下的全部编年史事件
 final worldTimelineEventsProvider =
     StreamProvider.family<List<TimelineEvent>, int>((ref, worldId) {
-  return ref.watch(timelineDaoProvider).watchEventsByWorld(worldId);
-});
+      return ref.watch(timelineDaoProvider).watchEventsByWorld(worldId);
+    });
 
 /// 监听某角色的个人生平事件
 final characterTimelineEventsProvider =
     StreamProvider.family<List<TimelineEvent>, int>((ref, characterId) {
-  return ref.watch(timelineDaoProvider).watchEventsByCharacter(characterId);
-});
+      return ref.watch(timelineDaoProvider).watchEventsByCharacter(characterId);
+    });
 
 final timelineActionsProvider = Provider((ref) => TimelineActions(ref));
 

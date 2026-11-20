@@ -21,10 +21,11 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
 
   // 设置值（存在则更新最新记录并清理历史多余条目，不存在则插入新记录）
   Future<void> setValue(String key, String value) async {
-    final existing = await (select(settings)
-          ..where((s) => s.key.equals(key))
-          ..orderBy([(s) => OrderingTerm.desc(s.id)]))
-        .get();
+    final existing =
+        await (select(settings)
+              ..where((s) => s.key.equals(key))
+              ..orderBy([(s) => OrderingTerm.desc(s.id)]))
+            .get();
     if (existing.isNotEmpty) {
       final latestId = existing.first.id;
       await (update(settings)..where((s) => s.id.equals(latestId))).write(
@@ -34,9 +35,9 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
         ),
       );
       if (existing.length > 1) {
-        await (delete(settings)
-              ..where((s) => s.key.equals(key) & s.id.isNotValue(latestId)))
-            .go();
+        await (delete(
+          settings,
+        )..where((s) => s.key.equals(key) & s.id.isNotValue(latestId))).go();
       }
     } else {
       await into(settings).insert(
@@ -51,7 +52,9 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
 
   // 获取所有设置
   Future<Map<String, String>> getAllSettings() async {
-    final rows = await (select(settings)..orderBy([(s) => OrderingTerm.asc(s.id)])).get();
+    final rows = await (select(
+      settings,
+    )..orderBy([(s) => OrderingTerm.asc(s.id)])).get();
     final result = <String, String>{};
     for (final row in rows) {
       result[row.key] = row.value;
@@ -61,11 +64,17 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
 
   // 获取基本字段列表
   Future<List<BasicInfoField>> getBasicInfoFields() async {
-    return (select(basicInfoFields)..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).get();
+    return (select(
+      basicInfoFields,
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).get();
   }
 
   // 更新基本字段
-  Future<void> updateBasicInfoField(int id, {bool? isVisible, int? sortOrder}) async {
+  Future<void> updateBasicInfoField(
+    int id, {
+    bool? isVisible,
+    int? sortOrder,
+  }) async {
     await (update(basicInfoFields)..where((t) => t.id.equals(id))).write(
       BasicInfoFieldsCompanion(
         isVisible: isVisible != null ? Value(isVisible) : const Value.absent(),
@@ -95,10 +104,22 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
     if (existing.isEmpty) {
       await batch((batch) {
         batch.insertAll(basicInfoFields, [
-          BasicInfoFieldsCompanion.insert(fieldName: '名称', sortOrder: const Value(0)),
-          BasicInfoFieldsCompanion.insert(fieldName: '性别', sortOrder: const Value(1)),
-          BasicInfoFieldsCompanion.insert(fieldName: '状态', sortOrder: const Value(2)),
-          BasicInfoFieldsCompanion.insert(fieldName: '创建时间', sortOrder: const Value(3)),
+          BasicInfoFieldsCompanion.insert(
+            fieldName: '名称',
+            sortOrder: const Value(0),
+          ),
+          BasicInfoFieldsCompanion.insert(
+            fieldName: '性别',
+            sortOrder: const Value(1),
+          ),
+          BasicInfoFieldsCompanion.insert(
+            fieldName: '状态',
+            sortOrder: const Value(2),
+          ),
+          BasicInfoFieldsCompanion.insert(
+            fieldName: '创建时间',
+            sortOrder: const Value(3),
+          ),
         ]);
       });
     }

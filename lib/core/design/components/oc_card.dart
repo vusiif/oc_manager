@@ -41,11 +41,17 @@ class _OcCardState extends State<OcCard> {
 
     final cardBg = isDark
         ? (_isHovered ? AppColors.darkBorder : AppColors.darkSurface)
-        : (_isHovered ? AppColors.brandLight.withValues(alpha: 0.3) : AppColors.lightSurface);
+        : (_isHovered
+              ? AppColors.brandLight.withValues(alpha: 0.3)
+              : AppColors.lightSurface);
 
     final borderColor = isDark
-        ? (_isHovered ? AppColors.brand.withValues(alpha: 0.5) : AppColors.darkBorder)
-        : (_isHovered ? AppColors.brand.withValues(alpha: 0.35) : AppColors.lightBorder);
+        ? (_isHovered
+              ? AppColors.brand.withValues(alpha: 0.5)
+              : AppColors.darkBorder)
+        : (_isHovered
+              ? AppColors.brand.withValues(alpha: 0.35)
+              : AppColors.lightBorder);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -64,7 +70,7 @@ class _OcCardState extends State<OcCard> {
                     color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -96,15 +102,17 @@ class _OcCardState extends State<OcCard> {
                         child: Container(
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurface : Colors.white,
+                            color: isDark
+                                ? AppColors.darkSurface
+                                : Colors.white,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             character.gender == '男'
                                 ? Icons.male
                                 : (character.gender == '女'
-                                    ? Icons.female
-                                    : Icons.transgender),
+                                      ? Icons.female
+                                      : Icons.transgender),
                             size: 13,
                             color: _getGenderColor(character.gender),
                           ),
@@ -182,8 +190,12 @@ class _OcCardState extends State<OcCard> {
                         iconSize: 20,
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
-                          character.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                          color: character.isFavorite ? Colors.amber : Colors.grey,
+                          character.isFavorite
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: character.isFavorite
+                              ? Colors.amber
+                              : Colors.grey,
                         ),
                         tooltip: character.isFavorite ? '取消收藏' : '收藏',
                         onPressed: widget.onFavoriteToggle,
@@ -196,7 +208,9 @@ class _OcCardState extends State<OcCard> {
                           character.isPinned
                               ? Icons.push_pin_rounded
                               : Icons.push_pin_outlined,
-                          color: character.isPinned ? AppColors.brand : Colors.grey,
+                          color: character.isPinned
+                              ? AppColors.brand
+                              : Colors.grey,
                         ),
                         tooltip: character.isPinned ? '取消置顶' : '置顶',
                         onPressed: widget.onPinToggle,

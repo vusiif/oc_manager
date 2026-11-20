@@ -12,9 +12,7 @@ class TagManagementPage extends ConsumerWidget {
     final tagsAsync = ref.watch(tagsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('标签管理'),
-      ),
+      appBar: AppBar(title: const Text('标签管理')),
       body: tagsAsync.when(
         data: (tags) {
           if (tags.isEmpty) {
@@ -29,10 +27,7 @@ class TagManagementPage extends ConsumerWidget {
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    '点击右下角按钮创建标签',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text('点击右下角按钮创建标签', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -48,10 +43,7 @@ class TagManagementPage extends ConsumerWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: color,
-                    radius: 16,
-                  ),
+                  leading: CircleAvatar(backgroundColor: color, radius: 16),
                   title: Text(tag.name),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -137,7 +129,9 @@ class TagManagementPage extends ConsumerWidget {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  await ref.read(tagActionsProvider).create(name, selectedColor);
+                  await ref
+                      .read(tagActionsProvider)
+                      .create(name, selectedColor);
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -201,12 +195,9 @@ class TagManagementPage extends ConsumerWidget {
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  ref.read(tagActionsProvider).update(
-                        tag.copyWith(
-                          name: name,
-                          color: selectedColor,
-                        ),
-                      );
+                  ref
+                      .read(tagActionsProvider)
+                      .update(tag.copyWith(name: name, color: selectedColor));
                   Navigator.pop(context);
                 }
               },

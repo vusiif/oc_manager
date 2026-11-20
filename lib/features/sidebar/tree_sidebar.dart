@@ -41,9 +41,7 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor,
-          ),
+          right: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
       child: Column(
@@ -56,7 +54,10 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
               children: [
                 const Icon(Icons.account_tree, size: 20),
                 const SizedBox(width: 8),
-                const Text('导航', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const Text(
+                  '导航',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.add, size: 20),
@@ -72,7 +73,11 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
               data: (worlds) {
                 if (worlds.isEmpty) {
                   return const Center(
-                    child: Text('还没有世界观\n点击上方 + 创建', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                    child: Text(
+                      '还没有世界观\n点击上方 + 创建',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   );
                 }
                 return ListView(
@@ -81,7 +86,10 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
                     return _WorldTreeNode(
                       world: world,
                       isExpanded: _expandedWorlds.contains(world.id),
-                      isSelected: widget.selectedWorldId == world.id && widget.selectedGroupId == null && widget.selectedCharacterId == null,
+                      isSelected:
+                          widget.selectedWorldId == world.id &&
+                          widget.selectedGroupId == null &&
+                          widget.selectedCharacterId == null,
                       selectedGroupId: widget.selectedGroupId,
                       selectedCharacterId: widget.selectedCharacterId,
                       onToggle: () {
@@ -129,11 +137,17 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
         title: const Text('新建世界观'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: '世界观名称', hintText: '例如：魔法大陆'),
+          decoration: const InputDecoration(
+            labelText: '世界观名称',
+            hintText: '例如：魔法大陆',
+          ),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
           ElevatedButton(
             onPressed: () {
               final name = controller.text.trim();
@@ -184,7 +198,9 @@ class _WorldTreeNodeState extends ConsumerState<_WorldTreeNode> {
   @override
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(groupsByWorldProvider(widget.world.id));
-    final charactersAsync = ref.watch(charactersByWorldProvider(widget.world.id));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.world.id),
+    );
 
     return DragTarget<int>(
       onWillAcceptWithDetails: (details) {
@@ -199,7 +215,9 @@ class _WorldTreeNodeState extends ConsumerState<_WorldTreeNode> {
         // 从所有分组中移除该人物
         groupsAsync.whenData((groups) {
           for (final group in groups) {
-            ref.read(groupActionsProvider).removeCharacterFromGroup(details.data, group.id);
+            ref
+                .read(groupActionsProvider)
+                .removeCharacterFromGroup(details.data, group.id);
           }
         });
       },
@@ -215,133 +233,198 @@ class _WorldTreeNodeState extends ConsumerState<_WorldTreeNode> {
                 color: _isDragOver
                     ? Colors.green.withValues(alpha: 0.2)
                     : widget.isSelected
-                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : null,
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                    : null,
                 child: Row(
                   children: [
                     GestureDetector(
                       onTap: widget.onToggle,
                       child: Icon(
-                        widget.isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                        widget.isExpanded
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_right,
                         size: 18,
                         color: Colors.grey,
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.public, size: 16, color: _isDragOver ? Colors.green : Colors.blue),
+                    Icon(
+                      Icons.public,
+                      size: 16,
+                      color: _isDragOver ? Colors.green : Colors.blue,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(widget.world.name, style: const TextStyle(fontSize: 14), overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        widget.world.name,
+                        style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add, size: 16),
                       tooltip: '新建分组',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
                       onPressed: () => _showCreateGroupDialog(context),
                     ),
                   ],
                 ),
               ),
             ),
-        if (widget.isExpanded)
-          groupsAsync.when(
-            data: (groups) {
-              return charactersAsync.when(
-                data: (characters) {
-                  final widgets = <Widget>[];
+            if (widget.isExpanded)
+              groupsAsync.when(
+                data: (groups) {
+                  return charactersAsync.when(
+                    data: (characters) {
+                      final widgets = <Widget>[];
 
-                  // 用户创建的分组
-                  for (final group in groups) {
-                    widgets.add(
-                      _GroupTreeNode(
-                        group: group,
-                        worldId: widget.world.id,
-                        allCharacters: characters,
-                        isSelected: widget.selectedGroupId == group.id && widget.selectedCharacterId == null,
-                        selectedCharacterId: widget.selectedCharacterId,
-                        isExpanded: _expandedGroups.contains(group.id),
-                        onToggle: () {
-                          setState(() {
-                            if (_expandedGroups.contains(group.id)) {
-                              _expandedGroups.remove(group.id);
-                            } else {
-                              _expandedGroups.add(group.id);
-                            }
-                          });
-                        },
-                        onGroupTap: () => widget.onGroupSelected(group.id),
-                        onCharacterSelected: widget.onCharacterSelected,
-                      ),
-                    );
-                  }
-
-                  // 获取所有已分组的人物 ID
-                  final groupedCharacterIds = <int>{};
-                  for (final group in groups) {
-                    final groupChars = ref.watch(charactersByGroupProvider(group.id));
-                    groupChars.whenData((chars) {
-                      for (final c in chars) {
-                        groupedCharacterIds.add(c.id);
-                      }
-                    });
-                  }
-
-                  // 未分组的人物显示在分组下面
-                  final ungrouped = characters.where((c) => !groupedCharacterIds.contains(c.id)).toList();
-                  for (final character in ungrouped) {
-                    final isCharSelected = widget.selectedCharacterId == character.id;
-                    widgets.add(
-                      Draggable<int>(
-                        data: character.id,
-                        feedback: Material(
-                          elevation: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            child: Text(character.name, style: const TextStyle(fontSize: 12)),
+                      // 用户创建的分组
+                      for (final group in groups) {
+                        widgets.add(
+                          _GroupTreeNode(
+                            group: group,
+                            worldId: widget.world.id,
+                            allCharacters: characters,
+                            isSelected:
+                                widget.selectedGroupId == group.id &&
+                                widget.selectedCharacterId == null,
+                            selectedCharacterId: widget.selectedCharacterId,
+                            isExpanded: _expandedGroups.contains(group.id),
+                            onToggle: () {
+                              setState(() {
+                                if (_expandedGroups.contains(group.id)) {
+                                  _expandedGroups.remove(group.id);
+                                } else {
+                                  _expandedGroups.add(group.id);
+                                }
+                              });
+                            },
+                            onGroupTap: () => widget.onGroupSelected(group.id),
+                            onCharacterSelected: widget.onCharacterSelected,
                           ),
-                        ),
-                        child: InkWell(
-                          onTap: () => widget.onCharacterSelected(character.id, null),
-                          child: Container(
-                            height: 32,
-                            padding: const EdgeInsets.only(left: 32, right: 8),
-                            color: isCharSelected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  child: Text(character.name.isNotEmpty ? character.name[0] : '?', style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                        );
+                      }
+
+                      // 获取所有已分组的人物 ID
+                      final groupedCharacterIds = <int>{};
+                      for (final group in groups) {
+                        final groupChars = ref.watch(
+                          charactersByGroupProvider(group.id),
+                        );
+                        groupChars.whenData((chars) {
+                          for (final c in chars) {
+                            groupedCharacterIds.add(c.id);
+                          }
+                        });
+                      }
+
+                      // 未分组的人物显示在分组下面
+                      final ungrouped = characters
+                          .where((c) => !groupedCharacterIds.contains(c.id))
+                          .toList();
+                      for (final character in ungrouped) {
+                        final isCharSelected =
+                            widget.selectedCharacterId == character.id;
+                        widgets.add(
+                          Draggable<int>(
+                            data: character.id,
+                            feedback: Material(
+                              elevation: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(character.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
-                              ],
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
+                                child: Text(
+                                  character.name,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () => widget.onCharacterSelected(
+                                character.id,
+                                null,
+                              ),
+                              child: Container(
+                                height: 32,
+                                padding: const EdgeInsets.only(
+                                  left: 32,
+                                  right: 8,
+                                ),
+                                color: isCharSelected
+                                    ? Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withValues(alpha: 0.3)
+                                    : null,
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 10,
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                      child: Text(
+                                        character.name.isNotEmpty
+                                            ? character.name[0]
+                                            : '?',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimaryContainer,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        character.name,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  }
+                        );
+                      }
 
-                  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: widgets,
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => Text('错误: $e'),
+                  );
                 },
                 loading: () => const SizedBox.shrink(),
                 error: (e, _) => Text('错误: $e'),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (e, _) => Text('错误: $e'),
-          ),
-        ],
-      );
-    },
+              ),
+          ],
+        );
+      },
     );
   }
 
   void _showCreateGroupDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => GroupDialog(worldId: widget.world.id));
+    showDialog(
+      context: context,
+      builder: (_) => GroupDialog(worldId: widget.world.id),
+    );
   }
 }
 
@@ -378,7 +461,9 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
 
   @override
   Widget build(BuildContext context) {
-    final groupCharsAsync = ref.watch(charactersByGroupProvider(widget.group.id));
+    final groupCharsAsync = ref.watch(
+      charactersByGroupProvider(widget.group.id),
+    );
 
     return DragTarget<int>(
       onWillAcceptWithDetails: (details) {
@@ -391,12 +476,14 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
       onAcceptWithDetails: (details) async {
         setState(() => _isDragOver = false);
         try {
-          await ref.read(groupActionsProvider).addCharacterToGroup(details.data, widget.group.id);
+          await ref
+              .read(groupActionsProvider)
+              .addCharacterToGroup(details.data, widget.group.id);
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('$e')));
           }
         }
       },
@@ -412,22 +499,34 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
                 color: _isDragOver
                     ? Colors.green.withValues(alpha: 0.2)
                     : widget.isSelected
-                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : null,
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                    : null,
                 child: Row(
                   children: [
                     GestureDetector(
                       onTap: widget.onToggle,
                       child: Icon(
-                        widget.isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                        widget.isExpanded
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_right,
                         size: 16,
                         color: Colors.grey,
                       ),
                     ),
-                    Icon(Icons.folder, size: 16, color: _isDragOver ? Colors.green : Colors.amber),
+                    Icon(
+                      Icons.folder,
+                      size: 16,
+                      color: _isDragOver ? Colors.green : Colors.amber,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(widget.group.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        widget.group.name,
+                        style: const TextStyle(fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     // 右键菜单
                     PopupMenuButton<String>(
@@ -435,11 +534,23 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
                       iconSize: 16,
                       itemBuilder: (context) => [
                         const PopupMenuItem(value: 'edit', child: Text('编辑分组')),
-                        const PopupMenuItem(value: 'delete', child: Text('删除分组', style: TextStyle(color: Colors.red))),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text(
+                            '删除分组',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
                       ],
                       onSelected: (value) {
                         if (value == 'edit') {
-                          showDialog(context: context, builder: (_) => GroupDialog(worldId: widget.worldId, group: widget.group));
+                          showDialog(
+                            context: context,
+                            builder: (_) => GroupDialog(
+                              worldId: widget.worldId,
+                              group: widget.group,
+                            ),
+                          );
                         } else if (value == 'delete') {
                           _confirmDelete(context);
                         }
@@ -454,38 +565,80 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
                 data: (characters) {
                   return Column(
                     children: characters.map((character) {
-                      final isSelected = widget.selectedCharacterId == character.id;
+                      final isSelected =
+                          widget.selectedCharacterId == character.id;
                       return Draggable<int>(
                         data: character.id,
                         feedback: Material(
                           elevation: 4,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            child: Text(character.name, style: const TextStyle(fontSize: 12)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            child: Text(
+                              character.name,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                         ),
                         child: InkWell(
-                          onTap: () => widget.onCharacterSelected(character.id, widget.group.id),
+                          onTap: () => widget.onCharacterSelected(
+                            character.id,
+                            widget.group.id,
+                          ),
                           child: Container(
                             height: 32,
                             padding: const EdgeInsets.only(left: 56, right: 8),
-                            color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                      .withValues(alpha: 0.3)
+                                : null,
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   radius: 10,
-                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  child: Text(character.name.isNotEmpty ? character.name[0] : '?', style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  child: Text(
+                                    character.name.isNotEmpty
+                                        ? character.name[0]
+                                        : '?',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimaryContainer,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(character.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+                                Expanded(
+                                  child: Text(
+                                    character.name,
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 // 从分组移除
                                 GestureDetector(
                                   onTap: () {
-                                    ref.read(groupActionsProvider).removeCharacterFromGroup(character.id, widget.group.id);
+                                    ref
+                                        .read(groupActionsProvider)
+                                        .removeCharacterFromGroup(
+                                          character.id,
+                                          widget.group.id,
+                                        );
                                   },
-                                  child: const Icon(Icons.close, size: 14, color: Colors.grey),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ],
                             ),
@@ -511,7 +664,10 @@ class _GroupTreeNodeState extends ConsumerState<_GroupTreeNode> {
         title: const Text('删除分组'),
         content: Text('确定要删除"${widget.group.name}"吗？\n分组下的人物不会被删除。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
           TextButton(
             onPressed: () {
               ref.read(groupActionsProvider).delete(widget.group.id);

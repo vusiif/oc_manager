@@ -44,26 +44,28 @@ class PackageManifest {
   });
 
   Map<String, dynamic> toJson() => {
-        'format': format,
-        'version': version,
-        'appVersion': appVersion,
-        'exportDate': exportDate,
-        'packageType': packageType,
-        'title': title,
-        if (description != null) 'description': description,
-        'entityCounts': entityCounts,
-      };
+    'format': format,
+    'version': version,
+    'appVersion': appVersion,
+    'exportDate': exportDate,
+    'packageType': packageType,
+    'title': title,
+    if (description != null) 'description': description,
+    'entityCounts': entityCounts,
+  };
 
   factory PackageManifest.fromJson(Map<String, dynamic> json) {
     return PackageManifest(
       format: json['format'] as String? ?? 'ocpkg',
       version: json['version'] as String? ?? '1.0',
       appVersion: json['appVersion'] as String? ?? '1.5.0',
-      exportDate: json['exportDate'] as String? ?? DateTime.now().toIso8601String(),
+      exportDate:
+          json['exportDate'] as String? ?? DateTime.now().toIso8601String(),
       packageType: json['packageType'] as String? ?? 'world',
       title: json['title'] as String? ?? 'Untitled Package',
       description: json['description'] as String?,
-      entityCounts: (json['entityCounts'] as Map<String, dynamic>?)?.map(
+      entityCounts:
+          (json['entityCounts'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, (v as num).toInt()),
           ) ??
           {},
@@ -102,35 +104,46 @@ class OcPackageBundle {
   });
 
   Map<String, dynamic> toJson() => {
-        'manifest': manifest.toJson(),
-        if (world != null) 'world': world,
-        'characters': characters,
-        'characterFields': characterFields,
-        'characterStats': characterStats,
-        'characterGalleries': characterGalleries,
-        'relations': relations,
-        'groups': groups,
-        'characterGroups': characterGroups,
-        'tags': tags,
-        'characterTags': characterTags,
-        'timelineEvents': timelineEvents,
-      };
+    'manifest': manifest.toJson(),
+    if (world != null) 'world': world,
+    'characters': characters,
+    'characterFields': characterFields,
+    'characterStats': characterStats,
+    'characterGalleries': characterGalleries,
+    'relations': relations,
+    'groups': groups,
+    'characterGroups': characterGroups,
+    'tags': tags,
+    'characterTags': characterTags,
+    'timelineEvents': timelineEvents,
+  };
 
   factory OcPackageBundle.fromJson(Map<String, dynamic> json) {
     final manifestJson = json['manifest'] as Map<String, dynamic>? ?? {};
     return OcPackageBundle(
       manifest: PackageManifest.fromJson(manifestJson),
       world: json['world'] as Map<String, dynamic>?,
-      characters: (json['characters'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      characterFields: (json['characterFields'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      characterStats: (json['characterStats'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      characterGalleries: (json['characterGalleries'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      relations: (json['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      characters:
+          (json['characters'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      characterFields:
+          (json['characterFields'] as List?)?.cast<Map<String, dynamic>>() ??
+          [],
+      characterStats:
+          (json['characterStats'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      characterGalleries:
+          (json['characterGalleries'] as List?)?.cast<Map<String, dynamic>>() ??
+          [],
+      relations:
+          (json['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
       groups: (json['groups'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      characterGroups: (json['characterGroups'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      characterGroups:
+          (json['characterGroups'] as List?)?.cast<Map<String, dynamic>>() ??
+          [],
       tags: (json['tags'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      characterTags: (json['characterTags'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-      timelineEvents: (json['timelineEvents'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      characterTags:
+          (json['characterTags'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      timelineEvents:
+          (json['timelineEvents'] as List?)?.cast<Map<String, dynamic>>() ?? [],
     );
   }
 

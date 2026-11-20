@@ -7,6 +7,10 @@ import '../../core/design/components/oc_avatar.dart';
 import '../../core/util/wiki_link_parser.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/backlink_provider.dart';
+import '../../providers/lore_provider.dart';
+import '../../providers/revision_provider.dart';
+import '../world/lore_entity_detail_dialog.dart';
+import '../world/revision_history_dialog.dart';
 
 /// 角色详情页中的详细描述卡片（支持维基双向链接与反向引用）
 class CharacterDescriptionSection extends ConsumerStatefulWidget {
@@ -42,7 +46,8 @@ class _CharacterDescriptionSectionState
     if (oldWidget.character.id != widget.character.id) {
       _controller.text = widget.character.description;
       _isEditing = false;
-    } else if (oldWidget.character.description != widget.character.description &&
+    } else if (oldWidget.character.description !=
+            widget.character.description &&
         !_isEditing) {
       _controller.text = widget.character.description;
     }
@@ -57,9 +62,19 @@ class _CharacterDescriptionSectionState
   Future<void> _saveDescription() async {
     final newText = _controller.text;
     if (newText != widget.character.description) {
-      await ref.read(characterActionsProvider).update(
-            widget.character.copyWith(description: newText),
-          );
+      if (widget.character.description.trim().isNotEmpty) {
+        await ref
+            .read(revisionActionsProvider)
+            .recordRevision(
+              worldId: widget.worldId,
+              entityType: 'character',
+              entityId: widget.character.id,
+              content: widget.character.description,
+            );
+      }
+      await ref
+          .read(characterActionsProvider)
+          .update(widget.character.copyWith(description: newText));
       ref.invalidate(characterByIdProvider(widget.character.id));
     }
     if (mounted) {
@@ -76,7 +91,9 @@ class _CharacterDescriptionSectionState
       final newText = text.replaceRange(selection.start, selection.end, tag);
       _controller.value = TextEditingValue(
         text: newText,
-        selection: TextSelection.collapsed(offset: selection.start + tag.length),
+        selection: TextSelection.collapsed(
+          offset: selection.start + tag.length,
+        ),
       );
     } else {
       final newText = '$text $tag';
@@ -88,8 +105,9 @@ class _CharacterDescriptionSectionState
   }
 
   void _showInsertLinkDialog(List<Character> allChars) {
-    final candidates =
-        allChars.where((c) => c.id != widget.character.id).toList();
+    final candidates = allChars
+        .where((c) => c.id != widget.character.id)
+        .toList();
 
     showDialog(
       context: context,
@@ -150,8 +168,10 @@ class _CharacterDescriptionSectionState
                                     size: 28,
                                   ),
                                   title: Text(char.name),
-                                  trailing: const Icon(Icons.add_rounded,
-                                      size: 18),
+                                  trailing: const Icon(
+                                    Icons.add_rounded,
+                                    size: 18,
+                                  ),
                                   onTap: () {
                                     Navigator.of(ctx).pop();
                                     _insertCharacterLink(char.name);
@@ -183,14 +203,22 @@ class _CharacterDescriptionSectionState
     final allChars = allCharsAsync.valueOrNull ?? [];
     final charMap = {for (final c in allChars) c.name: c};
 
+    final allLoresAsync = ref.watch(
+      loreEntitiesByWorldProvider(widget.worldId),
+    );
+    final allLores = allLoresAsync.valueOrNull ?? [];
+    final loreMap = {for (final l in allLores) l.name: l};
+
     // 反向引用查询
-    final backlinks = ref.watch(characterBacklinksProvider(
-      BacklinkQuery(
-        worldId: widget.worldId,
-        characterId: widget.character.id,
-        characterName: widget.character.name,
+    final backlinks = ref.watch(
+      characterBacklinksProvider(
+        BacklinkQuery(
+          worldId: widget.worldId,
+          characterId: widget.character.id,
+          characterName: widget.character.name,
+        ),
       ),
-    ));
+    );
 
     return Card(
       elevation: 0,
@@ -239,6 +267,30 @@ class _CharacterDescriptionSectionState
                   ),
                 ] else ...[
                   IconButton(
+                    icon: const Icon(Icons.history_rounded, size: 18),
+                    tooltip: '版本历史与快照恢复',
+                    onPressed: () {
+                      RevisionHistoryDialog.show(
+                        context,
+                        worldId: widget.worldId,
+                        entityType: 'character',
+                        entityId: widget.character.id,
+                        entityName: widget.character.name,
+                        currentContent: widget.character.description,
+                        character: widget.character,
+                        onRestore: (rev) async {
+                          await ref
+                              .read(revisionActionsProvider)
+                              .restoreCharacterDescription(
+                                revisionId: rev.id,
+                                character: widget.character,
+                              );
+                          _controller.text = rev.content;
+                        },
+                      );
+                    },
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     tooltip: '编辑描述',
                     onPressed: () => setState(() => _isEditing = true),
@@ -254,7 +306,7 @@ class _CharacterDescriptionSectionState
             if (_isEditing)
               _buildEditMode(context, allChars)
             else
-              _buildViewMode(context, charMap),
+              _buildViewMode(context, charMap, loreMap),
 
             // 反向引用（Backlinks 面板）
             if (backlinks.isNotEmpty) ...[
@@ -268,8 +320,10 @@ class _CharacterDescriptionSectionState
   }
 
   Widget _buildEditMode(BuildContext context, List<Character> allChars) {
-    final otherCandidates =
-        allChars.where((c) => c.id != widget.character.id).take(6).toList();
+    final otherCandidates = allChars
+        .where((c) => c.id != widget.character.id)
+        .take(6)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +380,10 @@ class _CharacterDescriptionSectionState
   }
 
   Widget _buildViewMode(
-      BuildContext context, Map<String, Character> charMap) {
+    BuildContext context,
+    Map<String, Character> charMap,
+    Map<String, LoreEntity> loreMap,
+  ) {
     final text = _controller.text.trim();
     final theme = Theme.of(context);
 
@@ -338,7 +395,9 @@ class _CharacterDescriptionSectionState
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
@@ -349,7 +408,9 @@ class _CharacterDescriptionSectionState
               Icon(
                 Icons.edit_note_rounded,
                 size: 32,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.5,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -368,9 +429,13 @@ class _CharacterDescriptionSectionState
     final spans = WikiLinkParser.buildWikiSpans(
       text: text,
       nameToCharacterMap: charMap,
+      nameToLoreEntityMap: loreMap,
       context: context,
       onCharacterTap: (target) {
         context.push('/world/${widget.worldId}/character/${target.id}');
+      },
+      onLoreEntityTap: (target) {
+        LoreEntityDetailDialog.show(context, entity: target);
       },
     );
 
@@ -385,12 +450,16 @@ class _CharacterDescriptionSectionState
   }
 
   Widget _buildBacklinksSection(
-      BuildContext context, List<BacklinkItem> backlinks) {
+    BuildContext context,
+    List<BacklinkItem> backlinks,
+  ) {
     final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.35,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
@@ -453,17 +522,23 @@ class _CharacterDescriptionSectionState
 
                 return InkWell(
                   onTap: () {
-                    context.push('/world/${widget.worldId}/character/${other.id}');
+                    context.push(
+                      '/world/${widget.worldId}/character/${other.id}',
+                    );
                   },
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                     ),
                     child: Row(
@@ -509,7 +584,8 @@ class _CharacterDescriptionSectionState
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontStyle: FontStyle.italic,
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ),

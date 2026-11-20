@@ -8,6 +8,7 @@ import '../providers/character_provider.dart';
 import '../providers/group_provider.dart';
 import '../providers/world_provider.dart';
 import 'character/character_detail_page.dart';
+import 'command_palette/command_palette_dialog.dart';
 import 'sidebar/tree_sidebar.dart';
 import 'world/world_detail_page.dart';
 import 'world/world_dialog.dart';
@@ -27,7 +28,23 @@ class _MainShellState extends ConsumerState<MainShell> {
   bool _sidebarVisible = true;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedWorldId = ref.read(activeWorldIdProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(activeWorldIdProvider, (previous, next) {
+      if (next != _selectedWorldId) {
+        setState(() {
+          _selectedWorldId = next;
+          _selectedGroupId = null;
+          _selectedCharacterId = null;
+        });
+      }
+    });
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -54,15 +71,15 @@ class _MainShellState extends ConsumerState<MainShell> {
             IconButton(
               icon: const Icon(Icons.hub_outlined),
               tooltip: '关系图谱',
-              onPressed: () =>
-                  context.push('/world/$_selectedWorldId/graph'),
+              onPressed: () => context.push('/world/$_selectedWorldId/graph'),
             ),
             IconButton(
               icon: const Icon(Icons.insights_rounded),
               tooltip: '全景数据大盘与网络分析',
               onPressed: () {
-                final world =
-                    ref.read(worldByIdProvider(_selectedWorldId!)).valueOrNull;
+                final world = ref
+                    .read(worldByIdProvider(_selectedWorldId!))
+                    .valueOrNull;
                 showDialog(
                   context: context,
                   builder: (_) => WorldAnalyticsDialog(
@@ -73,6 +90,11 @@ class _MainShellState extends ConsumerState<MainShell> {
               },
             ),
           ],
+          IconButton(
+            icon: const Icon(Icons.terminal_rounded),
+            tooltip: '全局命令面板 (Ctrl+K)',
+            onPressed: () => showCommandPalette(context),
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: '全局搜索',
@@ -166,6 +188,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                       selectedGroupId: _selectedGroupId,
                       selectedCharacterId: _selectedCharacterId,
                       onWorldSelected: (worldId) {
+                        ref.read(activeWorldIdProvider.notifier).state =
+                            worldId;
                         setState(() {
                           _selectedWorldId = worldId;
                           _selectedGroupId = null;
@@ -209,7 +233,10 @@ class _MainShellState extends ConsumerState<MainShell> {
         children: [
           const Icon(Icons.auto_awesome, size: 18, color: AppColors.brand),
           const SizedBox(width: AppSpacing.sm),
-          const Text('OC Manager', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'OC Manager',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       );
     }
@@ -225,8 +252,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     String? charName;
     if (_selectedCharacterId != null) {
-      final charAsync =
-          ref.watch(characterByIdProvider(_selectedCharacterId!));
+      final charAsync = ref.watch(characterByIdProvider(_selectedCharacterId!));
       charName = charAsync.valueOrNull?.name;
     }
 
@@ -237,6 +263,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           InkWell(
             borderRadius: AppRadius.radiusSm,
             onTap: () {
+              ref.read(activeWorldIdProvider.notifier).state = null;
               setState(() {
                 _selectedWorldId = null;
                 _selectedGroupId = null;
@@ -266,7 +293,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                 worldName,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: _selectedCharacterId == null && _selectedGroupId == null
+                  fontWeight:
+                      _selectedCharacterId == null && _selectedGroupId == null
                       ? FontWeight.w600
                       : FontWeight.normal,
                 ),
@@ -357,8 +385,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           return EmptyStateView(
             icon: Icons.public,
             title: '开启你的 OC 创作世界',
-            description:
-                '世界观是管理人物与关系的顶层容器。创建你的第一个世界观，开始构建丰富的人设立绘与复杂关系网吧！',
+            description: '世界观是管理人物与关系的顶层容器。创建你的第一个世界观，开始构建丰富的人设立绘与复杂关系网吧！',
             primaryActionLabel: '创建新世界观',
             onPrimaryAction: () => _showCreateWorldDialog(context),
           );
@@ -455,6 +482,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                       child: InkWell(
                         borderRadius: AppRadius.radiusMd,
                         onTap: () {
+                          ref.read(activeWorldIdProvider.notifier).state =
+                              world.id;
                           setState(() {
                             _selectedWorldId = world.id;
                             _selectedGroupId = null;
@@ -491,8 +520,11 @@ class _MainShellState extends ConsumerState<MainShell> {
                                     ),
                                   ),
                                   if (world.isLocked)
-                                    const Icon(Icons.lock,
-                                        size: 16, color: Colors.grey),
+                                    const Icon(
+                                      Icons.lock,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
                                 ],
                               ),
                               Text(
@@ -525,9 +557,6 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   void _showCreateWorldDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const WorldDialog(),
-    );
+    showDialog(context: context, builder: (context) => const WorldDialog());
   }
 }

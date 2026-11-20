@@ -17,9 +17,7 @@ void main() {
     setUp(() {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-        ],
+        overrides: [databaseProvider.overrideWithValue(db)],
       );
     });
 
@@ -43,13 +41,18 @@ void main() {
       );
     });
 
-    test('PaletteExtractor handles corrupt or empty bytes gracefully', () async {
-      final empty = await PaletteExtractor.extractFromBytes(Uint8List(0));
-      expect(empty, isEmpty);
+    test(
+      'PaletteExtractor handles corrupt or empty bytes gracefully',
+      () async {
+        final empty = await PaletteExtractor.extractFromBytes(Uint8List(0));
+        expect(empty, isEmpty);
 
-      final corrupt = await PaletteExtractor.extractFromBytes(Uint8List.fromList([1, 2, 3, 4]));
-      expect(corrupt, isEmpty);
-    });
+        final corrupt = await PaletteExtractor.extractFromBytes(
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+        expect(corrupt, isEmpty);
+      },
+    );
 
     test('Gallery CRUD & primary avatar synchronization', () async {
       // 1. 创建世界与初始角色
@@ -126,67 +129,89 @@ void main() {
       expect(galleries.any((g) => g.id == g1), isFalse);
     });
 
-    test('Trash cascade snapshot & restore preserves all gallery items', () async {
-      // 1. 创建世界与带画廊立绘的角色
-      final worldId = await db.worldDao.createWorld(
-        const WorldsCompanion(name: Value('回收站画廊世界')),
-      );
-      final charId = await db.characterDao.createCharacter(
-        CharactersCompanion(
-          worldId: Value(worldId),
-          name: Value('法师梅林'),
-        ),
-      );
+    test(
+      'Trash cascade snapshot & restore preserves all gallery items',
+      () async {
+        // 1. 创建世界与带画廊立绘的角色
+        final worldId = await db.worldDao.createWorld(
+          const WorldsCompanion(name: Value('回收站画廊世界')),
+        );
+        final charId = await db.characterDao.createCharacter(
+          CharactersCompanion(worldId: Value(worldId), name: Value('法师梅林')),
+        );
 
-      await db.characterDao.addGalleryImage(
-        CharacterGalleriesCompanion.insert(
-          characterId: charId,
-          imagePath: 'gallery/char_merlin_robe.png',
-          caption: const Value('法师长袍'),
-          isPrimary: const Value(true),
-        ),
-      );
-      await db.characterDao.addGalleryImage(
-        CharacterGalleriesCompanion.insert(
-          characterId: charId,
-          imagePath: 'gallery/char_merlin_young.png',
-          caption: const Value('青年时期'),
-          isPrimary: const Value(false),
-        ),
-      );
+        await db.characterDao.addGalleryImage(
+          CharacterGalleriesCompanion.insert(
+            characterId: charId,
+            imagePath: 'gallery/char_merlin_robe.png',
+            caption: const Value('法师长袍'),
+            isPrimary: const Value(true),
+          ),
+        );
+        await db.characterDao.addGalleryImage(
+          CharacterGalleriesCompanion.insert(
+            characterId: charId,
+            imagePath: 'gallery/char_merlin_young.png',
+            caption: const Value('青年时期'),
+            isPrimary: const Value(false),
+          ),
+        );
 
-      final character = await db.characterDao.getCharacterById(charId);
-      final beforeDeleteGalleries = await db.characterDao.getCharacterGalleries(charId);
-      expect(beforeDeleteGalleries.length, equals(2));
+        final character = await db.characterDao.getCharacterById(charId);
+        final beforeDeleteGalleries = await db.characterDao
+            .getCharacterGalleries(charId);
+        expect(beforeDeleteGalleries.length, equals(2));
 
-      // 2. 软删除角色到回收站
-      final trashActions = container.read(trashActionsProvider);
-      await trashActions.deleteCharacter(character);
+        // 2. 软删除角色到回收站
+        final trashActions = container.read(trashActionsProvider);
+        await trashActions.deleteCharacter(character);
 
-      // 验证画廊子表已清空
-      final afterDeleteGalleries = await db.characterDao.getCharacterGalleries(charId);
-      expect(afterDeleteGalleries.isEmpty, isTrue);
+        // 验证画廊子表已清空
+        final afterDeleteGalleries = await db.characterDao
+            .getCharacterGalleries(charId);
+        expect(afterDeleteGalleries.isEmpty, isTrue);
 
-      final trashList = await db.trashDao.getAllTrash();
-      expect(trashList.length, equals(1));
-      final trashItem = trashList.first;
-      expect(trashItem.itemData.contains('"galleries"'), isTrue);
-      expect(trashItem.itemData.contains('法师长袍'), isTrue);
-      expect(trashItem.itemData.contains('青年时期'), isTrue);
+        final trashList = await db.trashDao.getAllTrash();
+        expect(trashList.length, equals(1));
+        final trashItem = trashList.first;
+        expect(trashItem.itemData.contains('"galleries"'), isTrue);
+        expect(trashItem.itemData.contains('法师长袍'), isTrue);
+        expect(trashItem.itemData.contains('青年时期'), isTrue);
 
-      // 3. 从回收站恢复角色
-      await trashActions.restoreCharacter(trashItem);
+        // 3. 从回收站恢复角色
+        await trashActions.restoreCharacter(trashItem);
 
-      // 验证画廊立绘全部 100% 等价恢复
-      final restoredGalleries = await db.characterDao.getCharacterGalleries(charId);
-      expect(restoredGalleries.length, equals(2));
-      expect(restoredGalleries[0].imagePath, equals(beforeDeleteGalleries[0].imagePath));
-      expect(restoredGalleries[0].caption, equals(beforeDeleteGalleries[0].caption));
-      expect(restoredGalleries[0].isPrimary, equals(beforeDeleteGalleries[0].isPrimary));
+        // 验证画廊立绘全部 100% 等价恢复
+        final restoredGalleries = await db.characterDao.getCharacterGalleries(
+          charId,
+        );
+        expect(restoredGalleries.length, equals(2));
+        expect(
+          restoredGalleries[0].imagePath,
+          equals(beforeDeleteGalleries[0].imagePath),
+        );
+        expect(
+          restoredGalleries[0].caption,
+          equals(beforeDeleteGalleries[0].caption),
+        );
+        expect(
+          restoredGalleries[0].isPrimary,
+          equals(beforeDeleteGalleries[0].isPrimary),
+        );
 
-      expect(restoredGalleries[1].imagePath, equals(beforeDeleteGalleries[1].imagePath));
-      expect(restoredGalleries[1].caption, equals(beforeDeleteGalleries[1].caption));
-      expect(restoredGalleries[1].isPrimary, equals(beforeDeleteGalleries[1].isPrimary));
-    });
+        expect(
+          restoredGalleries[1].imagePath,
+          equals(beforeDeleteGalleries[1].imagePath),
+        );
+        expect(
+          restoredGalleries[1].caption,
+          equals(beforeDeleteGalleries[1].caption),
+        );
+        expect(
+          restoredGalleries[1].isPrimary,
+          equals(beforeDeleteGalleries[1].isPrimary),
+        );
+      },
+    );
   });
 }

@@ -4642,8 +4642,26 @@ class $GraphLayoutsTable extends GraphLayouts
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _canvasIdMeta = const VerificationMeta(
+    'canvasId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, worldId, characterId, x, y];
+  late final GeneratedColumn<int> canvasId = GeneratedColumn<int>(
+    'canvas_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    characterId,
+    x,
+    y,
+    canvasId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4684,6 +4702,12 @@ class $GraphLayoutsTable extends GraphLayouts
     if (data.containsKey('y')) {
       context.handle(_yMeta, y.isAcceptableOrUnknown(data['y']!, _yMeta));
     }
+    if (data.containsKey('canvas_id')) {
+      context.handle(
+        _canvasIdMeta,
+        canvasId.isAcceptableOrUnknown(data['canvas_id']!, _canvasIdMeta),
+      );
+    }
     return context;
   }
 
@@ -4713,6 +4737,10 @@ class $GraphLayoutsTable extends GraphLayouts
         DriftSqlType.double,
         data['${effectivePrefix}y'],
       )!,
+      canvasId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}canvas_id'],
+      ),
     );
   }
 
@@ -4728,12 +4756,14 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
   final int characterId;
   final double x;
   final double y;
+  final int? canvasId;
   const GraphLayout({
     required this.id,
     required this.worldId,
     required this.characterId,
     required this.x,
     required this.y,
+    this.canvasId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4743,6 +4773,9 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
     map['character_id'] = Variable<int>(characterId);
     map['x'] = Variable<double>(x);
     map['y'] = Variable<double>(y);
+    if (!nullToAbsent || canvasId != null) {
+      map['canvas_id'] = Variable<int>(canvasId);
+    }
     return map;
   }
 
@@ -4753,6 +4786,9 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
       characterId: Value(characterId),
       x: Value(x),
       y: Value(y),
+      canvasId: canvasId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(canvasId),
     );
   }
 
@@ -4767,6 +4803,7 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
       characterId: serializer.fromJson<int>(json['characterId']),
       x: serializer.fromJson<double>(json['x']),
       y: serializer.fromJson<double>(json['y']),
+      canvasId: serializer.fromJson<int?>(json['canvasId']),
     );
   }
   @override
@@ -4778,6 +4815,7 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
       'characterId': serializer.toJson<int>(characterId),
       'x': serializer.toJson<double>(x),
       'y': serializer.toJson<double>(y),
+      'canvasId': serializer.toJson<int?>(canvasId),
     };
   }
 
@@ -4787,12 +4825,14 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
     int? characterId,
     double? x,
     double? y,
+    Value<int?> canvasId = const Value.absent(),
   }) => GraphLayout(
     id: id ?? this.id,
     worldId: worldId ?? this.worldId,
     characterId: characterId ?? this.characterId,
     x: x ?? this.x,
     y: y ?? this.y,
+    canvasId: canvasId.present ? canvasId.value : this.canvasId,
   );
   GraphLayout copyWithCompanion(GraphLayoutsCompanion data) {
     return GraphLayout(
@@ -4803,6 +4843,7 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
           : this.characterId,
       x: data.x.present ? data.x.value : this.x,
       y: data.y.present ? data.y.value : this.y,
+      canvasId: data.canvasId.present ? data.canvasId.value : this.canvasId,
     );
   }
 
@@ -4813,13 +4854,14 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
           ..write('worldId: $worldId, ')
           ..write('characterId: $characterId, ')
           ..write('x: $x, ')
-          ..write('y: $y')
+          ..write('y: $y, ')
+          ..write('canvasId: $canvasId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, worldId, characterId, x, y);
+  int get hashCode => Object.hash(id, worldId, characterId, x, y, canvasId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4828,7 +4870,8 @@ class GraphLayout extends DataClass implements Insertable<GraphLayout> {
           other.worldId == this.worldId &&
           other.characterId == this.characterId &&
           other.x == this.x &&
-          other.y == this.y);
+          other.y == this.y &&
+          other.canvasId == this.canvasId);
 }
 
 class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
@@ -4837,12 +4880,14 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
   final Value<int> characterId;
   final Value<double> x;
   final Value<double> y;
+  final Value<int?> canvasId;
   const GraphLayoutsCompanion({
     this.id = const Value.absent(),
     this.worldId = const Value.absent(),
     this.characterId = const Value.absent(),
     this.x = const Value.absent(),
     this.y = const Value.absent(),
+    this.canvasId = const Value.absent(),
   });
   GraphLayoutsCompanion.insert({
     this.id = const Value.absent(),
@@ -4850,6 +4895,7 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
     required int characterId,
     this.x = const Value.absent(),
     this.y = const Value.absent(),
+    this.canvasId = const Value.absent(),
   }) : worldId = Value(worldId),
        characterId = Value(characterId);
   static Insertable<GraphLayout> custom({
@@ -4858,6 +4904,7 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
     Expression<int>? characterId,
     Expression<double>? x,
     Expression<double>? y,
+    Expression<int>? canvasId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4865,6 +4912,7 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
       if (characterId != null) 'character_id': characterId,
       if (x != null) 'x': x,
       if (y != null) 'y': y,
+      if (canvasId != null) 'canvas_id': canvasId,
     });
   }
 
@@ -4874,6 +4922,7 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
     Value<int>? characterId,
     Value<double>? x,
     Value<double>? y,
+    Value<int?>? canvasId,
   }) {
     return GraphLayoutsCompanion(
       id: id ?? this.id,
@@ -4881,6 +4930,7 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
       characterId: characterId ?? this.characterId,
       x: x ?? this.x,
       y: y ?? this.y,
+      canvasId: canvasId ?? this.canvasId,
     );
   }
 
@@ -4902,6 +4952,9 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
     if (y.present) {
       map['y'] = Variable<double>(y.value);
     }
+    if (canvasId.present) {
+      map['canvas_id'] = Variable<int>(canvasId.value);
+    }
     return map;
   }
 
@@ -4912,7 +4965,8 @@ class GraphLayoutsCompanion extends UpdateCompanion<GraphLayout> {
           ..write('worldId: $worldId, ')
           ..write('characterId: $characterId, ')
           ..write('x: $x, ')
-          ..write('y: $y')
+          ..write('y: $y, ')
+          ..write('canvasId: $canvasId')
           ..write(')'))
         .toString();
   }
@@ -6747,6 +6801,4824 @@ class TimelineEventsCompanion extends UpdateCompanion<TimelineEvent> {
   }
 }
 
+class $LoreEntitiesTable extends LoreEntities
+    with TableInfo<$LoreEntitiesTable, LoreEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoreEntitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _parentIdMeta = const VerificationMeta(
+    'parentId',
+  );
+  @override
+  late final GeneratedColumn<int> parentId = GeneratedColumn<int>(
+    'parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lore_entities (id)',
+    ),
+  );
+  static const VerificationMeta _entityTypeMeta = const VerificationMeta(
+    'entityType',
+  );
+  @override
+  late final GeneratedColumn<String> entityType = GeneratedColumn<String>(
+    'entity_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _coverImagePathMeta = const VerificationMeta(
+    'coverImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> coverImagePath = GeneratedColumn<String>(
+    'cover_image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _customFieldsMeta = const VerificationMeta(
+    'customFields',
+  );
+  @override
+  late final GeneratedColumn<String> customFields = GeneratedColumn<String>(
+    'custom_fields',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    parentId,
+    entityType,
+    name,
+    summary,
+    content,
+    coverImagePath,
+    tags,
+    customFields,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lore_entities';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LoreEntity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(
+        _parentIdMeta,
+        parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
+      );
+    }
+    if (data.containsKey('entity_type')) {
+      context.handle(
+        _entityTypeMeta,
+        entityType.isAcceptableOrUnknown(data['entity_type']!, _entityTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('cover_image_path')) {
+      context.handle(
+        _coverImagePathMeta,
+        coverImagePath.isAcceptableOrUnknown(
+          data['cover_image_path']!,
+          _coverImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    }
+    if (data.containsKey('custom_fields')) {
+      context.handle(
+        _customFieldsMeta,
+        customFields.isAcceptableOrUnknown(
+          data['custom_fields']!,
+          _customFieldsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoreEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoreEntity(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      parentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_id'],
+      ),
+      entityType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_type'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      coverImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_image_path'],
+      ),
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      )!,
+      customFields: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_fields'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LoreEntitiesTable createAlias(String alias) {
+    return $LoreEntitiesTable(attachedDatabase, alias);
+  }
+}
+
+class LoreEntity extends DataClass implements Insertable<LoreEntity> {
+  final int id;
+  final int worldId;
+  final int? parentId;
+  final String entityType;
+  final String name;
+  final String summary;
+  final String content;
+  final String? coverImagePath;
+  final String tags;
+  final String customFields;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const LoreEntity({
+    required this.id,
+    required this.worldId,
+    this.parentId,
+    required this.entityType,
+    required this.name,
+    required this.summary,
+    required this.content,
+    this.coverImagePath,
+    required this.tags,
+    required this.customFields,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<int>(parentId);
+    }
+    map['entity_type'] = Variable<String>(entityType);
+    map['name'] = Variable<String>(name);
+    map['summary'] = Variable<String>(summary);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || coverImagePath != null) {
+      map['cover_image_path'] = Variable<String>(coverImagePath);
+    }
+    map['tags'] = Variable<String>(tags);
+    map['custom_fields'] = Variable<String>(customFields);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LoreEntitiesCompanion toCompanion(bool nullToAbsent) {
+    return LoreEntitiesCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
+      entityType: Value(entityType),
+      name: Value(name),
+      summary: Value(summary),
+      content: Value(content),
+      coverImagePath: coverImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImagePath),
+      tags: Value(tags),
+      customFields: Value(customFields),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LoreEntity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoreEntity(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      parentId: serializer.fromJson<int?>(json['parentId']),
+      entityType: serializer.fromJson<String>(json['entityType']),
+      name: serializer.fromJson<String>(json['name']),
+      summary: serializer.fromJson<String>(json['summary']),
+      content: serializer.fromJson<String>(json['content']),
+      coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
+      tags: serializer.fromJson<String>(json['tags']),
+      customFields: serializer.fromJson<String>(json['customFields']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'parentId': serializer.toJson<int?>(parentId),
+      'entityType': serializer.toJson<String>(entityType),
+      'name': serializer.toJson<String>(name),
+      'summary': serializer.toJson<String>(summary),
+      'content': serializer.toJson<String>(content),
+      'coverImagePath': serializer.toJson<String?>(coverImagePath),
+      'tags': serializer.toJson<String>(tags),
+      'customFields': serializer.toJson<String>(customFields),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LoreEntity copyWith({
+    int? id,
+    int? worldId,
+    Value<int?> parentId = const Value.absent(),
+    String? entityType,
+    String? name,
+    String? summary,
+    String? content,
+    Value<String?> coverImagePath = const Value.absent(),
+    String? tags,
+    String? customFields,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => LoreEntity(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    parentId: parentId.present ? parentId.value : this.parentId,
+    entityType: entityType ?? this.entityType,
+    name: name ?? this.name,
+    summary: summary ?? this.summary,
+    content: content ?? this.content,
+    coverImagePath: coverImagePath.present
+        ? coverImagePath.value
+        : this.coverImagePath,
+    tags: tags ?? this.tags,
+    customFields: customFields ?? this.customFields,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  LoreEntity copyWithCompanion(LoreEntitiesCompanion data) {
+    return LoreEntity(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      entityType: data.entityType.present
+          ? data.entityType.value
+          : this.entityType,
+      name: data.name.present ? data.name.value : this.name,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      content: data.content.present ? data.content.value : this.content,
+      coverImagePath: data.coverImagePath.present
+          ? data.coverImagePath.value
+          : this.coverImagePath,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      customFields: data.customFields.present
+          ? data.customFields.value
+          : this.customFields,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreEntity(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('parentId: $parentId, ')
+          ..write('entityType: $entityType, ')
+          ..write('name: $name, ')
+          ..write('summary: $summary, ')
+          ..write('content: $content, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('tags: $tags, ')
+          ..write('customFields: $customFields, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    parentId,
+    entityType,
+    name,
+    summary,
+    content,
+    coverImagePath,
+    tags,
+    customFields,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoreEntity &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.parentId == this.parentId &&
+          other.entityType == this.entityType &&
+          other.name == this.name &&
+          other.summary == this.summary &&
+          other.content == this.content &&
+          other.coverImagePath == this.coverImagePath &&
+          other.tags == this.tags &&
+          other.customFields == this.customFields &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LoreEntitiesCompanion extends UpdateCompanion<LoreEntity> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<int?> parentId;
+  final Value<String> entityType;
+  final Value<String> name;
+  final Value<String> summary;
+  final Value<String> content;
+  final Value<String?> coverImagePath;
+  final Value<String> tags;
+  final Value<String> customFields;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const LoreEntitiesCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.entityType = const Value.absent(),
+    this.name = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.content = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.customFields = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  LoreEntitiesCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    this.parentId = const Value.absent(),
+    required String entityType,
+    required String name,
+    this.summary = const Value.absent(),
+    this.content = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.customFields = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       entityType = Value(entityType),
+       name = Value(name);
+  static Insertable<LoreEntity> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<int>? parentId,
+    Expression<String>? entityType,
+    Expression<String>? name,
+    Expression<String>? summary,
+    Expression<String>? content,
+    Expression<String>? coverImagePath,
+    Expression<String>? tags,
+    Expression<String>? customFields,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (parentId != null) 'parent_id': parentId,
+      if (entityType != null) 'entity_type': entityType,
+      if (name != null) 'name': name,
+      if (summary != null) 'summary': summary,
+      if (content != null) 'content': content,
+      if (coverImagePath != null) 'cover_image_path': coverImagePath,
+      if (tags != null) 'tags': tags,
+      if (customFields != null) 'custom_fields': customFields,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  LoreEntitiesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<int?>? parentId,
+    Value<String>? entityType,
+    Value<String>? name,
+    Value<String>? summary,
+    Value<String>? content,
+    Value<String?>? coverImagePath,
+    Value<String>? tags,
+    Value<String>? customFields,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return LoreEntitiesCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      parentId: parentId ?? this.parentId,
+      entityType: entityType ?? this.entityType,
+      name: name ?? this.name,
+      summary: summary ?? this.summary,
+      content: content ?? this.content,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
+      tags: tags ?? this.tags,
+      customFields: customFields ?? this.customFields,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (parentId.present) {
+      map['parent_id'] = Variable<int>(parentId.value);
+    }
+    if (entityType.present) {
+      map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (coverImagePath.present) {
+      map['cover_image_path'] = Variable<String>(coverImagePath.value);
+    }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (customFields.present) {
+      map['custom_fields'] = Variable<String>(customFields.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreEntitiesCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('parentId: $parentId, ')
+          ..write('entityType: $entityType, ')
+          ..write('name: $name, ')
+          ..write('summary: $summary, ')
+          ..write('content: $content, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('tags: $tags, ')
+          ..write('customFields: $customFields, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LoreRelationsTable extends LoreRelations
+    with TableInfo<$LoreRelationsTable, LoreRelation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoreRelationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _loreIdMeta = const VerificationMeta('loreId');
+  @override
+  late final GeneratedColumn<int> loreId = GeneratedColumn<int>(
+    'lore_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lore_entities (id)',
+    ),
+  );
+  static const VerificationMeta _characterIdMeta = const VerificationMeta(
+    'characterId',
+  );
+  @override
+  late final GeneratedColumn<int> characterId = GeneratedColumn<int>(
+    'character_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES characters (id)',
+    ),
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('成员'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    loreId,
+    characterId,
+    role,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lore_relations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LoreRelation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('lore_id')) {
+      context.handle(
+        _loreIdMeta,
+        loreId.isAcceptableOrUnknown(data['lore_id']!, _loreIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_loreIdMeta);
+    }
+    if (data.containsKey('character_id')) {
+      context.handle(
+        _characterIdMeta,
+        characterId.isAcceptableOrUnknown(
+          data['character_id']!,
+          _characterIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoreRelation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoreRelation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      loreId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lore_id'],
+      )!,
+      characterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}character_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LoreRelationsTable createAlias(String alias) {
+    return $LoreRelationsTable(attachedDatabase, alias);
+  }
+}
+
+class LoreRelation extends DataClass implements Insertable<LoreRelation> {
+  final int id;
+  final int worldId;
+  final int loreId;
+  final int characterId;
+  final String role;
+  final DateTime createdAt;
+  const LoreRelation({
+    required this.id,
+    required this.worldId,
+    required this.loreId,
+    required this.characterId,
+    required this.role,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    map['lore_id'] = Variable<int>(loreId);
+    map['character_id'] = Variable<int>(characterId);
+    map['role'] = Variable<String>(role);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LoreRelationsCompanion toCompanion(bool nullToAbsent) {
+    return LoreRelationsCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      loreId: Value(loreId),
+      characterId: Value(characterId),
+      role: Value(role),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LoreRelation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoreRelation(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      loreId: serializer.fromJson<int>(json['loreId']),
+      characterId: serializer.fromJson<int>(json['characterId']),
+      role: serializer.fromJson<String>(json['role']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'loreId': serializer.toJson<int>(loreId),
+      'characterId': serializer.toJson<int>(characterId),
+      'role': serializer.toJson<String>(role),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LoreRelation copyWith({
+    int? id,
+    int? worldId,
+    int? loreId,
+    int? characterId,
+    String? role,
+    DateTime? createdAt,
+  }) => LoreRelation(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    loreId: loreId ?? this.loreId,
+    characterId: characterId ?? this.characterId,
+    role: role ?? this.role,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  LoreRelation copyWithCompanion(LoreRelationsCompanion data) {
+    return LoreRelation(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      loreId: data.loreId.present ? data.loreId.value : this.loreId,
+      characterId: data.characterId.present
+          ? data.characterId.value
+          : this.characterId,
+      role: data.role.present ? data.role.value : this.role,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreRelation(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('loreId: $loreId, ')
+          ..write('characterId: $characterId, ')
+          ..write('role: $role, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, worldId, loreId, characterId, role, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoreRelation &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.loreId == this.loreId &&
+          other.characterId == this.characterId &&
+          other.role == this.role &&
+          other.createdAt == this.createdAt);
+}
+
+class LoreRelationsCompanion extends UpdateCompanion<LoreRelation> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<int> loreId;
+  final Value<int> characterId;
+  final Value<String> role;
+  final Value<DateTime> createdAt;
+  const LoreRelationsCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.loreId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  LoreRelationsCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    required int loreId,
+    required int characterId,
+    this.role = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       loreId = Value(loreId),
+       characterId = Value(characterId);
+  static Insertable<LoreRelation> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<int>? loreId,
+    Expression<int>? characterId,
+    Expression<String>? role,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (loreId != null) 'lore_id': loreId,
+      if (characterId != null) 'character_id': characterId,
+      if (role != null) 'role': role,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  LoreRelationsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<int>? loreId,
+    Value<int>? characterId,
+    Value<String>? role,
+    Value<DateTime>? createdAt,
+  }) {
+    return LoreRelationsCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      loreId: loreId ?? this.loreId,
+      characterId: characterId ?? this.characterId,
+      role: role ?? this.role,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (loreId.present) {
+      map['lore_id'] = Variable<int>(loreId.value);
+    }
+    if (characterId.present) {
+      map['character_id'] = Variable<int>(characterId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreRelationsCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('loreId: $loreId, ')
+          ..write('characterId: $characterId, ')
+          ..write('role: $role, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LoreEntityRelationsTable extends LoreEntityRelations
+    with TableInfo<$LoreEntityRelationsTable, LoreEntityRelation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LoreEntityRelationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _fromLoreIdMeta = const VerificationMeta(
+    'fromLoreId',
+  );
+  @override
+  late final GeneratedColumn<int> fromLoreId = GeneratedColumn<int>(
+    'from_lore_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lore_entities (id)',
+    ),
+  );
+  static const VerificationMeta _toLoreIdMeta = const VerificationMeta(
+    'toLoreId',
+  );
+  @override
+  late final GeneratedColumn<int> toLoreId = GeneratedColumn<int>(
+    'to_lore_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lore_entities (id)',
+    ),
+  );
+  static const VerificationMeta _relationTypeMeta = const VerificationMeta(
+    'relationType',
+  );
+  @override
+  late final GeneratedColumn<String> relationType = GeneratedColumn<String>(
+    'relation_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('同盟'),
+  );
+  static const VerificationMeta _isBidirectionalMeta = const VerificationMeta(
+    'isBidirectional',
+  );
+  @override
+  late final GeneratedColumn<bool> isBidirectional = GeneratedColumn<bool>(
+    'is_bidirectional',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_bidirectional" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    fromLoreId,
+    toLoreId,
+    relationType,
+    isBidirectional,
+    note,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lore_entity_relations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LoreEntityRelation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('from_lore_id')) {
+      context.handle(
+        _fromLoreIdMeta,
+        fromLoreId.isAcceptableOrUnknown(
+          data['from_lore_id']!,
+          _fromLoreIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fromLoreIdMeta);
+    }
+    if (data.containsKey('to_lore_id')) {
+      context.handle(
+        _toLoreIdMeta,
+        toLoreId.isAcceptableOrUnknown(data['to_lore_id']!, _toLoreIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toLoreIdMeta);
+    }
+    if (data.containsKey('relation_type')) {
+      context.handle(
+        _relationTypeMeta,
+        relationType.isAcceptableOrUnknown(
+          data['relation_type']!,
+          _relationTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_bidirectional')) {
+      context.handle(
+        _isBidirectionalMeta,
+        isBidirectional.isAcceptableOrUnknown(
+          data['is_bidirectional']!,
+          _isBidirectionalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LoreEntityRelation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LoreEntityRelation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      fromLoreId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_lore_id'],
+      )!,
+      toLoreId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}to_lore_id'],
+      )!,
+      relationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relation_type'],
+      )!,
+      isBidirectional: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_bidirectional'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LoreEntityRelationsTable createAlias(String alias) {
+    return $LoreEntityRelationsTable(attachedDatabase, alias);
+  }
+}
+
+class LoreEntityRelation extends DataClass
+    implements Insertable<LoreEntityRelation> {
+  final int id;
+  final int worldId;
+  final int fromLoreId;
+  final int toLoreId;
+  final String relationType;
+  final bool isBidirectional;
+  final String note;
+  final DateTime createdAt;
+  const LoreEntityRelation({
+    required this.id,
+    required this.worldId,
+    required this.fromLoreId,
+    required this.toLoreId,
+    required this.relationType,
+    required this.isBidirectional,
+    required this.note,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    map['from_lore_id'] = Variable<int>(fromLoreId);
+    map['to_lore_id'] = Variable<int>(toLoreId);
+    map['relation_type'] = Variable<String>(relationType);
+    map['is_bidirectional'] = Variable<bool>(isBidirectional);
+    map['note'] = Variable<String>(note);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LoreEntityRelationsCompanion toCompanion(bool nullToAbsent) {
+    return LoreEntityRelationsCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      fromLoreId: Value(fromLoreId),
+      toLoreId: Value(toLoreId),
+      relationType: Value(relationType),
+      isBidirectional: Value(isBidirectional),
+      note: Value(note),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LoreEntityRelation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LoreEntityRelation(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      fromLoreId: serializer.fromJson<int>(json['fromLoreId']),
+      toLoreId: serializer.fromJson<int>(json['toLoreId']),
+      relationType: serializer.fromJson<String>(json['relationType']),
+      isBidirectional: serializer.fromJson<bool>(json['isBidirectional']),
+      note: serializer.fromJson<String>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'fromLoreId': serializer.toJson<int>(fromLoreId),
+      'toLoreId': serializer.toJson<int>(toLoreId),
+      'relationType': serializer.toJson<String>(relationType),
+      'isBidirectional': serializer.toJson<bool>(isBidirectional),
+      'note': serializer.toJson<String>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LoreEntityRelation copyWith({
+    int? id,
+    int? worldId,
+    int? fromLoreId,
+    int? toLoreId,
+    String? relationType,
+    bool? isBidirectional,
+    String? note,
+    DateTime? createdAt,
+  }) => LoreEntityRelation(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    fromLoreId: fromLoreId ?? this.fromLoreId,
+    toLoreId: toLoreId ?? this.toLoreId,
+    relationType: relationType ?? this.relationType,
+    isBidirectional: isBidirectional ?? this.isBidirectional,
+    note: note ?? this.note,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  LoreEntityRelation copyWithCompanion(LoreEntityRelationsCompanion data) {
+    return LoreEntityRelation(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      fromLoreId: data.fromLoreId.present
+          ? data.fromLoreId.value
+          : this.fromLoreId,
+      toLoreId: data.toLoreId.present ? data.toLoreId.value : this.toLoreId,
+      relationType: data.relationType.present
+          ? data.relationType.value
+          : this.relationType,
+      isBidirectional: data.isBidirectional.present
+          ? data.isBidirectional.value
+          : this.isBidirectional,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreEntityRelation(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('fromLoreId: $fromLoreId, ')
+          ..write('toLoreId: $toLoreId, ')
+          ..write('relationType: $relationType, ')
+          ..write('isBidirectional: $isBidirectional, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    fromLoreId,
+    toLoreId,
+    relationType,
+    isBidirectional,
+    note,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LoreEntityRelation &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.fromLoreId == this.fromLoreId &&
+          other.toLoreId == this.toLoreId &&
+          other.relationType == this.relationType &&
+          other.isBidirectional == this.isBidirectional &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt);
+}
+
+class LoreEntityRelationsCompanion extends UpdateCompanion<LoreEntityRelation> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<int> fromLoreId;
+  final Value<int> toLoreId;
+  final Value<String> relationType;
+  final Value<bool> isBidirectional;
+  final Value<String> note;
+  final Value<DateTime> createdAt;
+  const LoreEntityRelationsCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.fromLoreId = const Value.absent(),
+    this.toLoreId = const Value.absent(),
+    this.relationType = const Value.absent(),
+    this.isBidirectional = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  LoreEntityRelationsCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    required int fromLoreId,
+    required int toLoreId,
+    this.relationType = const Value.absent(),
+    this.isBidirectional = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       fromLoreId = Value(fromLoreId),
+       toLoreId = Value(toLoreId);
+  static Insertable<LoreEntityRelation> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<int>? fromLoreId,
+    Expression<int>? toLoreId,
+    Expression<String>? relationType,
+    Expression<bool>? isBidirectional,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (fromLoreId != null) 'from_lore_id': fromLoreId,
+      if (toLoreId != null) 'to_lore_id': toLoreId,
+      if (relationType != null) 'relation_type': relationType,
+      if (isBidirectional != null) 'is_bidirectional': isBidirectional,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  LoreEntityRelationsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<int>? fromLoreId,
+    Value<int>? toLoreId,
+    Value<String>? relationType,
+    Value<bool>? isBidirectional,
+    Value<String>? note,
+    Value<DateTime>? createdAt,
+  }) {
+    return LoreEntityRelationsCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      fromLoreId: fromLoreId ?? this.fromLoreId,
+      toLoreId: toLoreId ?? this.toLoreId,
+      relationType: relationType ?? this.relationType,
+      isBidirectional: isBidirectional ?? this.isBidirectional,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (fromLoreId.present) {
+      map['from_lore_id'] = Variable<int>(fromLoreId.value);
+    }
+    if (toLoreId.present) {
+      map['to_lore_id'] = Variable<int>(toLoreId.value);
+    }
+    if (relationType.present) {
+      map['relation_type'] = Variable<String>(relationType.value);
+    }
+    if (isBidirectional.present) {
+      map['is_bidirectional'] = Variable<bool>(isBidirectional.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LoreEntityRelationsCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('fromLoreId: $fromLoreId, ')
+          ..write('toLoreId: $toLoreId, ')
+          ..write('relationType: $relationType, ')
+          ..write('isBidirectional: $isBidirectional, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EntityRevisionsTable extends EntityRevisions
+    with TableInfo<$EntityRevisionsTable, EntityRevision> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EntityRevisionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _entityTypeMeta = const VerificationMeta(
+    'entityType',
+  );
+  @override
+  late final GeneratedColumn<String> entityType = GeneratedColumn<String>(
+    'entity_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entityIdMeta = const VerificationMeta(
+    'entityId',
+  );
+  @override
+  late final GeneratedColumn<int> entityId = GeneratedColumn<int>(
+    'entity_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _charCountMeta = const VerificationMeta(
+    'charCount',
+  );
+  @override
+  late final GeneratedColumn<int> charCount = GeneratedColumn<int>(
+    'char_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    entityType,
+    entityId,
+    title,
+    content,
+    charCount,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'entity_revisions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EntityRevision> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('entity_type')) {
+      context.handle(
+        _entityTypeMeta,
+        entityType.isAcceptableOrUnknown(data['entity_type']!, _entityTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('entity_id')) {
+      context.handle(
+        _entityIdMeta,
+        entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('char_count')) {
+      context.handle(
+        _charCountMeta,
+        charCount.isAcceptableOrUnknown(data['char_count']!, _charCountMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  EntityRevision map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EntityRevision(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      entityType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_type'],
+      )!,
+      entityId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}entity_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      charCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}char_count'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EntityRevisionsTable createAlias(String alias) {
+    return $EntityRevisionsTable(attachedDatabase, alias);
+  }
+}
+
+class EntityRevision extends DataClass implements Insertable<EntityRevision> {
+  final int id;
+  final int worldId;
+  final String entityType;
+  final int entityId;
+  final String title;
+  final String content;
+  final int charCount;
+  final DateTime createdAt;
+  const EntityRevision({
+    required this.id,
+    required this.worldId,
+    required this.entityType,
+    required this.entityId,
+    required this.title,
+    required this.content,
+    required this.charCount,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    map['entity_type'] = Variable<String>(entityType);
+    map['entity_id'] = Variable<int>(entityId);
+    map['title'] = Variable<String>(title);
+    map['content'] = Variable<String>(content);
+    map['char_count'] = Variable<int>(charCount);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  EntityRevisionsCompanion toCompanion(bool nullToAbsent) {
+    return EntityRevisionsCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      entityType: Value(entityType),
+      entityId: Value(entityId),
+      title: Value(title),
+      content: Value(content),
+      charCount: Value(charCount),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory EntityRevision.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EntityRevision(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      entityType: serializer.fromJson<String>(json['entityType']),
+      entityId: serializer.fromJson<int>(json['entityId']),
+      title: serializer.fromJson<String>(json['title']),
+      content: serializer.fromJson<String>(json['content']),
+      charCount: serializer.fromJson<int>(json['charCount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'entityType': serializer.toJson<String>(entityType),
+      'entityId': serializer.toJson<int>(entityId),
+      'title': serializer.toJson<String>(title),
+      'content': serializer.toJson<String>(content),
+      'charCount': serializer.toJson<int>(charCount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  EntityRevision copyWith({
+    int? id,
+    int? worldId,
+    String? entityType,
+    int? entityId,
+    String? title,
+    String? content,
+    int? charCount,
+    DateTime? createdAt,
+  }) => EntityRevision(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    entityType: entityType ?? this.entityType,
+    entityId: entityId ?? this.entityId,
+    title: title ?? this.title,
+    content: content ?? this.content,
+    charCount: charCount ?? this.charCount,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  EntityRevision copyWithCompanion(EntityRevisionsCompanion data) {
+    return EntityRevision(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      entityType: data.entityType.present
+          ? data.entityType.value
+          : this.entityType,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      title: data.title.present ? data.title.value : this.title,
+      content: data.content.present ? data.content.value : this.content,
+      charCount: data.charCount.present ? data.charCount.value : this.charCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntityRevision(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('charCount: $charCount, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    entityType,
+    entityId,
+    title,
+    content,
+    charCount,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EntityRevision &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.entityType == this.entityType &&
+          other.entityId == this.entityId &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.charCount == this.charCount &&
+          other.createdAt == this.createdAt);
+}
+
+class EntityRevisionsCompanion extends UpdateCompanion<EntityRevision> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<String> entityType;
+  final Value<int> entityId;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<int> charCount;
+  final Value<DateTime> createdAt;
+  const EntityRevisionsCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.entityType = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.charCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  EntityRevisionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    required String entityType,
+    required int entityId,
+    this.title = const Value.absent(),
+    required String content,
+    this.charCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       entityType = Value(entityType),
+       entityId = Value(entityId),
+       content = Value(content);
+  static Insertable<EntityRevision> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<String>? entityType,
+    Expression<int>? entityId,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<int>? charCount,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (entityType != null) 'entity_type': entityType,
+      if (entityId != null) 'entity_id': entityId,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (charCount != null) 'char_count': charCount,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  EntityRevisionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<String>? entityType,
+    Value<int>? entityId,
+    Value<String>? title,
+    Value<String>? content,
+    Value<int>? charCount,
+    Value<DateTime>? createdAt,
+  }) {
+    return EntityRevisionsCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      charCount: charCount ?? this.charCount,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (entityType.present) {
+      map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (entityId.present) {
+      map['entity_id'] = Variable<int>(entityId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (charCount.present) {
+      map['char_count'] = Variable<int>(charCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EntityRevisionsCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('charCount: $charCount, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GraphCanvasesTable extends GraphCanvases
+    with TableInfo<$GraphCanvasesTable, GraphCanvas> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GraphCanvasesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _viewportXMeta = const VerificationMeta(
+    'viewportX',
+  );
+  @override
+  late final GeneratedColumn<double> viewportX = GeneratedColumn<double>(
+    'viewport_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _viewportYMeta = const VerificationMeta(
+    'viewportY',
+  );
+  @override
+  late final GeneratedColumn<double> viewportY = GeneratedColumn<double>(
+    'viewport_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _zoomScaleMeta = const VerificationMeta(
+    'zoomScale',
+  );
+  @override
+  late final GeneratedColumn<double> zoomScale = GeneratedColumn<double>(
+    'zoom_scale',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  static const VerificationMeta _filterConfigMeta = const VerificationMeta(
+    'filterConfig',
+  );
+  @override
+  late final GeneratedColumn<String> filterConfig = GeneratedColumn<String>(
+    'filter_config',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    name,
+    description,
+    isDefault,
+    viewportX,
+    viewportY,
+    zoomScale,
+    filterConfig,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'graph_canvases';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GraphCanvas> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    if (data.containsKey('viewport_x')) {
+      context.handle(
+        _viewportXMeta,
+        viewportX.isAcceptableOrUnknown(data['viewport_x']!, _viewportXMeta),
+      );
+    }
+    if (data.containsKey('viewport_y')) {
+      context.handle(
+        _viewportYMeta,
+        viewportY.isAcceptableOrUnknown(data['viewport_y']!, _viewportYMeta),
+      );
+    }
+    if (data.containsKey('zoom_scale')) {
+      context.handle(
+        _zoomScaleMeta,
+        zoomScale.isAcceptableOrUnknown(data['zoom_scale']!, _zoomScaleMeta),
+      );
+    }
+    if (data.containsKey('filter_config')) {
+      context.handle(
+        _filterConfigMeta,
+        filterConfig.isAcceptableOrUnknown(
+          data['filter_config']!,
+          _filterConfigMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GraphCanvas map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GraphCanvas(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
+      viewportX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}viewport_x'],
+      )!,
+      viewportY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}viewport_y'],
+      )!,
+      zoomScale: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}zoom_scale'],
+      )!,
+      filterConfig: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}filter_config'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GraphCanvasesTable createAlias(String alias) {
+    return $GraphCanvasesTable(attachedDatabase, alias);
+  }
+}
+
+class GraphCanvas extends DataClass implements Insertable<GraphCanvas> {
+  final int id;
+  final int worldId;
+  final String name;
+  final String? description;
+  final bool isDefault;
+  final double viewportX;
+  final double viewportY;
+  final double zoomScale;
+  final String? filterConfig;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const GraphCanvas({
+    required this.id,
+    required this.worldId,
+    required this.name,
+    this.description,
+    required this.isDefault,
+    required this.viewportX,
+    required this.viewportY,
+    required this.zoomScale,
+    this.filterConfig,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['is_default'] = Variable<bool>(isDefault);
+    map['viewport_x'] = Variable<double>(viewportX);
+    map['viewport_y'] = Variable<double>(viewportY);
+    map['zoom_scale'] = Variable<double>(zoomScale);
+    if (!nullToAbsent || filterConfig != null) {
+      map['filter_config'] = Variable<String>(filterConfig);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  GraphCanvasesCompanion toCompanion(bool nullToAbsent) {
+    return GraphCanvasesCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      isDefault: Value(isDefault),
+      viewportX: Value(viewportX),
+      viewportY: Value(viewportY),
+      zoomScale: Value(zoomScale),
+      filterConfig: filterConfig == null && nullToAbsent
+          ? const Value.absent()
+          : Value(filterConfig),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory GraphCanvas.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GraphCanvas(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+      viewportX: serializer.fromJson<double>(json['viewportX']),
+      viewportY: serializer.fromJson<double>(json['viewportY']),
+      zoomScale: serializer.fromJson<double>(json['zoomScale']),
+      filterConfig: serializer.fromJson<String?>(json['filterConfig']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'isDefault': serializer.toJson<bool>(isDefault),
+      'viewportX': serializer.toJson<double>(viewportX),
+      'viewportY': serializer.toJson<double>(viewportY),
+      'zoomScale': serializer.toJson<double>(zoomScale),
+      'filterConfig': serializer.toJson<String?>(filterConfig),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  GraphCanvas copyWith({
+    int? id,
+    int? worldId,
+    String? name,
+    Value<String?> description = const Value.absent(),
+    bool? isDefault,
+    double? viewportX,
+    double? viewportY,
+    double? zoomScale,
+    Value<String?> filterConfig = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => GraphCanvas(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    name: name ?? this.name,
+    description: description.present ? description.value : this.description,
+    isDefault: isDefault ?? this.isDefault,
+    viewportX: viewportX ?? this.viewportX,
+    viewportY: viewportY ?? this.viewportY,
+    zoomScale: zoomScale ?? this.zoomScale,
+    filterConfig: filterConfig.present ? filterConfig.value : this.filterConfig,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  GraphCanvas copyWithCompanion(GraphCanvasesCompanion data) {
+    return GraphCanvas(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      viewportX: data.viewportX.present ? data.viewportX.value : this.viewportX,
+      viewportY: data.viewportY.present ? data.viewportY.value : this.viewportY,
+      zoomScale: data.zoomScale.present ? data.zoomScale.value : this.zoomScale,
+      filterConfig: data.filterConfig.present
+          ? data.filterConfig.value
+          : this.filterConfig,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GraphCanvas(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('viewportX: $viewportX, ')
+          ..write('viewportY: $viewportY, ')
+          ..write('zoomScale: $zoomScale, ')
+          ..write('filterConfig: $filterConfig, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    name,
+    description,
+    isDefault,
+    viewportX,
+    viewportY,
+    zoomScale,
+    filterConfig,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GraphCanvas &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.isDefault == this.isDefault &&
+          other.viewportX == this.viewportX &&
+          other.viewportY == this.viewportY &&
+          other.zoomScale == this.zoomScale &&
+          other.filterConfig == this.filterConfig &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GraphCanvasesCompanion extends UpdateCompanion<GraphCanvas> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<bool> isDefault;
+  final Value<double> viewportX;
+  final Value<double> viewportY;
+  final Value<double> zoomScale;
+  final Value<String?> filterConfig;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const GraphCanvasesCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.viewportX = const Value.absent(),
+    this.viewportY = const Value.absent(),
+    this.zoomScale = const Value.absent(),
+    this.filterConfig = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  GraphCanvasesCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    required String name,
+    this.description = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.viewportX = const Value.absent(),
+    this.viewportY = const Value.absent(),
+    this.zoomScale = const Value.absent(),
+    this.filterConfig = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       name = Value(name);
+  static Insertable<GraphCanvas> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<bool>? isDefault,
+    Expression<double>? viewportX,
+    Expression<double>? viewportY,
+    Expression<double>? zoomScale,
+    Expression<String>? filterConfig,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (isDefault != null) 'is_default': isDefault,
+      if (viewportX != null) 'viewport_x': viewportX,
+      if (viewportY != null) 'viewport_y': viewportY,
+      if (zoomScale != null) 'zoom_scale': zoomScale,
+      if (filterConfig != null) 'filter_config': filterConfig,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  GraphCanvasesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<String>? name,
+    Value<String?>? description,
+    Value<bool>? isDefault,
+    Value<double>? viewportX,
+    Value<double>? viewportY,
+    Value<double>? zoomScale,
+    Value<String?>? filterConfig,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return GraphCanvasesCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      isDefault: isDefault ?? this.isDefault,
+      viewportX: viewportX ?? this.viewportX,
+      viewportY: viewportY ?? this.viewportY,
+      zoomScale: zoomScale ?? this.zoomScale,
+      filterConfig: filterConfig ?? this.filterConfig,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (viewportX.present) {
+      map['viewport_x'] = Variable<double>(viewportX.value);
+    }
+    if (viewportY.present) {
+      map['viewport_y'] = Variable<double>(viewportY.value);
+    }
+    if (zoomScale.present) {
+      map['zoom_scale'] = Variable<double>(zoomScale.value);
+    }
+    if (filterConfig.present) {
+      map['filter_config'] = Variable<String>(filterConfig.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GraphCanvasesCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('viewportX: $viewportX, ')
+          ..write('viewportY: $viewportY, ')
+          ..write('zoomScale: $zoomScale, ')
+          ..write('filterConfig: $filterConfig, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StoryWorksTable extends StoryWorks
+    with TableInfo<$StoryWorksTable, StoryWork> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StoryWorksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<int> worldId = GeneratedColumn<int>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id)',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('小说'),
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('策划中'),
+  );
+  static const VerificationMeta _coverImagePathMeta = const VerificationMeta(
+    'coverImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> coverImagePath = GeneratedColumn<String>(
+    'cover_image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    title,
+    type,
+    summary,
+    status,
+    coverImagePath,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'story_works';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoryWork> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('cover_image_path')) {
+      context.handle(
+        _coverImagePathMeta,
+        coverImagePath.isAcceptableOrUnknown(
+          data['cover_image_path']!,
+          _coverImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoryWork map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoryWork(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}world_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      coverImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_image_path'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StoryWorksTable createAlias(String alias) {
+    return $StoryWorksTable(attachedDatabase, alias);
+  }
+}
+
+class StoryWork extends DataClass implements Insertable<StoryWork> {
+  final int id;
+  final int worldId;
+  final String title;
+  final String type;
+  final String summary;
+  final String status;
+  final String? coverImagePath;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const StoryWork({
+    required this.id,
+    required this.worldId,
+    required this.title,
+    required this.type,
+    required this.summary,
+    required this.status,
+    this.coverImagePath,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['world_id'] = Variable<int>(worldId);
+    map['title'] = Variable<String>(title);
+    map['type'] = Variable<String>(type);
+    map['summary'] = Variable<String>(summary);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || coverImagePath != null) {
+      map['cover_image_path'] = Variable<String>(coverImagePath);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  StoryWorksCompanion toCompanion(bool nullToAbsent) {
+    return StoryWorksCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      title: Value(title),
+      type: Value(type),
+      summary: Value(summary),
+      status: Value(status),
+      coverImagePath: coverImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImagePath),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory StoryWork.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoryWork(
+      id: serializer.fromJson<int>(json['id']),
+      worldId: serializer.fromJson<int>(json['worldId']),
+      title: serializer.fromJson<String>(json['title']),
+      type: serializer.fromJson<String>(json['type']),
+      summary: serializer.fromJson<String>(json['summary']),
+      status: serializer.fromJson<String>(json['status']),
+      coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'worldId': serializer.toJson<int>(worldId),
+      'title': serializer.toJson<String>(title),
+      'type': serializer.toJson<String>(type),
+      'summary': serializer.toJson<String>(summary),
+      'status': serializer.toJson<String>(status),
+      'coverImagePath': serializer.toJson<String?>(coverImagePath),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  StoryWork copyWith({
+    int? id,
+    int? worldId,
+    String? title,
+    String? type,
+    String? summary,
+    String? status,
+    Value<String?> coverImagePath = const Value.absent(),
+    int? sortOrder,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => StoryWork(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    title: title ?? this.title,
+    type: type ?? this.type,
+    summary: summary ?? this.summary,
+    status: status ?? this.status,
+    coverImagePath: coverImagePath.present
+        ? coverImagePath.value
+        : this.coverImagePath,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  StoryWork copyWithCompanion(StoryWorksCompanion data) {
+    return StoryWork(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      title: data.title.present ? data.title.value : this.title,
+      type: data.type.present ? data.type.value : this.type,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      status: data.status.present ? data.status.value : this.status,
+      coverImagePath: data.coverImagePath.present
+          ? data.coverImagePath.value
+          : this.coverImagePath,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryWork(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('title: $title, ')
+          ..write('type: $type, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    worldId,
+    title,
+    type,
+    summary,
+    status,
+    coverImagePath,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoryWork &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.title == this.title &&
+          other.type == this.type &&
+          other.summary == this.summary &&
+          other.status == this.status &&
+          other.coverImagePath == this.coverImagePath &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class StoryWorksCompanion extends UpdateCompanion<StoryWork> {
+  final Value<int> id;
+  final Value<int> worldId;
+  final Value<String> title;
+  final Value<String> type;
+  final Value<String> summary;
+  final Value<String> status;
+  final Value<String?> coverImagePath;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const StoryWorksCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.type = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  StoryWorksCompanion.insert({
+    this.id = const Value.absent(),
+    required int worldId,
+    required String title,
+    this.type = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : worldId = Value(worldId),
+       title = Value(title);
+  static Insertable<StoryWork> custom({
+    Expression<int>? id,
+    Expression<int>? worldId,
+    Expression<String>? title,
+    Expression<String>? type,
+    Expression<String>? summary,
+    Expression<String>? status,
+    Expression<String>? coverImagePath,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (title != null) 'title': title,
+      if (type != null) 'type': type,
+      if (summary != null) 'summary': summary,
+      if (status != null) 'status': status,
+      if (coverImagePath != null) 'cover_image_path': coverImagePath,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  StoryWorksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? worldId,
+    Value<String>? title,
+    Value<String>? type,
+    Value<String>? summary,
+    Value<String>? status,
+    Value<String?>? coverImagePath,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return StoryWorksCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      title: title ?? this.title,
+      type: type ?? this.type,
+      summary: summary ?? this.summary,
+      status: status ?? this.status,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<int>(worldId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (coverImagePath.present) {
+      map['cover_image_path'] = Variable<String>(coverImagePath.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryWorksCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('title: $title, ')
+          ..write('type: $type, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StoryChaptersTable extends StoryChapters
+    with TableInfo<$StoryChaptersTable, StoryChapter> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StoryChaptersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _workIdMeta = const VerificationMeta('workId');
+  @override
+  late final GeneratedColumn<int> workId = GeneratedColumn<int>(
+    'work_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES story_works (id)',
+    ),
+  );
+  static const VerificationMeta _arcNameMeta = const VerificationMeta(
+    'arcName',
+  );
+  @override
+  late final GeneratedColumn<String> arcName = GeneratedColumn<String>(
+    'arc_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('正卷'),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('大纲'),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _wordCountMeta = const VerificationMeta(
+    'wordCount',
+  );
+  @override
+  late final GeneratedColumn<int> wordCount = GeneratedColumn<int>(
+    'word_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    workId,
+    arcName,
+    title,
+    summary,
+    status,
+    sortOrder,
+    wordCount,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'story_chapters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoryChapter> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('work_id')) {
+      context.handle(
+        _workIdMeta,
+        workId.isAcceptableOrUnknown(data['work_id']!, _workIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_workIdMeta);
+    }
+    if (data.containsKey('arc_name')) {
+      context.handle(
+        _arcNameMeta,
+        arcName.isAcceptableOrUnknown(data['arc_name']!, _arcNameMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('word_count')) {
+      context.handle(
+        _wordCountMeta,
+        wordCount.isAcceptableOrUnknown(data['word_count']!, _wordCountMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoryChapter map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoryChapter(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      workId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}work_id'],
+      )!,
+      arcName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}arc_name'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      wordCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}word_count'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StoryChaptersTable createAlias(String alias) {
+    return $StoryChaptersTable(attachedDatabase, alias);
+  }
+}
+
+class StoryChapter extends DataClass implements Insertable<StoryChapter> {
+  final int id;
+  final int workId;
+  final String arcName;
+  final String title;
+  final String summary;
+  final String status;
+  final int sortOrder;
+  final int wordCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const StoryChapter({
+    required this.id,
+    required this.workId,
+    required this.arcName,
+    required this.title,
+    required this.summary,
+    required this.status,
+    required this.sortOrder,
+    required this.wordCount,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['work_id'] = Variable<int>(workId);
+    map['arc_name'] = Variable<String>(arcName);
+    map['title'] = Variable<String>(title);
+    map['summary'] = Variable<String>(summary);
+    map['status'] = Variable<String>(status);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['word_count'] = Variable<int>(wordCount);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  StoryChaptersCompanion toCompanion(bool nullToAbsent) {
+    return StoryChaptersCompanion(
+      id: Value(id),
+      workId: Value(workId),
+      arcName: Value(arcName),
+      title: Value(title),
+      summary: Value(summary),
+      status: Value(status),
+      sortOrder: Value(sortOrder),
+      wordCount: Value(wordCount),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory StoryChapter.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoryChapter(
+      id: serializer.fromJson<int>(json['id']),
+      workId: serializer.fromJson<int>(json['workId']),
+      arcName: serializer.fromJson<String>(json['arcName']),
+      title: serializer.fromJson<String>(json['title']),
+      summary: serializer.fromJson<String>(json['summary']),
+      status: serializer.fromJson<String>(json['status']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      wordCount: serializer.fromJson<int>(json['wordCount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'workId': serializer.toJson<int>(workId),
+      'arcName': serializer.toJson<String>(arcName),
+      'title': serializer.toJson<String>(title),
+      'summary': serializer.toJson<String>(summary),
+      'status': serializer.toJson<String>(status),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'wordCount': serializer.toJson<int>(wordCount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  StoryChapter copyWith({
+    int? id,
+    int? workId,
+    String? arcName,
+    String? title,
+    String? summary,
+    String? status,
+    int? sortOrder,
+    int? wordCount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => StoryChapter(
+    id: id ?? this.id,
+    workId: workId ?? this.workId,
+    arcName: arcName ?? this.arcName,
+    title: title ?? this.title,
+    summary: summary ?? this.summary,
+    status: status ?? this.status,
+    sortOrder: sortOrder ?? this.sortOrder,
+    wordCount: wordCount ?? this.wordCount,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  StoryChapter copyWithCompanion(StoryChaptersCompanion data) {
+    return StoryChapter(
+      id: data.id.present ? data.id.value : this.id,
+      workId: data.workId.present ? data.workId.value : this.workId,
+      arcName: data.arcName.present ? data.arcName.value : this.arcName,
+      title: data.title.present ? data.title.value : this.title,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      status: data.status.present ? data.status.value : this.status,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      wordCount: data.wordCount.present ? data.wordCount.value : this.wordCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryChapter(')
+          ..write('id: $id, ')
+          ..write('workId: $workId, ')
+          ..write('arcName: $arcName, ')
+          ..write('title: $title, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('wordCount: $wordCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    workId,
+    arcName,
+    title,
+    summary,
+    status,
+    sortOrder,
+    wordCount,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoryChapter &&
+          other.id == this.id &&
+          other.workId == this.workId &&
+          other.arcName == this.arcName &&
+          other.title == this.title &&
+          other.summary == this.summary &&
+          other.status == this.status &&
+          other.sortOrder == this.sortOrder &&
+          other.wordCount == this.wordCount &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class StoryChaptersCompanion extends UpdateCompanion<StoryChapter> {
+  final Value<int> id;
+  final Value<int> workId;
+  final Value<String> arcName;
+  final Value<String> title;
+  final Value<String> summary;
+  final Value<String> status;
+  final Value<int> sortOrder;
+  final Value<int> wordCount;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const StoryChaptersCompanion({
+    this.id = const Value.absent(),
+    this.workId = const Value.absent(),
+    this.arcName = const Value.absent(),
+    this.title = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.wordCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  StoryChaptersCompanion.insert({
+    this.id = const Value.absent(),
+    required int workId,
+    this.arcName = const Value.absent(),
+    required String title,
+    this.summary = const Value.absent(),
+    this.status = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.wordCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : workId = Value(workId),
+       title = Value(title);
+  static Insertable<StoryChapter> custom({
+    Expression<int>? id,
+    Expression<int>? workId,
+    Expression<String>? arcName,
+    Expression<String>? title,
+    Expression<String>? summary,
+    Expression<String>? status,
+    Expression<int>? sortOrder,
+    Expression<int>? wordCount,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workId != null) 'work_id': workId,
+      if (arcName != null) 'arc_name': arcName,
+      if (title != null) 'title': title,
+      if (summary != null) 'summary': summary,
+      if (status != null) 'status': status,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (wordCount != null) 'word_count': wordCount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  StoryChaptersCompanion copyWith({
+    Value<int>? id,
+    Value<int>? workId,
+    Value<String>? arcName,
+    Value<String>? title,
+    Value<String>? summary,
+    Value<String>? status,
+    Value<int>? sortOrder,
+    Value<int>? wordCount,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return StoryChaptersCompanion(
+      id: id ?? this.id,
+      workId: workId ?? this.workId,
+      arcName: arcName ?? this.arcName,
+      title: title ?? this.title,
+      summary: summary ?? this.summary,
+      status: status ?? this.status,
+      sortOrder: sortOrder ?? this.sortOrder,
+      wordCount: wordCount ?? this.wordCount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (workId.present) {
+      map['work_id'] = Variable<int>(workId.value);
+    }
+    if (arcName.present) {
+      map['arc_name'] = Variable<String>(arcName.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (wordCount.present) {
+      map['word_count'] = Variable<int>(wordCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryChaptersCompanion(')
+          ..write('id: $id, ')
+          ..write('workId: $workId, ')
+          ..write('arcName: $arcName, ')
+          ..write('title: $title, ')
+          ..write('summary: $summary, ')
+          ..write('status: $status, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('wordCount: $wordCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StoryScenesTable extends StoryScenes
+    with TableInfo<$StoryScenesTable, StoryScene> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StoryScenesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _chapterIdMeta = const VerificationMeta(
+    'chapterId',
+  );
+  @override
+  late final GeneratedColumn<int> chapterId = GeneratedColumn<int>(
+    'chapter_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES story_chapters (id)',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _povCharacterIdMeta = const VerificationMeta(
+    'povCharacterId',
+  );
+  @override
+  late final GeneratedColumn<int> povCharacterId = GeneratedColumn<int>(
+    'pov_character_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES characters (id)',
+    ),
+  );
+  static const VerificationMeta _locationIdMeta = const VerificationMeta(
+    'locationId',
+  );
+  @override
+  late final GeneratedColumn<int> locationId = GeneratedColumn<int>(
+    'location_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lore_entities (id)',
+    ),
+  );
+  static const VerificationMeta _locationNameMeta = const VerificationMeta(
+    'locationName',
+  );
+  @override
+  late final GeneratedColumn<String> locationName = GeneratedColumn<String>(
+    'location_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _timelineTimeMeta = const VerificationMeta(
+    'timelineTime',
+  );
+  @override
+  late final GeneratedColumn<String> timelineTime = GeneratedColumn<String>(
+    'timeline_time',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _moodMeta = const VerificationMeta('mood');
+  @override
+  late final GeneratedColumn<String> mood = GeneratedColumn<String>(
+    'mood',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 0,
+      maxTextLength: 50,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _characterIdsMeta = const VerificationMeta(
+    'characterIds',
+  );
+  @override
+  late final GeneratedColumn<String> characterIds = GeneratedColumn<String>(
+    'character_ids',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    chapterId,
+    title,
+    summary,
+    content,
+    povCharacterId,
+    locationId,
+    locationName,
+    timelineTime,
+    mood,
+    characterIds,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'story_scenes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoryScene> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(
+        _chapterIdMeta,
+        chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chapterIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('pov_character_id')) {
+      context.handle(
+        _povCharacterIdMeta,
+        povCharacterId.isAcceptableOrUnknown(
+          data['pov_character_id']!,
+          _povCharacterIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_id')) {
+      context.handle(
+        _locationIdMeta,
+        locationId.isAcceptableOrUnknown(data['location_id']!, _locationIdMeta),
+      );
+    }
+    if (data.containsKey('location_name')) {
+      context.handle(
+        _locationNameMeta,
+        locationName.isAcceptableOrUnknown(
+          data['location_name']!,
+          _locationNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('timeline_time')) {
+      context.handle(
+        _timelineTimeMeta,
+        timelineTime.isAcceptableOrUnknown(
+          data['timeline_time']!,
+          _timelineTimeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mood')) {
+      context.handle(
+        _moodMeta,
+        mood.isAcceptableOrUnknown(data['mood']!, _moodMeta),
+      );
+    }
+    if (data.containsKey('character_ids')) {
+      context.handle(
+        _characterIdsMeta,
+        characterIds.isAcceptableOrUnknown(
+          data['character_ids']!,
+          _characterIdsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoryScene map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoryScene(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      chapterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chapter_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      povCharacterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pov_character_id'],
+      ),
+      locationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}location_id'],
+      ),
+      locationName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_name'],
+      )!,
+      timelineTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}timeline_time'],
+      )!,
+      mood: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mood'],
+      )!,
+      characterIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}character_ids'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StoryScenesTable createAlias(String alias) {
+    return $StoryScenesTable(attachedDatabase, alias);
+  }
+}
+
+class StoryScene extends DataClass implements Insertable<StoryScene> {
+  final int id;
+  final int chapterId;
+  final String title;
+  final String summary;
+  final String content;
+  final int? povCharacterId;
+  final int? locationId;
+  final String locationName;
+  final String timelineTime;
+  final String mood;
+  final String characterIds;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const StoryScene({
+    required this.id,
+    required this.chapterId,
+    required this.title,
+    required this.summary,
+    required this.content,
+    this.povCharacterId,
+    this.locationId,
+    required this.locationName,
+    required this.timelineTime,
+    required this.mood,
+    required this.characterIds,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['chapter_id'] = Variable<int>(chapterId);
+    map['title'] = Variable<String>(title);
+    map['summary'] = Variable<String>(summary);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || povCharacterId != null) {
+      map['pov_character_id'] = Variable<int>(povCharacterId);
+    }
+    if (!nullToAbsent || locationId != null) {
+      map['location_id'] = Variable<int>(locationId);
+    }
+    map['location_name'] = Variable<String>(locationName);
+    map['timeline_time'] = Variable<String>(timelineTime);
+    map['mood'] = Variable<String>(mood);
+    map['character_ids'] = Variable<String>(characterIds);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  StoryScenesCompanion toCompanion(bool nullToAbsent) {
+    return StoryScenesCompanion(
+      id: Value(id),
+      chapterId: Value(chapterId),
+      title: Value(title),
+      summary: Value(summary),
+      content: Value(content),
+      povCharacterId: povCharacterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(povCharacterId),
+      locationId: locationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationId),
+      locationName: Value(locationName),
+      timelineTime: Value(timelineTime),
+      mood: Value(mood),
+      characterIds: Value(characterIds),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory StoryScene.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoryScene(
+      id: serializer.fromJson<int>(json['id']),
+      chapterId: serializer.fromJson<int>(json['chapterId']),
+      title: serializer.fromJson<String>(json['title']),
+      summary: serializer.fromJson<String>(json['summary']),
+      content: serializer.fromJson<String>(json['content']),
+      povCharacterId: serializer.fromJson<int?>(json['povCharacterId']),
+      locationId: serializer.fromJson<int?>(json['locationId']),
+      locationName: serializer.fromJson<String>(json['locationName']),
+      timelineTime: serializer.fromJson<String>(json['timelineTime']),
+      mood: serializer.fromJson<String>(json['mood']),
+      characterIds: serializer.fromJson<String>(json['characterIds']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'chapterId': serializer.toJson<int>(chapterId),
+      'title': serializer.toJson<String>(title),
+      'summary': serializer.toJson<String>(summary),
+      'content': serializer.toJson<String>(content),
+      'povCharacterId': serializer.toJson<int?>(povCharacterId),
+      'locationId': serializer.toJson<int?>(locationId),
+      'locationName': serializer.toJson<String>(locationName),
+      'timelineTime': serializer.toJson<String>(timelineTime),
+      'mood': serializer.toJson<String>(mood),
+      'characterIds': serializer.toJson<String>(characterIds),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  StoryScene copyWith({
+    int? id,
+    int? chapterId,
+    String? title,
+    String? summary,
+    String? content,
+    Value<int?> povCharacterId = const Value.absent(),
+    Value<int?> locationId = const Value.absent(),
+    String? locationName,
+    String? timelineTime,
+    String? mood,
+    String? characterIds,
+    int? sortOrder,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => StoryScene(
+    id: id ?? this.id,
+    chapterId: chapterId ?? this.chapterId,
+    title: title ?? this.title,
+    summary: summary ?? this.summary,
+    content: content ?? this.content,
+    povCharacterId: povCharacterId.present
+        ? povCharacterId.value
+        : this.povCharacterId,
+    locationId: locationId.present ? locationId.value : this.locationId,
+    locationName: locationName ?? this.locationName,
+    timelineTime: timelineTime ?? this.timelineTime,
+    mood: mood ?? this.mood,
+    characterIds: characterIds ?? this.characterIds,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  StoryScene copyWithCompanion(StoryScenesCompanion data) {
+    return StoryScene(
+      id: data.id.present ? data.id.value : this.id,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      title: data.title.present ? data.title.value : this.title,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      content: data.content.present ? data.content.value : this.content,
+      povCharacterId: data.povCharacterId.present
+          ? data.povCharacterId.value
+          : this.povCharacterId,
+      locationId: data.locationId.present
+          ? data.locationId.value
+          : this.locationId,
+      locationName: data.locationName.present
+          ? data.locationName.value
+          : this.locationName,
+      timelineTime: data.timelineTime.present
+          ? data.timelineTime.value
+          : this.timelineTime,
+      mood: data.mood.present ? data.mood.value : this.mood,
+      characterIds: data.characterIds.present
+          ? data.characterIds.value
+          : this.characterIds,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryScene(')
+          ..write('id: $id, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('title: $title, ')
+          ..write('summary: $summary, ')
+          ..write('content: $content, ')
+          ..write('povCharacterId: $povCharacterId, ')
+          ..write('locationId: $locationId, ')
+          ..write('locationName: $locationName, ')
+          ..write('timelineTime: $timelineTime, ')
+          ..write('mood: $mood, ')
+          ..write('characterIds: $characterIds, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    chapterId,
+    title,
+    summary,
+    content,
+    povCharacterId,
+    locationId,
+    locationName,
+    timelineTime,
+    mood,
+    characterIds,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoryScene &&
+          other.id == this.id &&
+          other.chapterId == this.chapterId &&
+          other.title == this.title &&
+          other.summary == this.summary &&
+          other.content == this.content &&
+          other.povCharacterId == this.povCharacterId &&
+          other.locationId == this.locationId &&
+          other.locationName == this.locationName &&
+          other.timelineTime == this.timelineTime &&
+          other.mood == this.mood &&
+          other.characterIds == this.characterIds &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class StoryScenesCompanion extends UpdateCompanion<StoryScene> {
+  final Value<int> id;
+  final Value<int> chapterId;
+  final Value<String> title;
+  final Value<String> summary;
+  final Value<String> content;
+  final Value<int?> povCharacterId;
+  final Value<int?> locationId;
+  final Value<String> locationName;
+  final Value<String> timelineTime;
+  final Value<String> mood;
+  final Value<String> characterIds;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const StoryScenesCompanion({
+    this.id = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.content = const Value.absent(),
+    this.povCharacterId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.timelineTime = const Value.absent(),
+    this.mood = const Value.absent(),
+    this.characterIds = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  StoryScenesCompanion.insert({
+    this.id = const Value.absent(),
+    required int chapterId,
+    required String title,
+    this.summary = const Value.absent(),
+    this.content = const Value.absent(),
+    this.povCharacterId = const Value.absent(),
+    this.locationId = const Value.absent(),
+    this.locationName = const Value.absent(),
+    this.timelineTime = const Value.absent(),
+    this.mood = const Value.absent(),
+    this.characterIds = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : chapterId = Value(chapterId),
+       title = Value(title);
+  static Insertable<StoryScene> custom({
+    Expression<int>? id,
+    Expression<int>? chapterId,
+    Expression<String>? title,
+    Expression<String>? summary,
+    Expression<String>? content,
+    Expression<int>? povCharacterId,
+    Expression<int>? locationId,
+    Expression<String>? locationName,
+    Expression<String>? timelineTime,
+    Expression<String>? mood,
+    Expression<String>? characterIds,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (title != null) 'title': title,
+      if (summary != null) 'summary': summary,
+      if (content != null) 'content': content,
+      if (povCharacterId != null) 'pov_character_id': povCharacterId,
+      if (locationId != null) 'location_id': locationId,
+      if (locationName != null) 'location_name': locationName,
+      if (timelineTime != null) 'timeline_time': timelineTime,
+      if (mood != null) 'mood': mood,
+      if (characterIds != null) 'character_ids': characterIds,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  StoryScenesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? chapterId,
+    Value<String>? title,
+    Value<String>? summary,
+    Value<String>? content,
+    Value<int?>? povCharacterId,
+    Value<int?>? locationId,
+    Value<String>? locationName,
+    Value<String>? timelineTime,
+    Value<String>? mood,
+    Value<String>? characterIds,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return StoryScenesCompanion(
+      id: id ?? this.id,
+      chapterId: chapterId ?? this.chapterId,
+      title: title ?? this.title,
+      summary: summary ?? this.summary,
+      content: content ?? this.content,
+      povCharacterId: povCharacterId ?? this.povCharacterId,
+      locationId: locationId ?? this.locationId,
+      locationName: locationName ?? this.locationName,
+      timelineTime: timelineTime ?? this.timelineTime,
+      mood: mood ?? this.mood,
+      characterIds: characterIds ?? this.characterIds,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<int>(chapterId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (povCharacterId.present) {
+      map['pov_character_id'] = Variable<int>(povCharacterId.value);
+    }
+    if (locationId.present) {
+      map['location_id'] = Variable<int>(locationId.value);
+    }
+    if (locationName.present) {
+      map['location_name'] = Variable<String>(locationName.value);
+    }
+    if (timelineTime.present) {
+      map['timeline_time'] = Variable<String>(timelineTime.value);
+    }
+    if (mood.present) {
+      map['mood'] = Variable<String>(mood.value);
+    }
+    if (characterIds.present) {
+      map['character_ids'] = Variable<String>(characterIds.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryScenesCompanion(')
+          ..write('id: $id, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('title: $title, ')
+          ..write('summary: $summary, ')
+          ..write('content: $content, ')
+          ..write('povCharacterId: $povCharacterId, ')
+          ..write('locationId: $locationId, ')
+          ..write('locationName: $locationName, ')
+          ..write('timelineTime: $timelineTime, ')
+          ..write('mood: $mood, ')
+          ..write('characterIds: $characterIds, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6775,6 +11647,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $TimelineEventsTable timelineEvents = $TimelineEventsTable(this);
+  late final $LoreEntitiesTable loreEntities = $LoreEntitiesTable(this);
+  late final $LoreRelationsTable loreRelations = $LoreRelationsTable(this);
+  late final $LoreEntityRelationsTable loreEntityRelations =
+      $LoreEntityRelationsTable(this);
+  late final $EntityRevisionsTable entityRevisions = $EntityRevisionsTable(
+    this,
+  );
+  late final $GraphCanvasesTable graphCanvases = $GraphCanvasesTable(this);
+  late final $StoryWorksTable storyWorks = $StoryWorksTable(this);
+  late final $StoryChaptersTable storyChapters = $StoryChaptersTable(this);
+  late final $StoryScenesTable storyScenes = $StoryScenesTable(this);
   late final WorldDao worldDao = WorldDao(this as AppDatabase);
   late final CharacterDao characterDao = CharacterDao(this as AppDatabase);
   late final RelationDao relationDao = RelationDao(this as AppDatabase);
@@ -6784,6 +11667,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final GroupDao groupDao = GroupDao(this as AppDatabase);
   late final TimelineDao timelineDao = TimelineDao(this as AppDatabase);
+  late final LoreDao loreDao = LoreDao(this as AppDatabase);
+  late final RevisionDao revisionDao = RevisionDao(this as AppDatabase);
+  late final CanvasDao canvasDao = CanvasDao(this as AppDatabase);
+  late final StoryDao storyDao = StoryDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6807,6 +11694,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     groups,
     characterGroups,
     timelineEvents,
+    loreEntities,
+    loreRelations,
+    loreEntityRelations,
+    entityRevisions,
+    graphCanvases,
+    storyWorks,
+    storyChapters,
+    storyScenes,
   ];
 }
 
@@ -6901,6 +11796,125 @@ final class $$WorldsTableReferences
     ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_timelineEventsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$LoreEntitiesTable, List<LoreEntity>>
+  _loreEntitiesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.loreEntities,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.loreEntities.worldId),
+  );
+
+  $$LoreEntitiesTableProcessedTableManager get loreEntitiesRefs {
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loreEntitiesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$LoreRelationsTable, List<LoreRelation>>
+  _loreRelationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.loreRelations,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.loreRelations.worldId),
+  );
+
+  $$LoreRelationsTableProcessedTableManager get loreRelationsRefs {
+    final manager = $$LoreRelationsTableTableManager(
+      $_db,
+      $_db.loreRelations,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loreRelationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $LoreEntityRelationsTable,
+    List<LoreEntityRelation>
+  >
+  _loreEntityRelationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.loreEntityRelations,
+        aliasName: $_aliasNameGenerator(
+          db.worlds.id,
+          db.loreEntityRelations.worldId,
+        ),
+      );
+
+  $$LoreEntityRelationsTableProcessedTableManager get loreEntityRelationsRefs {
+    final manager = $$LoreEntityRelationsTableTableManager(
+      $_db,
+      $_db.loreEntityRelations,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _loreEntityRelationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EntityRevisionsTable, List<EntityRevision>>
+  _entityRevisionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.entityRevisions,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.entityRevisions.worldId),
+  );
+
+  $$EntityRevisionsTableProcessedTableManager get entityRevisionsRefs {
+    final manager = $$EntityRevisionsTableTableManager(
+      $_db,
+      $_db.entityRevisions,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _entityRevisionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$GraphCanvasesTable, List<GraphCanvas>>
+  _graphCanvasesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.graphCanvases,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.graphCanvases.worldId),
+  );
+
+  $$GraphCanvasesTableProcessedTableManager get graphCanvasesRefs {
+    final manager = $$GraphCanvasesTableTableManager(
+      $_db,
+      $_db.graphCanvases,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_graphCanvasesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryWorksTable, List<StoryWork>>
+  _storyWorksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyWorks,
+    aliasName: $_aliasNameGenerator(db.worlds.id, db.storyWorks.worldId),
+  );
+
+  $$StoryWorksTableProcessedTableManager get storyWorksRefs {
+    final manager = $$StoryWorksTableTableManager(
+      $_db,
+      $_db.storyWorks,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_storyWorksRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7037,6 +12051,156 @@ class $$WorldsTableFilterComposer
           }) => $$TimelineEventsTableFilterComposer(
             $db: $db,
             $table: $db.timelineEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> loreEntitiesRefs(
+    Expression<bool> Function($$LoreEntitiesTableFilterComposer f) f,
+  ) {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> loreRelationsRefs(
+    Expression<bool> Function($$LoreRelationsTableFilterComposer f) f,
+  ) {
+    final $$LoreRelationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableFilterComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> loreEntityRelationsRefs(
+    Expression<bool> Function($$LoreEntityRelationsTableFilterComposer f) f,
+  ) {
+    final $$LoreEntityRelationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreEntityRelations,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntityRelationsTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntityRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> entityRevisionsRefs(
+    Expression<bool> Function($$EntityRevisionsTableFilterComposer f) f,
+  ) {
+    final $$EntityRevisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.entityRevisions,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntityRevisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.entityRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> graphCanvasesRefs(
+    Expression<bool> Function($$GraphCanvasesTableFilterComposer f) f,
+  ) {
+    final $$GraphCanvasesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.graphCanvases,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GraphCanvasesTableFilterComposer(
+            $db: $db,
+            $table: $db.graphCanvases,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> storyWorksRefs(
+    Expression<bool> Function($$StoryWorksTableFilterComposer f) f,
+  ) {
+    final $$StoryWorksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyWorks,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryWorksTableFilterComposer(
+            $db: $db,
+            $table: $db.storyWorks,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7215,6 +12379,157 @@ class $$WorldsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> loreEntitiesRefs<T extends Object>(
+    Expression<T> Function($$LoreEntitiesTableAnnotationComposer a) f,
+  ) {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> loreRelationsRefs<T extends Object>(
+    Expression<T> Function($$LoreRelationsTableAnnotationComposer a) f,
+  ) {
+    final $$LoreRelationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> loreEntityRelationsRefs<T extends Object>(
+    Expression<T> Function($$LoreEntityRelationsTableAnnotationComposer a) f,
+  ) {
+    final $$LoreEntityRelationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.loreEntityRelations,
+          getReferencedColumn: (t) => t.worldId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$LoreEntityRelationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.loreEntityRelations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> entityRevisionsRefs<T extends Object>(
+    Expression<T> Function($$EntityRevisionsTableAnnotationComposer a) f,
+  ) {
+    final $$EntityRevisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.entityRevisions,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EntityRevisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.entityRevisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> graphCanvasesRefs<T extends Object>(
+    Expression<T> Function($$GraphCanvasesTableAnnotationComposer a) f,
+  ) {
+    final $$GraphCanvasesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.graphCanvases,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GraphCanvasesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.graphCanvases,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> storyWorksRefs<T extends Object>(
+    Expression<T> Function($$StoryWorksTableAnnotationComposer a) f,
+  ) {
+    final $$StoryWorksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyWorks,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryWorksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyWorks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$WorldsTableTableManager
@@ -7235,6 +12550,12 @@ class $$WorldsTableTableManager
             bool templatesRefs,
             bool groupsRefs,
             bool timelineEventsRefs,
+            bool loreEntitiesRefs,
+            bool loreRelationsRefs,
+            bool loreEntityRelationsRefs,
+            bool entityRevisionsRefs,
+            bool graphCanvasesRefs,
+            bool storyWorksRefs,
           })
         > {
   $$WorldsTableTableManager(_$AppDatabase db, $WorldsTable table)
@@ -7292,6 +12613,12 @@ class $$WorldsTableTableManager
                 templatesRefs = false,
                 groupsRefs = false,
                 timelineEventsRefs = false,
+                loreEntitiesRefs = false,
+                loreRelationsRefs = false,
+                loreEntityRelationsRefs = false,
+                entityRevisionsRefs = false,
+                graphCanvasesRefs = false,
+                storyWorksRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7300,6 +12627,12 @@ class $$WorldsTableTableManager
                     if (templatesRefs) db.templates,
                     if (groupsRefs) db.groups,
                     if (timelineEventsRefs) db.timelineEvents,
+                    if (loreEntitiesRefs) db.loreEntities,
+                    if (loreRelationsRefs) db.loreRelations,
+                    if (loreEntityRelationsRefs) db.loreEntityRelations,
+                    if (entityRevisionsRefs) db.entityRevisions,
+                    if (graphCanvasesRefs) db.graphCanvases,
+                    if (storyWorksRefs) db.storyWorks,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -7380,6 +12713,132 @@ class $$WorldsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (loreEntitiesRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          LoreEntity
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._loreEntitiesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).loreEntitiesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (loreRelationsRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          LoreRelation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._loreRelationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).loreRelationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (loreEntityRelationsRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          LoreEntityRelation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._loreEntityRelationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).loreEntityRelationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (entityRevisionsRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          EntityRevision
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._entityRevisionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).entityRevisionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (graphCanvasesRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          GraphCanvas
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._graphCanvasesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).graphCanvasesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (storyWorksRefs)
+                        await $_getPrefetchedData<
+                          World,
+                          $WorldsTable,
+                          StoryWork
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._storyWorksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).storyWorksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -7405,6 +12864,12 @@ typedef $$WorldsTableProcessedTableManager =
         bool templatesRefs,
         bool groupsRefs,
         bool timelineEventsRefs,
+        bool loreEntitiesRefs,
+        bool loreRelationsRefs,
+        bool loreEntityRelationsRefs,
+        bool entityRevisionsRefs,
+        bool graphCanvasesRefs,
+        bool storyWorksRefs,
       })
     >;
 typedef $$CharactersTableCreateCompanionBuilder =
@@ -7586,6 +13051,48 @@ final class $$CharactersTableReferences
     ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_timelineEventsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$LoreRelationsTable, List<LoreRelation>>
+  _loreRelationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.loreRelations,
+    aliasName: $_aliasNameGenerator(
+      db.characters.id,
+      db.loreRelations.characterId,
+    ),
+  );
+
+  $$LoreRelationsTableProcessedTableManager get loreRelationsRefs {
+    final manager = $$LoreRelationsTableTableManager(
+      $_db,
+      $_db.loreRelations,
+    ).filter((f) => f.characterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loreRelationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryScenesTable, List<StoryScene>>
+  _storyScenesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyScenes,
+    aliasName: $_aliasNameGenerator(
+      db.characters.id,
+      db.storyScenes.povCharacterId,
+    ),
+  );
+
+  $$StoryScenesTableProcessedTableManager get storyScenesRefs {
+    final manager = $$StoryScenesTableTableManager(
+      $_db,
+      $_db.storyScenes,
+    ).filter((f) => f.povCharacterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_storyScenesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7815,6 +13322,56 @@ class $$CharactersTableFilterComposer
           }) => $$TimelineEventsTableFilterComposer(
             $db: $db,
             $table: $db.timelineEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> loreRelationsRefs(
+    Expression<bool> Function($$LoreRelationsTableFilterComposer f) f,
+  ) {
+    final $$LoreRelationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableFilterComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> storyScenesRefs(
+    Expression<bool> Function($$StoryScenesTableFilterComposer f) f,
+  ) {
+    final $$StoryScenesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.povCharacterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableFilterComposer(
+            $db: $db,
+            $table: $db.storyScenes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8126,6 +13683,56 @@ class $$CharactersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> loreRelationsRefs<T extends Object>(
+    Expression<T> Function($$LoreRelationsTableAnnotationComposer a) f,
+  ) {
+    final $$LoreRelationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.characterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> storyScenesRefs<T extends Object>(
+    Expression<T> Function($$StoryScenesTableAnnotationComposer a) f,
+  ) {
+    final $$StoryScenesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.povCharacterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyScenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CharactersTableTableManager
@@ -8149,6 +13756,8 @@ class $$CharactersTableTableManager
             bool characterTagsRefs,
             bool characterGroupsRefs,
             bool timelineEventsRefs,
+            bool loreRelationsRefs,
+            bool storyScenesRefs,
           })
         > {
   $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
@@ -8231,6 +13840,8 @@ class $$CharactersTableTableManager
                 characterTagsRefs = false,
                 characterGroupsRefs = false,
                 timelineEventsRefs = false,
+                loreRelationsRefs = false,
+                storyScenesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -8241,6 +13852,8 @@ class $$CharactersTableTableManager
                     if (characterTagsRefs) db.characterTags,
                     if (characterGroupsRefs) db.characterGroups,
                     if (timelineEventsRefs) db.timelineEvents,
+                    if (loreRelationsRefs) db.loreRelations,
+                    if (storyScenesRefs) db.storyScenes,
                   ],
                   addJoins:
                       <
@@ -8403,6 +14016,48 @@ class $$CharactersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (loreRelationsRefs)
+                        await $_getPrefetchedData<
+                          Character,
+                          $CharactersTable,
+                          LoreRelation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CharactersTableReferences
+                              ._loreRelationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).loreRelationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.characterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (storyScenesRefs)
+                        await $_getPrefetchedData<
+                          Character,
+                          $CharactersTable,
+                          StoryScene
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CharactersTableReferences
+                              ._storyScenesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CharactersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).storyScenesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.povCharacterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -8431,6 +14086,8 @@ typedef $$CharactersTableProcessedTableManager =
         bool characterTagsRefs,
         bool characterGroupsRefs,
         bool timelineEventsRefs,
+        bool loreRelationsRefs,
+        bool storyScenesRefs,
       })
     >;
 typedef $$CharacterFieldsTableCreateCompanionBuilder =
@@ -11575,6 +17232,7 @@ typedef $$GraphLayoutsTableCreateCompanionBuilder =
       required int characterId,
       Value<double> x,
       Value<double> y,
+      Value<int?> canvasId,
     });
 typedef $$GraphLayoutsTableUpdateCompanionBuilder =
     GraphLayoutsCompanion Function({
@@ -11583,6 +17241,7 @@ typedef $$GraphLayoutsTableUpdateCompanionBuilder =
       Value<int> characterId,
       Value<double> x,
       Value<double> y,
+      Value<int?> canvasId,
     });
 
 class $$GraphLayoutsTableFilterComposer
@@ -11616,6 +17275,11 @@ class $$GraphLayoutsTableFilterComposer
 
   ColumnFilters<double> get y => $composableBuilder(
     column: $table.y,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get canvasId => $composableBuilder(
+    column: $table.canvasId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11653,6 +17317,11 @@ class $$GraphLayoutsTableOrderingComposer
     column: $table.y,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get canvasId => $composableBuilder(
+    column: $table.canvasId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GraphLayoutsTableAnnotationComposer
@@ -11680,6 +17349,9 @@ class $$GraphLayoutsTableAnnotationComposer
 
   GeneratedColumn<double> get y =>
       $composableBuilder(column: $table.y, builder: (column) => column);
+
+  GeneratedColumn<int> get canvasId =>
+      $composableBuilder(column: $table.canvasId, builder: (column) => column);
 }
 
 class $$GraphLayoutsTableTableManager
@@ -11718,12 +17390,14 @@ class $$GraphLayoutsTableTableManager
                 Value<int> characterId = const Value.absent(),
                 Value<double> x = const Value.absent(),
                 Value<double> y = const Value.absent(),
+                Value<int?> canvasId = const Value.absent(),
               }) => GraphLayoutsCompanion(
                 id: id,
                 worldId: worldId,
                 characterId: characterId,
                 x: x,
                 y: y,
+                canvasId: canvasId,
               ),
           createCompanionCallback:
               ({
@@ -11732,12 +17406,14 @@ class $$GraphLayoutsTableTableManager
                 required int characterId,
                 Value<double> x = const Value.absent(),
                 Value<double> y = const Value.absent(),
+                Value<int?> canvasId = const Value.absent(),
               }) => GraphLayoutsCompanion.insert(
                 id: id,
                 worldId: worldId,
                 characterId: characterId,
                 x: x,
                 y: y,
+                canvasId: canvasId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -13399,6 +19075,4355 @@ typedef $$TimelineEventsTableProcessedTableManager =
       TimelineEvent,
       PrefetchHooks Function({bool worldId, bool characterId})
     >;
+typedef $$LoreEntitiesTableCreateCompanionBuilder =
+    LoreEntitiesCompanion Function({
+      Value<int> id,
+      required int worldId,
+      Value<int?> parentId,
+      required String entityType,
+      required String name,
+      Value<String> summary,
+      Value<String> content,
+      Value<String?> coverImagePath,
+      Value<String> tags,
+      Value<String> customFields,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$LoreEntitiesTableUpdateCompanionBuilder =
+    LoreEntitiesCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<int?> parentId,
+      Value<String> entityType,
+      Value<String> name,
+      Value<String> summary,
+      Value<String> content,
+      Value<String?> coverImagePath,
+      Value<String> tags,
+      Value<String> customFields,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$LoreEntitiesTableReferences
+    extends BaseReferences<_$AppDatabase, $LoreEntitiesTable, LoreEntity> {
+  $$LoreEntitiesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.loreEntities.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoreEntitiesTable _parentIdTable(_$AppDatabase db) =>
+      db.loreEntities.createAlias(
+        $_aliasNameGenerator(db.loreEntities.parentId, db.loreEntities.id),
+      );
+
+  $$LoreEntitiesTableProcessedTableManager? get parentId {
+    final $_column = $_itemColumn<int>('parent_id');
+    if ($_column == null) return null;
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$LoreRelationsTable, List<LoreRelation>>
+  _loreRelationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.loreRelations,
+    aliasName: $_aliasNameGenerator(
+      db.loreEntities.id,
+      db.loreRelations.loreId,
+    ),
+  );
+
+  $$LoreRelationsTableProcessedTableManager get loreRelationsRefs {
+    final manager = $$LoreRelationsTableTableManager(
+      $_db,
+      $_db.loreRelations,
+    ).filter((f) => f.loreId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_loreRelationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryScenesTable, List<StoryScene>>
+  _storyScenesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyScenes,
+    aliasName: $_aliasNameGenerator(
+      db.loreEntities.id,
+      db.storyScenes.locationId,
+    ),
+  );
+
+  $$StoryScenesTableProcessedTableManager get storyScenesRefs {
+    final manager = $$StoryScenesTableTableManager(
+      $_db,
+      $_db.storyScenes,
+    ).filter((f) => f.locationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_storyScenesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$LoreEntitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $LoreEntitiesTable> {
+  $$LoreEntitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customFields => $composableBuilder(
+    column: $table.customFields,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableFilterComposer get parentId {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> loreRelationsRefs(
+    Expression<bool> Function($$LoreRelationsTableFilterComposer f) f,
+  ) {
+    final $$LoreRelationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.loreId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableFilterComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> storyScenesRefs(
+    Expression<bool> Function($$StoryScenesTableFilterComposer f) f,
+  ) {
+    final $$StoryScenesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.locationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableFilterComposer(
+            $db: $db,
+            $table: $db.storyScenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LoreEntitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoreEntitiesTable> {
+  $$LoreEntitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customFields => $composableBuilder(
+    column: $table.customFields,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableOrderingComposer get parentId {
+    final $$LoreEntitiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreEntitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoreEntitiesTable> {
+  $$LoreEntitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<String> get customFields => $composableBuilder(
+    column: $table.customFields,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableAnnotationComposer get parentId {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> loreRelationsRefs<T extends Object>(
+    Expression<T> Function($$LoreRelationsTableAnnotationComposer a) f,
+  ) {
+    final $$LoreRelationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.loreRelations,
+      getReferencedColumn: (t) => t.loreId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreRelationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreRelations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> storyScenesRefs<T extends Object>(
+    Expression<T> Function($$StoryScenesTableAnnotationComposer a) f,
+  ) {
+    final $$StoryScenesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.locationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyScenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$LoreEntitiesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LoreEntitiesTable,
+          LoreEntity,
+          $$LoreEntitiesTableFilterComposer,
+          $$LoreEntitiesTableOrderingComposer,
+          $$LoreEntitiesTableAnnotationComposer,
+          $$LoreEntitiesTableCreateCompanionBuilder,
+          $$LoreEntitiesTableUpdateCompanionBuilder,
+          (LoreEntity, $$LoreEntitiesTableReferences),
+          LoreEntity,
+          PrefetchHooks Function({
+            bool worldId,
+            bool parentId,
+            bool loreRelationsRefs,
+            bool storyScenesRefs,
+          })
+        > {
+  $$LoreEntitiesTableTableManager(_$AppDatabase db, $LoreEntitiesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoreEntitiesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoreEntitiesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LoreEntitiesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<int?> parentId = const Value.absent(),
+                Value<String> entityType = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String> customFields = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LoreEntitiesCompanion(
+                id: id,
+                worldId: worldId,
+                parentId: parentId,
+                entityType: entityType,
+                name: name,
+                summary: summary,
+                content: content,
+                coverImagePath: coverImagePath,
+                tags: tags,
+                customFields: customFields,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                Value<int?> parentId = const Value.absent(),
+                required String entityType,
+                required String name,
+                Value<String> summary = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String> customFields = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LoreEntitiesCompanion.insert(
+                id: id,
+                worldId: worldId,
+                parentId: parentId,
+                entityType: entityType,
+                name: name,
+                summary: summary,
+                content: content,
+                coverImagePath: coverImagePath,
+                tags: tags,
+                customFields: customFields,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LoreEntitiesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                worldId = false,
+                parentId = false,
+                loreRelationsRefs = false,
+                storyScenesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (loreRelationsRefs) db.loreRelations,
+                    if (storyScenesRefs) db.storyScenes,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (worldId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.worldId,
+                                    referencedTable:
+                                        $$LoreEntitiesTableReferences
+                                            ._worldIdTable(db),
+                                    referencedColumn:
+                                        $$LoreEntitiesTableReferences
+                                            ._worldIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (parentId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentId,
+                                    referencedTable:
+                                        $$LoreEntitiesTableReferences
+                                            ._parentIdTable(db),
+                                    referencedColumn:
+                                        $$LoreEntitiesTableReferences
+                                            ._parentIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (loreRelationsRefs)
+                        await $_getPrefetchedData<
+                          LoreEntity,
+                          $LoreEntitiesTable,
+                          LoreRelation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LoreEntitiesTableReferences
+                              ._loreRelationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LoreEntitiesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).loreRelationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.loreId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (storyScenesRefs)
+                        await $_getPrefetchedData<
+                          LoreEntity,
+                          $LoreEntitiesTable,
+                          StoryScene
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LoreEntitiesTableReferences
+                              ._storyScenesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LoreEntitiesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).storyScenesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.locationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$LoreEntitiesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LoreEntitiesTable,
+      LoreEntity,
+      $$LoreEntitiesTableFilterComposer,
+      $$LoreEntitiesTableOrderingComposer,
+      $$LoreEntitiesTableAnnotationComposer,
+      $$LoreEntitiesTableCreateCompanionBuilder,
+      $$LoreEntitiesTableUpdateCompanionBuilder,
+      (LoreEntity, $$LoreEntitiesTableReferences),
+      LoreEntity,
+      PrefetchHooks Function({
+        bool worldId,
+        bool parentId,
+        bool loreRelationsRefs,
+        bool storyScenesRefs,
+      })
+    >;
+typedef $$LoreRelationsTableCreateCompanionBuilder =
+    LoreRelationsCompanion Function({
+      Value<int> id,
+      required int worldId,
+      required int loreId,
+      required int characterId,
+      Value<String> role,
+      Value<DateTime> createdAt,
+    });
+typedef $$LoreRelationsTableUpdateCompanionBuilder =
+    LoreRelationsCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<int> loreId,
+      Value<int> characterId,
+      Value<String> role,
+      Value<DateTime> createdAt,
+    });
+
+final class $$LoreRelationsTableReferences
+    extends BaseReferences<_$AppDatabase, $LoreRelationsTable, LoreRelation> {
+  $$LoreRelationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.loreRelations.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoreEntitiesTable _loreIdTable(_$AppDatabase db) =>
+      db.loreEntities.createAlias(
+        $_aliasNameGenerator(db.loreRelations.loreId, db.loreEntities.id),
+      );
+
+  $$LoreEntitiesTableProcessedTableManager get loreId {
+    final $_column = $_itemColumn<int>('lore_id')!;
+
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_loreIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CharactersTable _characterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias(
+        $_aliasNameGenerator(db.loreRelations.characterId, db.characters.id),
+      );
+
+  $$CharactersTableProcessedTableManager get characterId {
+    final $_column = $_itemColumn<int>('character_id')!;
+
+    final manager = $$CharactersTableTableManager(
+      $_db,
+      $_db.characters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_characterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$LoreRelationsTableFilterComposer
+    extends Composer<_$AppDatabase, $LoreRelationsTable> {
+  $$LoreRelationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableFilterComposer get loreId {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableFilterComposer get characterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreRelationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoreRelationsTable> {
+  $$LoreRelationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableOrderingComposer get loreId {
+    final $$LoreEntitiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableOrderingComposer get characterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreRelationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoreRelationsTable> {
+  $$LoreRelationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableAnnotationComposer get loreId {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.loreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableAnnotationComposer get characterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.characterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreRelationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LoreRelationsTable,
+          LoreRelation,
+          $$LoreRelationsTableFilterComposer,
+          $$LoreRelationsTableOrderingComposer,
+          $$LoreRelationsTableAnnotationComposer,
+          $$LoreRelationsTableCreateCompanionBuilder,
+          $$LoreRelationsTableUpdateCompanionBuilder,
+          (LoreRelation, $$LoreRelationsTableReferences),
+          LoreRelation,
+          PrefetchHooks Function({bool worldId, bool loreId, bool characterId})
+        > {
+  $$LoreRelationsTableTableManager(_$AppDatabase db, $LoreRelationsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoreRelationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoreRelationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LoreRelationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<int> loreId = const Value.absent(),
+                Value<int> characterId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LoreRelationsCompanion(
+                id: id,
+                worldId: worldId,
+                loreId: loreId,
+                characterId: characterId,
+                role: role,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                required int loreId,
+                required int characterId,
+                Value<String> role = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LoreRelationsCompanion.insert(
+                id: id,
+                worldId: worldId,
+                loreId: loreId,
+                characterId: characterId,
+                role: role,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LoreRelationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({worldId = false, loreId = false, characterId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (worldId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.worldId,
+                                    referencedTable:
+                                        $$LoreRelationsTableReferences
+                                            ._worldIdTable(db),
+                                    referencedColumn:
+                                        $$LoreRelationsTableReferences
+                                            ._worldIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (loreId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.loreId,
+                                    referencedTable:
+                                        $$LoreRelationsTableReferences
+                                            ._loreIdTable(db),
+                                    referencedColumn:
+                                        $$LoreRelationsTableReferences
+                                            ._loreIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (characterId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.characterId,
+                                    referencedTable:
+                                        $$LoreRelationsTableReferences
+                                            ._characterIdTable(db),
+                                    referencedColumn:
+                                        $$LoreRelationsTableReferences
+                                            ._characterIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$LoreRelationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LoreRelationsTable,
+      LoreRelation,
+      $$LoreRelationsTableFilterComposer,
+      $$LoreRelationsTableOrderingComposer,
+      $$LoreRelationsTableAnnotationComposer,
+      $$LoreRelationsTableCreateCompanionBuilder,
+      $$LoreRelationsTableUpdateCompanionBuilder,
+      (LoreRelation, $$LoreRelationsTableReferences),
+      LoreRelation,
+      PrefetchHooks Function({bool worldId, bool loreId, bool characterId})
+    >;
+typedef $$LoreEntityRelationsTableCreateCompanionBuilder =
+    LoreEntityRelationsCompanion Function({
+      Value<int> id,
+      required int worldId,
+      required int fromLoreId,
+      required int toLoreId,
+      Value<String> relationType,
+      Value<bool> isBidirectional,
+      Value<String> note,
+      Value<DateTime> createdAt,
+    });
+typedef $$LoreEntityRelationsTableUpdateCompanionBuilder =
+    LoreEntityRelationsCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<int> fromLoreId,
+      Value<int> toLoreId,
+      Value<String> relationType,
+      Value<bool> isBidirectional,
+      Value<String> note,
+      Value<DateTime> createdAt,
+    });
+
+final class $$LoreEntityRelationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $LoreEntityRelationsTable,
+          LoreEntityRelation
+        > {
+  $$LoreEntityRelationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.loreEntityRelations.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoreEntitiesTable _fromLoreIdTable(_$AppDatabase db) =>
+      db.loreEntities.createAlias(
+        $_aliasNameGenerator(
+          db.loreEntityRelations.fromLoreId,
+          db.loreEntities.id,
+        ),
+      );
+
+  $$LoreEntitiesTableProcessedTableManager get fromLoreId {
+    final $_column = $_itemColumn<int>('from_lore_id')!;
+
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fromLoreIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoreEntitiesTable _toLoreIdTable(_$AppDatabase db) =>
+      db.loreEntities.createAlias(
+        $_aliasNameGenerator(
+          db.loreEntityRelations.toLoreId,
+          db.loreEntities.id,
+        ),
+      );
+
+  $$LoreEntitiesTableProcessedTableManager get toLoreId {
+    final $_column = $_itemColumn<int>('to_lore_id')!;
+
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_toLoreIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$LoreEntityRelationsTableFilterComposer
+    extends Composer<_$AppDatabase, $LoreEntityRelationsTable> {
+  $$LoreEntityRelationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relationType => $composableBuilder(
+    column: $table.relationType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isBidirectional => $composableBuilder(
+    column: $table.isBidirectional,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableFilterComposer get fromLoreId {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableFilterComposer get toLoreId {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreEntityRelationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LoreEntityRelationsTable> {
+  $$LoreEntityRelationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relationType => $composableBuilder(
+    column: $table.relationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isBidirectional => $composableBuilder(
+    column: $table.isBidirectional,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableOrderingComposer get fromLoreId {
+    final $$LoreEntitiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableOrderingComposer get toLoreId {
+    final $$LoreEntitiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreEntityRelationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LoreEntityRelationsTable> {
+  $$LoreEntityRelationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get relationType => $composableBuilder(
+    column: $table.relationType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isBidirectional => $composableBuilder(
+    column: $table.isBidirectional,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableAnnotationComposer get fromLoreId {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableAnnotationComposer get toLoreId {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toLoreId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LoreEntityRelationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LoreEntityRelationsTable,
+          LoreEntityRelation,
+          $$LoreEntityRelationsTableFilterComposer,
+          $$LoreEntityRelationsTableOrderingComposer,
+          $$LoreEntityRelationsTableAnnotationComposer,
+          $$LoreEntityRelationsTableCreateCompanionBuilder,
+          $$LoreEntityRelationsTableUpdateCompanionBuilder,
+          (LoreEntityRelation, $$LoreEntityRelationsTableReferences),
+          LoreEntityRelation,
+          PrefetchHooks Function({bool worldId, bool fromLoreId, bool toLoreId})
+        > {
+  $$LoreEntityRelationsTableTableManager(
+    _$AppDatabase db,
+    $LoreEntityRelationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LoreEntityRelationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LoreEntityRelationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LoreEntityRelationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<int> fromLoreId = const Value.absent(),
+                Value<int> toLoreId = const Value.absent(),
+                Value<String> relationType = const Value.absent(),
+                Value<bool> isBidirectional = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LoreEntityRelationsCompanion(
+                id: id,
+                worldId: worldId,
+                fromLoreId: fromLoreId,
+                toLoreId: toLoreId,
+                relationType: relationType,
+                isBidirectional: isBidirectional,
+                note: note,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                required int fromLoreId,
+                required int toLoreId,
+                Value<String> relationType = const Value.absent(),
+                Value<bool> isBidirectional = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => LoreEntityRelationsCompanion.insert(
+                id: id,
+                worldId: worldId,
+                fromLoreId: fromLoreId,
+                toLoreId: toLoreId,
+                relationType: relationType,
+                isBidirectional: isBidirectional,
+                note: note,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LoreEntityRelationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({worldId = false, fromLoreId = false, toLoreId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (worldId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.worldId,
+                                    referencedTable:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._worldIdTable(db),
+                                    referencedColumn:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._worldIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (fromLoreId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.fromLoreId,
+                                    referencedTable:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._fromLoreIdTable(db),
+                                    referencedColumn:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._fromLoreIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (toLoreId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.toLoreId,
+                                    referencedTable:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._toLoreIdTable(db),
+                                    referencedColumn:
+                                        $$LoreEntityRelationsTableReferences
+                                            ._toLoreIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$LoreEntityRelationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LoreEntityRelationsTable,
+      LoreEntityRelation,
+      $$LoreEntityRelationsTableFilterComposer,
+      $$LoreEntityRelationsTableOrderingComposer,
+      $$LoreEntityRelationsTableAnnotationComposer,
+      $$LoreEntityRelationsTableCreateCompanionBuilder,
+      $$LoreEntityRelationsTableUpdateCompanionBuilder,
+      (LoreEntityRelation, $$LoreEntityRelationsTableReferences),
+      LoreEntityRelation,
+      PrefetchHooks Function({bool worldId, bool fromLoreId, bool toLoreId})
+    >;
+typedef $$EntityRevisionsTableCreateCompanionBuilder =
+    EntityRevisionsCompanion Function({
+      Value<int> id,
+      required int worldId,
+      required String entityType,
+      required int entityId,
+      Value<String> title,
+      required String content,
+      Value<int> charCount,
+      Value<DateTime> createdAt,
+    });
+typedef $$EntityRevisionsTableUpdateCompanionBuilder =
+    EntityRevisionsCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<String> entityType,
+      Value<int> entityId,
+      Value<String> title,
+      Value<String> content,
+      Value<int> charCount,
+      Value<DateTime> createdAt,
+    });
+
+final class $$EntityRevisionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $EntityRevisionsTable, EntityRevision> {
+  $$EntityRevisionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.entityRevisions.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EntityRevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $EntityRevisionsTable> {
+  $$EntityRevisionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get charCount => $composableBuilder(
+    column: $table.charCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntityRevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EntityRevisionsTable> {
+  $$EntityRevisionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get entityId => $composableBuilder(
+    column: $table.entityId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get charCount => $composableBuilder(
+    column: $table.charCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntityRevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EntityRevisionsTable> {
+  $$EntityRevisionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entityType => $composableBuilder(
+    column: $table.entityType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get charCount =>
+      $composableBuilder(column: $table.charCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EntityRevisionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EntityRevisionsTable,
+          EntityRevision,
+          $$EntityRevisionsTableFilterComposer,
+          $$EntityRevisionsTableOrderingComposer,
+          $$EntityRevisionsTableAnnotationComposer,
+          $$EntityRevisionsTableCreateCompanionBuilder,
+          $$EntityRevisionsTableUpdateCompanionBuilder,
+          (EntityRevision, $$EntityRevisionsTableReferences),
+          EntityRevision,
+          PrefetchHooks Function({bool worldId})
+        > {
+  $$EntityRevisionsTableTableManager(
+    _$AppDatabase db,
+    $EntityRevisionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EntityRevisionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EntityRevisionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EntityRevisionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<String> entityType = const Value.absent(),
+                Value<int> entityId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> charCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => EntityRevisionsCompanion(
+                id: id,
+                worldId: worldId,
+                entityType: entityType,
+                entityId: entityId,
+                title: title,
+                content: content,
+                charCount: charCount,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                required String entityType,
+                required int entityId,
+                Value<String> title = const Value.absent(),
+                required String content,
+                Value<int> charCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => EntityRevisionsCompanion.insert(
+                id: id,
+                worldId: worldId,
+                entityType: entityType,
+                entityId: entityId,
+                title: title,
+                content: content,
+                charCount: charCount,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EntityRevisionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({worldId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (worldId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.worldId,
+                                referencedTable:
+                                    $$EntityRevisionsTableReferences
+                                        ._worldIdTable(db),
+                                referencedColumn:
+                                    $$EntityRevisionsTableReferences
+                                        ._worldIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EntityRevisionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EntityRevisionsTable,
+      EntityRevision,
+      $$EntityRevisionsTableFilterComposer,
+      $$EntityRevisionsTableOrderingComposer,
+      $$EntityRevisionsTableAnnotationComposer,
+      $$EntityRevisionsTableCreateCompanionBuilder,
+      $$EntityRevisionsTableUpdateCompanionBuilder,
+      (EntityRevision, $$EntityRevisionsTableReferences),
+      EntityRevision,
+      PrefetchHooks Function({bool worldId})
+    >;
+typedef $$GraphCanvasesTableCreateCompanionBuilder =
+    GraphCanvasesCompanion Function({
+      Value<int> id,
+      required int worldId,
+      required String name,
+      Value<String?> description,
+      Value<bool> isDefault,
+      Value<double> viewportX,
+      Value<double> viewportY,
+      Value<double> zoomScale,
+      Value<String?> filterConfig,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$GraphCanvasesTableUpdateCompanionBuilder =
+    GraphCanvasesCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<String> name,
+      Value<String?> description,
+      Value<bool> isDefault,
+      Value<double> viewportX,
+      Value<double> viewportY,
+      Value<double> zoomScale,
+      Value<String?> filterConfig,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$GraphCanvasesTableReferences
+    extends BaseReferences<_$AppDatabase, $GraphCanvasesTable, GraphCanvas> {
+  $$GraphCanvasesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.graphCanvases.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$GraphCanvasesTableFilterComposer
+    extends Composer<_$AppDatabase, $GraphCanvasesTable> {
+  $$GraphCanvasesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get viewportX => $composableBuilder(
+    column: $table.viewportX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get viewportY => $composableBuilder(
+    column: $table.viewportY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get zoomScale => $composableBuilder(
+    column: $table.zoomScale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filterConfig => $composableBuilder(
+    column: $table.filterConfig,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GraphCanvasesTableOrderingComposer
+    extends Composer<_$AppDatabase, $GraphCanvasesTable> {
+  $$GraphCanvasesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get viewportX => $composableBuilder(
+    column: $table.viewportX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get viewportY => $composableBuilder(
+    column: $table.viewportY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get zoomScale => $composableBuilder(
+    column: $table.zoomScale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filterConfig => $composableBuilder(
+    column: $table.filterConfig,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GraphCanvasesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GraphCanvasesTable> {
+  $$GraphCanvasesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => column);
+
+  GeneratedColumn<double> get viewportX =>
+      $composableBuilder(column: $table.viewportX, builder: (column) => column);
+
+  GeneratedColumn<double> get viewportY =>
+      $composableBuilder(column: $table.viewportY, builder: (column) => column);
+
+  GeneratedColumn<double> get zoomScale =>
+      $composableBuilder(column: $table.zoomScale, builder: (column) => column);
+
+  GeneratedColumn<String> get filterConfig => $composableBuilder(
+    column: $table.filterConfig,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GraphCanvasesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GraphCanvasesTable,
+          GraphCanvas,
+          $$GraphCanvasesTableFilterComposer,
+          $$GraphCanvasesTableOrderingComposer,
+          $$GraphCanvasesTableAnnotationComposer,
+          $$GraphCanvasesTableCreateCompanionBuilder,
+          $$GraphCanvasesTableUpdateCompanionBuilder,
+          (GraphCanvas, $$GraphCanvasesTableReferences),
+          GraphCanvas,
+          PrefetchHooks Function({bool worldId})
+        > {
+  $$GraphCanvasesTableTableManager(_$AppDatabase db, $GraphCanvasesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GraphCanvasesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GraphCanvasesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GraphCanvasesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<double> viewportX = const Value.absent(),
+                Value<double> viewportY = const Value.absent(),
+                Value<double> zoomScale = const Value.absent(),
+                Value<String?> filterConfig = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => GraphCanvasesCompanion(
+                id: id,
+                worldId: worldId,
+                name: name,
+                description: description,
+                isDefault: isDefault,
+                viewportX: viewportX,
+                viewportY: viewportY,
+                zoomScale: zoomScale,
+                filterConfig: filterConfig,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                required String name,
+                Value<String?> description = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<double> viewportX = const Value.absent(),
+                Value<double> viewportY = const Value.absent(),
+                Value<double> zoomScale = const Value.absent(),
+                Value<String?> filterConfig = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => GraphCanvasesCompanion.insert(
+                id: id,
+                worldId: worldId,
+                name: name,
+                description: description,
+                isDefault: isDefault,
+                viewportX: viewportX,
+                viewportY: viewportY,
+                zoomScale: zoomScale,
+                filterConfig: filterConfig,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$GraphCanvasesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({worldId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (worldId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.worldId,
+                                referencedTable: $$GraphCanvasesTableReferences
+                                    ._worldIdTable(db),
+                                referencedColumn: $$GraphCanvasesTableReferences
+                                    ._worldIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$GraphCanvasesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GraphCanvasesTable,
+      GraphCanvas,
+      $$GraphCanvasesTableFilterComposer,
+      $$GraphCanvasesTableOrderingComposer,
+      $$GraphCanvasesTableAnnotationComposer,
+      $$GraphCanvasesTableCreateCompanionBuilder,
+      $$GraphCanvasesTableUpdateCompanionBuilder,
+      (GraphCanvas, $$GraphCanvasesTableReferences),
+      GraphCanvas,
+      PrefetchHooks Function({bool worldId})
+    >;
+typedef $$StoryWorksTableCreateCompanionBuilder =
+    StoryWorksCompanion Function({
+      Value<int> id,
+      required int worldId,
+      required String title,
+      Value<String> type,
+      Value<String> summary,
+      Value<String> status,
+      Value<String?> coverImagePath,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$StoryWorksTableUpdateCompanionBuilder =
+    StoryWorksCompanion Function({
+      Value<int> id,
+      Value<int> worldId,
+      Value<String> title,
+      Value<String> type,
+      Value<String> summary,
+      Value<String> status,
+      Value<String?> coverImagePath,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$StoryWorksTableReferences
+    extends BaseReferences<_$AppDatabase, $StoryWorksTable, StoryWork> {
+  $$StoryWorksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) => db.worlds.createAlias(
+    $_aliasNameGenerator(db.storyWorks.worldId, db.worlds.id),
+  );
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<int>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryChaptersTable, List<StoryChapter>>
+  _storyChaptersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyChapters,
+    aliasName: $_aliasNameGenerator(db.storyWorks.id, db.storyChapters.workId),
+  );
+
+  $$StoryChaptersTableProcessedTableManager get storyChaptersRefs {
+    final manager = $$StoryChaptersTableTableManager(
+      $_db,
+      $_db.storyChapters,
+    ).filter((f) => f.workId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_storyChaptersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StoryWorksTableFilterComposer
+    extends Composer<_$AppDatabase, $StoryWorksTable> {
+  $$StoryWorksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> storyChaptersRefs(
+    Expression<bool> Function($$StoryChaptersTableFilterComposer f) f,
+  ) {
+    final $$StoryChaptersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyChapters,
+      getReferencedColumn: (t) => t.workId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryChaptersTableFilterComposer(
+            $db: $db,
+            $table: $db.storyChapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$StoryWorksTableOrderingComposer
+    extends Composer<_$AppDatabase, $StoryWorksTable> {
+  $$StoryWorksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryWorksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StoryWorksTable> {
+  $$StoryWorksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get coverImagePath => $composableBuilder(
+    column: $table.coverImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> storyChaptersRefs<T extends Object>(
+    Expression<T> Function($$StoryChaptersTableAnnotationComposer a) f,
+  ) {
+    final $$StoryChaptersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyChapters,
+      getReferencedColumn: (t) => t.workId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryChaptersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyChapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$StoryWorksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StoryWorksTable,
+          StoryWork,
+          $$StoryWorksTableFilterComposer,
+          $$StoryWorksTableOrderingComposer,
+          $$StoryWorksTableAnnotationComposer,
+          $$StoryWorksTableCreateCompanionBuilder,
+          $$StoryWorksTableUpdateCompanionBuilder,
+          (StoryWork, $$StoryWorksTableReferences),
+          StoryWork,
+          PrefetchHooks Function({bool worldId, bool storyChaptersRefs})
+        > {
+  $$StoryWorksTableTableManager(_$AppDatabase db, $StoryWorksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StoryWorksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StoryWorksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StoryWorksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> worldId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryWorksCompanion(
+                id: id,
+                worldId: worldId,
+                title: title,
+                type: type,
+                summary: summary,
+                status: status,
+                coverImagePath: coverImagePath,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int worldId,
+                required String title,
+                Value<String> type = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> coverImagePath = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryWorksCompanion.insert(
+                id: id,
+                worldId: worldId,
+                title: title,
+                type: type,
+                summary: summary,
+                status: status,
+                coverImagePath: coverImagePath,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StoryWorksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({worldId = false, storyChaptersRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (storyChaptersRefs) db.storyChapters,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (worldId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.worldId,
+                                    referencedTable: $$StoryWorksTableReferences
+                                        ._worldIdTable(db),
+                                    referencedColumn:
+                                        $$StoryWorksTableReferences
+                                            ._worldIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (storyChaptersRefs)
+                        await $_getPrefetchedData<
+                          StoryWork,
+                          $StoryWorksTable,
+                          StoryChapter
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StoryWorksTableReferences
+                              ._storyChaptersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StoryWorksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).storyChaptersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.workId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StoryWorksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StoryWorksTable,
+      StoryWork,
+      $$StoryWorksTableFilterComposer,
+      $$StoryWorksTableOrderingComposer,
+      $$StoryWorksTableAnnotationComposer,
+      $$StoryWorksTableCreateCompanionBuilder,
+      $$StoryWorksTableUpdateCompanionBuilder,
+      (StoryWork, $$StoryWorksTableReferences),
+      StoryWork,
+      PrefetchHooks Function({bool worldId, bool storyChaptersRefs})
+    >;
+typedef $$StoryChaptersTableCreateCompanionBuilder =
+    StoryChaptersCompanion Function({
+      Value<int> id,
+      required int workId,
+      Value<String> arcName,
+      required String title,
+      Value<String> summary,
+      Value<String> status,
+      Value<int> sortOrder,
+      Value<int> wordCount,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$StoryChaptersTableUpdateCompanionBuilder =
+    StoryChaptersCompanion Function({
+      Value<int> id,
+      Value<int> workId,
+      Value<String> arcName,
+      Value<String> title,
+      Value<String> summary,
+      Value<String> status,
+      Value<int> sortOrder,
+      Value<int> wordCount,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$StoryChaptersTableReferences
+    extends BaseReferences<_$AppDatabase, $StoryChaptersTable, StoryChapter> {
+  $$StoryChaptersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StoryWorksTable _workIdTable(_$AppDatabase db) =>
+      db.storyWorks.createAlias(
+        $_aliasNameGenerator(db.storyChapters.workId, db.storyWorks.id),
+      );
+
+  $$StoryWorksTableProcessedTableManager get workId {
+    final $_column = $_itemColumn<int>('work_id')!;
+
+    final manager = $$StoryWorksTableTableManager(
+      $_db,
+      $_db.storyWorks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryScenesTable, List<StoryScene>>
+  _storyScenesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyScenes,
+    aliasName: $_aliasNameGenerator(
+      db.storyChapters.id,
+      db.storyScenes.chapterId,
+    ),
+  );
+
+  $$StoryScenesTableProcessedTableManager get storyScenesRefs {
+    final manager = $$StoryScenesTableTableManager(
+      $_db,
+      $_db.storyScenes,
+    ).filter((f) => f.chapterId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_storyScenesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StoryChaptersTableFilterComposer
+    extends Composer<_$AppDatabase, $StoryChaptersTable> {
+  $$StoryChaptersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get arcName => $composableBuilder(
+    column: $table.arcName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get wordCount => $composableBuilder(
+    column: $table.wordCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StoryWorksTableFilterComposer get workId {
+    final $$StoryWorksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workId,
+      referencedTable: $db.storyWorks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryWorksTableFilterComposer(
+            $db: $db,
+            $table: $db.storyWorks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> storyScenesRefs(
+    Expression<bool> Function($$StoryScenesTableFilterComposer f) f,
+  ) {
+    final $$StoryScenesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableFilterComposer(
+            $db: $db,
+            $table: $db.storyScenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$StoryChaptersTableOrderingComposer
+    extends Composer<_$AppDatabase, $StoryChaptersTable> {
+  $$StoryChaptersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get arcName => $composableBuilder(
+    column: $table.arcName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get wordCount => $composableBuilder(
+    column: $table.wordCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StoryWorksTableOrderingComposer get workId {
+    final $$StoryWorksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workId,
+      referencedTable: $db.storyWorks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryWorksTableOrderingComposer(
+            $db: $db,
+            $table: $db.storyWorks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryChaptersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StoryChaptersTable> {
+  $$StoryChaptersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get arcName =>
+      $composableBuilder(column: $table.arcName, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get wordCount =>
+      $composableBuilder(column: $table.wordCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$StoryWorksTableAnnotationComposer get workId {
+    final $$StoryWorksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workId,
+      referencedTable: $db.storyWorks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryWorksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyWorks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> storyScenesRefs<T extends Object>(
+    Expression<T> Function($$StoryScenesTableAnnotationComposer a) f,
+  ) {
+    final $$StoryScenesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyScenes,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryScenesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyScenes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$StoryChaptersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StoryChaptersTable,
+          StoryChapter,
+          $$StoryChaptersTableFilterComposer,
+          $$StoryChaptersTableOrderingComposer,
+          $$StoryChaptersTableAnnotationComposer,
+          $$StoryChaptersTableCreateCompanionBuilder,
+          $$StoryChaptersTableUpdateCompanionBuilder,
+          (StoryChapter, $$StoryChaptersTableReferences),
+          StoryChapter,
+          PrefetchHooks Function({bool workId, bool storyScenesRefs})
+        > {
+  $$StoryChaptersTableTableManager(_$AppDatabase db, $StoryChaptersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StoryChaptersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StoryChaptersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StoryChaptersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> workId = const Value.absent(),
+                Value<String> arcName = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> wordCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryChaptersCompanion(
+                id: id,
+                workId: workId,
+                arcName: arcName,
+                title: title,
+                summary: summary,
+                status: status,
+                sortOrder: sortOrder,
+                wordCount: wordCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int workId,
+                Value<String> arcName = const Value.absent(),
+                required String title,
+                Value<String> summary = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> wordCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryChaptersCompanion.insert(
+                id: id,
+                workId: workId,
+                arcName: arcName,
+                title: title,
+                summary: summary,
+                status: status,
+                sortOrder: sortOrder,
+                wordCount: wordCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StoryChaptersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({workId = false, storyScenesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (storyScenesRefs) db.storyScenes],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (workId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.workId,
+                                referencedTable: $$StoryChaptersTableReferences
+                                    ._workIdTable(db),
+                                referencedColumn: $$StoryChaptersTableReferences
+                                    ._workIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (storyScenesRefs)
+                    await $_getPrefetchedData<
+                      StoryChapter,
+                      $StoryChaptersTable,
+                      StoryScene
+                    >(
+                      currentTable: table,
+                      referencedTable: $$StoryChaptersTableReferences
+                          ._storyScenesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$StoryChaptersTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).storyScenesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.chapterId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StoryChaptersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StoryChaptersTable,
+      StoryChapter,
+      $$StoryChaptersTableFilterComposer,
+      $$StoryChaptersTableOrderingComposer,
+      $$StoryChaptersTableAnnotationComposer,
+      $$StoryChaptersTableCreateCompanionBuilder,
+      $$StoryChaptersTableUpdateCompanionBuilder,
+      (StoryChapter, $$StoryChaptersTableReferences),
+      StoryChapter,
+      PrefetchHooks Function({bool workId, bool storyScenesRefs})
+    >;
+typedef $$StoryScenesTableCreateCompanionBuilder =
+    StoryScenesCompanion Function({
+      Value<int> id,
+      required int chapterId,
+      required String title,
+      Value<String> summary,
+      Value<String> content,
+      Value<int?> povCharacterId,
+      Value<int?> locationId,
+      Value<String> locationName,
+      Value<String> timelineTime,
+      Value<String> mood,
+      Value<String> characterIds,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$StoryScenesTableUpdateCompanionBuilder =
+    StoryScenesCompanion Function({
+      Value<int> id,
+      Value<int> chapterId,
+      Value<String> title,
+      Value<String> summary,
+      Value<String> content,
+      Value<int?> povCharacterId,
+      Value<int?> locationId,
+      Value<String> locationName,
+      Value<String> timelineTime,
+      Value<String> mood,
+      Value<String> characterIds,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$StoryScenesTableReferences
+    extends BaseReferences<_$AppDatabase, $StoryScenesTable, StoryScene> {
+  $$StoryScenesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $StoryChaptersTable _chapterIdTable(_$AppDatabase db) =>
+      db.storyChapters.createAlias(
+        $_aliasNameGenerator(db.storyScenes.chapterId, db.storyChapters.id),
+      );
+
+  $$StoryChaptersTableProcessedTableManager get chapterId {
+    final $_column = $_itemColumn<int>('chapter_id')!;
+
+    final manager = $$StoryChaptersTableTableManager(
+      $_db,
+      $_db.storyChapters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CharactersTable _povCharacterIdTable(_$AppDatabase db) =>
+      db.characters.createAlias(
+        $_aliasNameGenerator(db.storyScenes.povCharacterId, db.characters.id),
+      );
+
+  $$CharactersTableProcessedTableManager? get povCharacterId {
+    final $_column = $_itemColumn<int>('pov_character_id');
+    if ($_column == null) return null;
+    final manager = $$CharactersTableTableManager(
+      $_db,
+      $_db.characters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_povCharacterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LoreEntitiesTable _locationIdTable(_$AppDatabase db) =>
+      db.loreEntities.createAlias(
+        $_aliasNameGenerator(db.storyScenes.locationId, db.loreEntities.id),
+      );
+
+  $$LoreEntitiesTableProcessedTableManager? get locationId {
+    final $_column = $_itemColumn<int>('location_id');
+    if ($_column == null) return null;
+    final manager = $$LoreEntitiesTableTableManager(
+      $_db,
+      $_db.loreEntities,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_locationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StoryScenesTableFilterComposer
+    extends Composer<_$AppDatabase, $StoryScenesTable> {
+  $$StoryScenesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timelineTime => $composableBuilder(
+    column: $table.timelineTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mood => $composableBuilder(
+    column: $table.mood,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get characterIds => $composableBuilder(
+    column: $table.characterIds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StoryChaptersTableFilterComposer get chapterId {
+    final $$StoryChaptersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.storyChapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryChaptersTableFilterComposer(
+            $db: $db,
+            $table: $db.storyChapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableFilterComposer get povCharacterId {
+    final $$CharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.povCharacterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableFilterComposer get locationId {
+    final $$LoreEntitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.locationId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryScenesTableOrderingComposer
+    extends Composer<_$AppDatabase, $StoryScenesTable> {
+  $$StoryScenesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timelineTime => $composableBuilder(
+    column: $table.timelineTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mood => $composableBuilder(
+    column: $table.mood,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get characterIds => $composableBuilder(
+    column: $table.characterIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StoryChaptersTableOrderingComposer get chapterId {
+    final $$StoryChaptersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.storyChapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryChaptersTableOrderingComposer(
+            $db: $db,
+            $table: $db.storyChapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableOrderingComposer get povCharacterId {
+    final $$CharactersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.povCharacterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableOrderingComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableOrderingComposer get locationId {
+    final $$LoreEntitiesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.locationId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableOrderingComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryScenesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StoryScenesTable> {
+  $$StoryScenesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get locationName => $composableBuilder(
+    column: $table.locationName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timelineTime => $composableBuilder(
+    column: $table.timelineTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mood =>
+      $composableBuilder(column: $table.mood, builder: (column) => column);
+
+  GeneratedColumn<String> get characterIds => $composableBuilder(
+    column: $table.characterIds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$StoryChaptersTableAnnotationComposer get chapterId {
+    final $$StoryChaptersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chapterId,
+      referencedTable: $db.storyChapters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryChaptersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyChapters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CharactersTableAnnotationComposer get povCharacterId {
+    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.povCharacterId,
+      referencedTable: $db.characters,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.characters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LoreEntitiesTableAnnotationComposer get locationId {
+    final $$LoreEntitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.locationId,
+      referencedTable: $db.loreEntities,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LoreEntitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.loreEntities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryScenesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StoryScenesTable,
+          StoryScene,
+          $$StoryScenesTableFilterComposer,
+          $$StoryScenesTableOrderingComposer,
+          $$StoryScenesTableAnnotationComposer,
+          $$StoryScenesTableCreateCompanionBuilder,
+          $$StoryScenesTableUpdateCompanionBuilder,
+          (StoryScene, $$StoryScenesTableReferences),
+          StoryScene,
+          PrefetchHooks Function({
+            bool chapterId,
+            bool povCharacterId,
+            bool locationId,
+          })
+        > {
+  $$StoryScenesTableTableManager(_$AppDatabase db, $StoryScenesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StoryScenesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StoryScenesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StoryScenesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> chapterId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int?> povCharacterId = const Value.absent(),
+                Value<int?> locationId = const Value.absent(),
+                Value<String> locationName = const Value.absent(),
+                Value<String> timelineTime = const Value.absent(),
+                Value<String> mood = const Value.absent(),
+                Value<String> characterIds = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryScenesCompanion(
+                id: id,
+                chapterId: chapterId,
+                title: title,
+                summary: summary,
+                content: content,
+                povCharacterId: povCharacterId,
+                locationId: locationId,
+                locationName: locationName,
+                timelineTime: timelineTime,
+                mood: mood,
+                characterIds: characterIds,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int chapterId,
+                required String title,
+                Value<String> summary = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int?> povCharacterId = const Value.absent(),
+                Value<int?> locationId = const Value.absent(),
+                Value<String> locationName = const Value.absent(),
+                Value<String> timelineTime = const Value.absent(),
+                Value<String> mood = const Value.absent(),
+                Value<String> characterIds = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => StoryScenesCompanion.insert(
+                id: id,
+                chapterId: chapterId,
+                title: title,
+                summary: summary,
+                content: content,
+                povCharacterId: povCharacterId,
+                locationId: locationId,
+                locationName: locationName,
+                timelineTime: timelineTime,
+                mood: mood,
+                characterIds: characterIds,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StoryScenesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                chapterId = false,
+                povCharacterId = false,
+                locationId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (chapterId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.chapterId,
+                                    referencedTable:
+                                        $$StoryScenesTableReferences
+                                            ._chapterIdTable(db),
+                                    referencedColumn:
+                                        $$StoryScenesTableReferences
+                                            ._chapterIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (povCharacterId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.povCharacterId,
+                                    referencedTable:
+                                        $$StoryScenesTableReferences
+                                            ._povCharacterIdTable(db),
+                                    referencedColumn:
+                                        $$StoryScenesTableReferences
+                                            ._povCharacterIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (locationId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.locationId,
+                                    referencedTable:
+                                        $$StoryScenesTableReferences
+                                            ._locationIdTable(db),
+                                    referencedColumn:
+                                        $$StoryScenesTableReferences
+                                            ._locationIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StoryScenesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StoryScenesTable,
+      StoryScene,
+      $$StoryScenesTableFilterComposer,
+      $$StoryScenesTableOrderingComposer,
+      $$StoryScenesTableAnnotationComposer,
+      $$StoryScenesTableCreateCompanionBuilder,
+      $$StoryScenesTableUpdateCompanionBuilder,
+      (StoryScene, $$StoryScenesTableReferences),
+      StoryScene,
+      PrefetchHooks Function({
+        bool chapterId,
+        bool povCharacterId,
+        bool locationId,
+      })
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13438,4 +23463,20 @@ class $AppDatabaseManager {
       $$CharacterGroupsTableTableManager(_db, _db.characterGroups);
   $$TimelineEventsTableTableManager get timelineEvents =>
       $$TimelineEventsTableTableManager(_db, _db.timelineEvents);
+  $$LoreEntitiesTableTableManager get loreEntities =>
+      $$LoreEntitiesTableTableManager(_db, _db.loreEntities);
+  $$LoreRelationsTableTableManager get loreRelations =>
+      $$LoreRelationsTableTableManager(_db, _db.loreRelations);
+  $$LoreEntityRelationsTableTableManager get loreEntityRelations =>
+      $$LoreEntityRelationsTableTableManager(_db, _db.loreEntityRelations);
+  $$EntityRevisionsTableTableManager get entityRevisions =>
+      $$EntityRevisionsTableTableManager(_db, _db.entityRevisions);
+  $$GraphCanvasesTableTableManager get graphCanvases =>
+      $$GraphCanvasesTableTableManager(_db, _db.graphCanvases);
+  $$StoryWorksTableTableManager get storyWorks =>
+      $$StoryWorksTableTableManager(_db, _db.storyWorks);
+  $$StoryChaptersTableTableManager get storyChapters =>
+      $$StoryChaptersTableTableManager(_db, _db.storyChapters);
+  $$StoryScenesTableTableManager get storyScenes =>
+      $$StoryScenesTableTableManager(_db, _db.storyScenes);
 }

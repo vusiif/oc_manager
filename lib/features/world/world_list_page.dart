@@ -79,10 +79,7 @@ class WorldListPage extends ConsumerWidget {
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    '点击右下角按钮创建第一个世界观',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text('点击右下角按钮创建第一个世界观', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -95,9 +92,7 @@ class WorldListPage extends ConsumerWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.public),
-                  ),
+                  leading: const CircleAvatar(child: Icon(Icons.public)),
                   title: Text(
                     world.name,
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -141,22 +136,17 @@ class WorldListPage extends ConsumerWidget {
   }
 
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => const WorldDialog(),
-    );
+    showDialog(context: context, builder: (context) => const WorldDialog());
   }
 
-  void _showEditDialog(
-      BuildContext context, WidgetRef ref, dynamic world) {
+  void _showEditDialog(BuildContext context, WidgetRef ref, dynamic world) {
     showDialog(
       context: context,
       builder: (context) => WorldDialog(world: world),
     );
   }
 
-  void _confirmDelete(
-      BuildContext context, WidgetRef ref, dynamic world) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, dynamic world) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -168,9 +158,9 @@ class WorldListPage extends ConsumerWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              ref.read(worldActionsProvider).delete(world.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              await ref.read(worldActionsProvider).delete(world.id);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),

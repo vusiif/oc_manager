@@ -21,8 +21,9 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.world?.name ?? '');
-    _descController =
-        TextEditingController(text: widget.world?.description ?? '');
+    _descController = TextEditingController(
+      text: widget.world?.description ?? '',
+    );
   }
 
   @override
@@ -65,10 +66,7 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: Text(isEditing ? '保存' : '创建'),
-        ),
+        ElevatedButton(onPressed: _save, child: Text(isEditing ? '保存' : '创建')),
       ],
     );
   }
@@ -76,9 +74,9 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入世界观名称')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入世界观名称')));
       return;
     }
 

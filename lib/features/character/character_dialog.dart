@@ -10,21 +10,13 @@ import '../../providers/database_provider.dart';
 import '../../core/storage/image_storage_service.dart';
 import '../../core/design/components/oc_avatar.dart';
 
-const _genderOptions = [
-  ('男', '♂'),
-  ('女', '♀'),
-  ('其他', '⚥'),
-];
+const _genderOptions = [('男', '♂'), ('女', '♀'), ('其他', '⚥')];
 
 class CharacterDialog extends ConsumerStatefulWidget {
   final int worldId;
   final Character? character;
 
-  const CharacterDialog({
-    super.key,
-    required this.worldId,
-    this.character,
-  });
+  const CharacterDialog({super.key, required this.worldId, this.character});
 
   @override
   ConsumerState<CharacterDialog> createState() => _CharacterDialogState();
@@ -42,13 +34,11 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.character?.name ?? '');
+    _nameController = TextEditingController(text: widget.character?.name ?? '');
     _customGenderController = TextEditingController();
     _avatarPath = widget.character?.avatarPath;
     final g = widget.character?.gender ?? '';
-    if (g.isNotEmpty &&
-        !_genderOptions.any((o) => o.$1 == g)) {
+    if (g.isNotEmpty && !_genderOptions.any((o) => o.$1 == g)) {
       _gender = g;
       _isCustomGender = true;
       _customGenderController.text = g;
@@ -74,15 +64,16 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
           sourcePath: picked.path,
           characterId: widget.character?.id,
         );
+        if (!mounted) return;
         setState(() {
           _avatarPath = relPath;
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择图片失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('选择图片失败: $e')));
       }
     }
   }
@@ -160,8 +151,10 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
               children: [
                 for (final (label, icon) in _genderOptions)
                   ChoiceChip(
-                    label: Text('$icon $label',
-                        style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      '$icon $label',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     selected: !_isCustomGender && _gender == label,
                     onSelected: (_) => setState(() {
                       _gender = label;
@@ -169,11 +162,9 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
                     }),
                   ),
                 ChoiceChip(
-                  label: const Text('自定义…',
-                      style: TextStyle(fontSize: 12)),
+                  label: const Text('自定义…', style: TextStyle(fontSize: 12)),
                   selected: _isCustomGender,
-                  onSelected: (_) =>
-                      setState(() => _isCustomGender = true),
+                  onSelected: (_) => setState(() => _isCustomGender = true),
                 ),
               ],
             ),
@@ -214,10 +205,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: Text(isEditing ? '保存' : '创建'),
-        ),
+        ElevatedButton(onPressed: _save, child: Text(isEditing ? '保存' : '创建')),
       ],
     );
   }
@@ -225,9 +213,9 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入人物名称')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入人物名称')));
       return;
     }
 
@@ -297,15 +285,9 @@ class _TemplateSelector extends ConsumerWidget {
             isDense: true,
           ),
           items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('不使用模板'),
-            ),
+            const DropdownMenuItem<int?>(value: null, child: Text('不使用模板')),
             for (final t in templates)
-              DropdownMenuItem<int?>(
-                value: t.id,
-                child: Text(t.name),
-              ),
+              DropdownMenuItem<int?>(value: t.id, child: Text(t.name)),
           ],
           onChanged: onChanged,
         );

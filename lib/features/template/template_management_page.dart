@@ -13,9 +13,7 @@ class TemplateManagementPage extends ConsumerWidget {
     final templatesAsync = ref.watch(globalTemplatesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('模板管理'),
-      ),
+      appBar: AppBar(title: const Text('模板管理')),
       body: templatesAsync.when(
         data: (templates) {
           if (templates.isEmpty) {
@@ -30,10 +28,7 @@ class TemplateManagementPage extends ConsumerWidget {
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    '点击右下角按钮创建模板',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text('点击右下角按钮创建模板', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -59,10 +54,7 @@ class TemplateManagementPage extends ConsumerWidget {
   }
 
   void _showCreateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => const TemplateDialog(),
-    );
+    showDialog(context: context, builder: (_) => const TemplateDialog());
   }
 }
 
@@ -117,14 +109,19 @@ class _TemplateTile extends ConsumerWidget {
                       dense: true,
                       leading: const Icon(Icons.short_text, size: 18),
                       title: Text(field.fieldName),
-                      subtitle: Text(_fieldTypeName(field.fieldType) +
-                          (field.defaultValue != null &&
-                                  field.defaultValue!.isNotEmpty
-                              ? '  |  默认：${field.defaultValue}'
-                              : '')),
+                      subtitle: Text(
+                        _fieldTypeName(field.fieldType) +
+                            (field.defaultValue != null &&
+                                    field.defaultValue!.isNotEmpty
+                                ? '  |  默认：${field.defaultValue}'
+                                : ''),
+                      ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete,
-                            size: 16, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete,
+                          size: 16,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _deleteField(context, ref, field.id),
                       ),
                     ),

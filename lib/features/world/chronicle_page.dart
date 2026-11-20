@@ -12,10 +12,7 @@ import '../../core/design/components/oc_avatar.dart';
 class ChroniclePage extends ConsumerStatefulWidget {
   final int worldId;
 
-  const ChroniclePage({
-    super.key,
-    required this.worldId,
-  });
+  const ChroniclePage({super.key, required this.worldId});
 
   @override
   ConsumerState<ChroniclePage> createState() => _ChroniclePageState();
@@ -31,8 +28,9 @@ class _ChroniclePageState extends ConsumerState<ChroniclePage> {
     final theme = Theme.of(context);
     final worldAsync = ref.watch(worldByIdProvider(widget.worldId));
     final eventsAsync = ref.watch(worldTimelineEventsProvider(widget.worldId));
-    final charactersAsync =
-        ref.watch(charactersByWorldProvider(widget.worldId));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.worldId),
+    );
 
     final characters = charactersAsync.valueOrNull ?? [];
     final charMap = {for (final c in characters) c.id: c};
@@ -46,12 +44,11 @@ class _ChroniclePageState extends ConsumerState<ChroniclePage> {
         ),
         actions: [
           FilledButton.icon(
-            onPressed: () => _openEventDialog(context, ref, characters: characters),
+            onPressed: () =>
+                _openEventDialog(context, ref, characters: characters),
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('新撰纪事'),
-            style: FilledButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
+            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
           ),
           const SizedBox(width: 16),
         ],
@@ -322,7 +319,9 @@ class _ChroniclePageState extends ConsumerState<ChroniclePage> {
         final isFirst = index == 0;
         final isLast = index == events.length - 1;
         final cat = TimelineCategoryConfig.find(ev.category);
-        final boundChar = ev.characterId != null ? charMap[ev.characterId] : null;
+        final boundChar = ev.characterId != null
+            ? charMap[ev.characterId]
+            : null;
 
         return IntrinsicHeight(
           child: Row(
@@ -348,10 +347,7 @@ class _ChroniclePageState extends ConsumerState<ChroniclePage> {
                       decoration: BoxDecoration(
                         color: cat.color.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: cat.color,
-                          width: 2.5,
-                        ),
+                        border: Border.all(color: cat.color, width: 2.5),
                         boxShadow: [
                           BoxShadow(
                             color: cat.color.withValues(alpha: 0.2),
@@ -496,7 +492,10 @@ class _ChronicleEventCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: category.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -545,10 +544,13 @@ class _ChronicleEventCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer
-                          .withValues(alpha: 0.5),
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: theme.colorScheme.primary.withValues(alpha: 0.3),
@@ -584,8 +586,10 @@ class _ChronicleEventCard extends StatelessWidget {
                 )
               else
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(4),
@@ -682,8 +686,9 @@ class _ChronicleEventEditDialogState
     _yearController = TextEditingController(text: ev?.year ?? '');
     _titleController = TextEditingController(text: ev?.title ?? '');
     _descController = TextEditingController(text: ev?.description ?? '');
-    _sortController =
-        TextEditingController(text: (ev?.sortOrder ?? 0.0).toString());
+    _sortController = TextEditingController(
+      text: (ev?.sortOrder ?? 0.0).toString(),
+    );
     _category = ev?.category ?? 'general';
     _importance = ev?.importance ?? 1;
     _characterId = ev?.characterId;
@@ -766,10 +771,7 @@ class _ChronicleEventEditDialogState
                       child: Text('无角色绑定（世界宏观大事件）'),
                     ),
                     for (final c in widget.characters)
-                      DropdownMenuItem<int?>(
-                        value: c.id,
-                        child: Text(c.name),
-                      ),
+                      DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
                   ],
                   onChanged: (val) {
                     setState(() => _characterId = val);
@@ -824,7 +826,9 @@ class _ChronicleEventEditDialogState
                           labelText: '事件分类',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
                         ),
                         items: TimelineCategoryConfig.all.map((c) {
                           return DropdownMenuItem<String>(
@@ -854,7 +858,9 @@ class _ChronicleEventEditDialogState
                           labelText: '重要度',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
                         ),
                         items: const [
                           DropdownMenuItem(value: 1, child: Text('常规记事 (★)')),
@@ -876,7 +882,9 @@ class _ChronicleEventEditDialogState
                 TextFormField(
                   controller: _sortController,
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: '排序权重 (可选)',
                     hintText: '数字越小排在越前，支持小数 (如 1.0, 2.5)',

@@ -9,22 +9,41 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-final worldDaoProvider = Provider((ref) => ref.watch(databaseProvider).worldDao);
-final characterDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).characterDao);
-final relationDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).relationDao);
-final templateDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).templateDao);
+final worldDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).worldDao,
+);
+final characterDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).characterDao,
+);
+final relationDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).relationDao,
+);
+final templateDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).templateDao,
+);
 final tagDaoProvider = Provider((ref) => ref.watch(databaseProvider).tagDao);
-final trashDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).trashDao);
-final settingsDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).settingsDao);
-final groupDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).groupDao);
-final timelineDaoProvider =
-    Provider((ref) => ref.watch(databaseProvider).timelineDao);
+final trashDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).trashDao,
+);
+final settingsDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).settingsDao,
+);
+final groupDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).groupDao,
+);
+final timelineDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).timelineDao,
+);
+final loreDaoProvider = Provider((ref) => ref.watch(databaseProvider).loreDao);
+final revisionDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).revisionDao,
+);
+final canvasDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).canvasDao,
+);
+final storyDaoProvider = Provider(
+  (ref) => ref.watch(databaseProvider).storyDao,
+);
 
 final bookletExportServiceProvider = Provider<BookletExportService>((ref) {
   final db = ref.watch(databaseProvider);
@@ -35,4 +54,3 @@ final ocPackageServiceProvider = Provider<OcPackageService>((ref) {
   final db = ref.watch(databaseProvider);
   return OcPackageService(db);
 });
-

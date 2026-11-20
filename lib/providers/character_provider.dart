@@ -4,30 +4,35 @@ import '../data/database/app_database.dart';
 import 'database_provider.dart';
 import 'trash_provider.dart';
 
-final charactersByWorldProvider =
-    StreamProvider.family<List<Character>, int>((ref, worldId) {
+final charactersByWorldProvider = StreamProvider.family<List<Character>, int>((
+  ref,
+  worldId,
+) {
   return ref.watch(characterDaoProvider).watchCharactersByWorld(worldId);
 });
 
-final characterByIdProvider =
-    FutureProvider.family<Character, int>((ref, id) {
+final characterByIdProvider = FutureProvider.family<Character, int>((ref, id) {
   return ref.watch(characterDaoProvider).getCharacterById(id);
 });
 
 final characterFieldsProvider =
     StreamProvider.family<List<CharacterField>, int>((ref, characterId) {
-  return ref.watch(characterDaoProvider).watchCharacterFields(characterId);
-});
+      return ref.watch(characterDaoProvider).watchCharacterFields(characterId);
+    });
 
-final characterStatsProvider =
-    StreamProvider.family<List<CharacterStat>, int>((ref, characterId) {
+final characterStatsProvider = StreamProvider.family<List<CharacterStat>, int>((
+  ref,
+  characterId,
+) {
   return ref.watch(characterDaoProvider).watchCharacterStats(characterId);
 });
 
 final characterGalleriesProvider =
     StreamProvider.family<List<CharacterGallery>, int>((ref, characterId) {
-  return ref.watch(characterDaoProvider).watchCharacterGalleries(characterId);
-});
+      return ref
+          .watch(characterDaoProvider)
+          .watchCharacterGalleries(characterId);
+    });
 
 final characterActionsProvider = Provider((ref) => CharacterActions(ref));
 
@@ -43,7 +48,9 @@ class CharacterActions {
     String gender = '',
     String? avatarPath,
   }) async {
-    return _ref.read(characterDaoProvider).createCharacter(
+    return _ref
+        .read(characterDaoProvider)
+        .createCharacter(
           CharactersCompanion(
             worldId: Value(worldId),
             name: Value(name),
@@ -55,7 +62,9 @@ class CharacterActions {
   }
 
   Future<bool> update(Character character) async {
-    return _ref.read(characterDaoProvider).updateCharacter(
+    return _ref
+        .read(characterDaoProvider)
+        .updateCharacter(
           CharactersCompanion(
             id: Value(character.id),
             worldId: Value(character.worldId),
@@ -73,13 +82,16 @@ class CharacterActions {
   }
 
   Future<void> delete(int id) async {
-    final character =
-        await _ref.read(characterDaoProvider).getCharacterById(id);
+    final character = await _ref
+        .read(characterDaoProvider)
+        .getCharacterById(id);
     await _ref.read(trashActionsProvider).deleteCharacter(character);
   }
 
   Future<void> toggleFavorite(Character character) async {
-    await _ref.read(characterDaoProvider).updatePartial(
+    await _ref
+        .read(characterDaoProvider)
+        .updatePartial(
           character.id,
           CharactersCompanion(
             isFavorite: Value(!character.isFavorite),
@@ -89,7 +101,9 @@ class CharacterActions {
   }
 
   Future<void> togglePin(Character character) async {
-    await _ref.read(characterDaoProvider).updatePartial(
+    await _ref
+        .read(characterDaoProvider)
+        .updatePartial(
           character.id,
           CharactersCompanion(
             isPinned: Value(!character.isPinned),
@@ -99,7 +113,9 @@ class CharacterActions {
   }
 
   Future<void> updateStatus(int characterId, int newStatus) async {
-    await _ref.read(characterDaoProvider).updatePartial(
+    await _ref
+        .read(characterDaoProvider)
+        .updatePartial(
           characterId,
           CharactersCompanion(
             status: Value(newStatus),
@@ -109,14 +125,20 @@ class CharacterActions {
   }
 
   Future<void> updateField(
-      int characterId, String fieldName, String fieldType, String? value) async {
+    int characterId,
+    String fieldName,
+    String fieldType,
+    String? value,
+  ) async {
     final fields = await _ref
         .read(characterDaoProvider)
         .getCharacterFields(characterId);
     final existing = fields.where((f) => f.fieldName == fieldName).firstOrNull;
 
     if (existing != null) {
-      await _ref.read(characterDaoProvider).updateCharacterField(
+      await _ref
+          .read(characterDaoProvider)
+          .updateCharacterField(
             CharacterFieldsCompanion(
               id: Value(existing.id),
               characterId: Value(existing.characterId),
@@ -126,7 +148,9 @@ class CharacterActions {
             ),
           );
     } else {
-      await _ref.read(characterDaoProvider).createCharacterField(
+      await _ref
+          .read(characterDaoProvider)
+          .createCharacterField(
             CharacterFieldsCompanion(
               characterId: Value(characterId),
               fieldName: Value(fieldName),
@@ -141,9 +165,7 @@ class CharacterActions {
     int characterId,
     List<CharacterStatsCompanion> stats,
   ) async {
-    await _ref
-        .read(characterDaoProvider)
-        .setCharacterStats(characterId, stats);
+    await _ref.read(characterDaoProvider).setCharacterStats(characterId, stats);
   }
 
   Future<void> updateStat(CharacterStatsCompanion stat) async {
@@ -183,9 +205,9 @@ class CharacterActions {
 
   Future<void> updateGalleryCaption(int galleryId, String caption) async {
     final dao = _ref.read(characterDaoProvider);
-    final item = await (dao.select(dao.characterGalleries)
-          ..where((t) => t.id.equals(galleryId)))
-        .getSingleOrNull();
+    final item = await (dao.select(
+      dao.characterGalleries,
+    )..where((t) => t.id.equals(galleryId))).getSingleOrNull();
     if (item != null) {
       await dao.updateGalleryImage(
         CharacterGalleriesCompanion(

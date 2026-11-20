@@ -22,10 +22,7 @@ class GraphGeometry {
 
     if (gender == '女') {
       final r = 24.0 + padding;
-      return Offset(
-        nodeCenter.dx + cosA * r,
-        nodeCenter.dy + sinA * r,
-      );
+      return Offset(nodeCenter.dx + cosA * r, nodeCenter.dy + sinA * r);
     } else if (gender == '男') {
       final w = 24.0 + padding;
       final h = 24.0 + padding;
@@ -37,10 +34,7 @@ class GraphGeometry {
       final tY = absSin > 1e-6 ? h / absSin : double.infinity;
       final t = min(tX, tY);
 
-      return Offset(
-        nodeCenter.dx + cosA * t,
-        nodeCenter.dy + sinA * t,
-      );
+      return Offset(nodeCenter.dx + cosA * t, nodeCenter.dy + sinA * t);
     } else {
       // Diamond: side s = 38.4, vertex distance from center d = s / sqrt(2) + padding.
       // Equation of diamond: |x| + |y| = d
@@ -49,10 +43,7 @@ class GraphGeometry {
       final denom = cosA.abs() + sinA.abs();
       final t = denom > 1e-6 ? baseDistance / denom : baseDistance;
 
-      return Offset(
-        nodeCenter.dx + cosA * t,
-        nodeCenter.dy + sinA * t,
-      );
+      return Offset(nodeCenter.dx + cosA * t, nodeCenter.dy + sinA * t);
     }
   }
 

@@ -51,7 +51,9 @@ class CharacterTimelineSection extends ConsumerWidget {
                       ? const SizedBox.shrink()
                       : Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(12),
@@ -75,8 +77,10 @@ class CharacterTimelineSection extends ConsumerWidget {
                   label: const Text('记录生平'),
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 0,
+                    ),
                   ),
                 ),
               ],
@@ -236,11 +240,7 @@ class CharacterTimelineSection extends ConsumerWidget {
                   child: _EventCard(
                     event: event,
                     categoryConfig: categoryConfig,
-                    onEdit: () => _openEventDialog(
-                      context,
-                      ref,
-                      event: event,
-                    ),
+                    onEdit: () => _openEventDialog(context, ref, event: event),
                     onDelete: () => _confirmDelete(context, ref, event),
                   ),
                 ),
@@ -316,7 +316,9 @@ class _EventCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.35,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: event.importance >= 3
@@ -393,10 +395,7 @@ class _EventCard extends StatelessWidget {
           // 事件标题
           Text(
             event.title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
 
           // 详细描述
@@ -452,8 +451,9 @@ class _TimelineEventEditDialogState
     _yearController = TextEditingController(text: ev?.year ?? '');
     _titleController = TextEditingController(text: ev?.title ?? '');
     _descController = TextEditingController(text: ev?.description ?? '');
-    _sortController =
-        TextEditingController(text: (ev?.sortOrder ?? 0.0).toString());
+    _sortController = TextEditingController(
+      text: (ev?.sortOrder ?? 0.0).toString(),
+    );
     _category = ev?.category ?? 'general';
     _importance = ev?.importance ?? 1;
   }
@@ -568,7 +568,9 @@ class _TimelineEventEditDialogState
                           labelText: '事件分类',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
                         ),
                         items: TimelineCategoryConfig.all.map((c) {
                           return DropdownMenuItem<String>(
@@ -598,7 +600,9 @@ class _TimelineEventEditDialogState
                           labelText: '重要度',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
                         ),
                         items: const [
                           DropdownMenuItem(value: 1, child: Text('常规轶事 (★)')),
@@ -620,7 +624,9 @@ class _TimelineEventEditDialogState
                 TextFormField(
                   controller: _sortController,
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: true),
+                    decimal: true,
+                    signed: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: '排序权重 (可选)',
                     hintText: '数字越小排在越前，支持小数 (如 1.0, 2.5)',

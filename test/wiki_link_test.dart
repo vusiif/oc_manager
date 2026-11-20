@@ -64,8 +64,7 @@ void main() {
     );
 
     test('WikiLinkParser extractTargetNames and hasReferenceTo', () {
-      const text =
-          '幼年与 [[ 艾莉丝 ]] 和 [[罗兰]] 结伴，后来遇到 [[艾莉丝]] 与 [[  ]] 以及普通文本。';
+      const text = '幼年与 [[ 艾莉丝 ]] 和 [[罗兰]] 结伴，后来遇到 [[艾莉丝]] 与 [[  ]] 以及普通文本。';
       final names = WikiLinkParser.extractTargetNames(text);
       expect(names.length, equals(2));
       expect(names, contains('艾莉丝'));
@@ -77,7 +76,8 @@ void main() {
     });
 
     test('WikiLinkParser extractContextSnippets extracts matching line', () {
-      const story = '第一章：启程之日。\n'
+      const story =
+          '第一章：启程之日。\n'
           '在风暴席卷之夜，他遇到了神秘的导师 [[艾莉丝]]，两人立下不可违逆的誓约。\n'
           '随后踏上漫长旅途。';
 
@@ -86,88 +86,95 @@ void main() {
       expect(snippets.first, contains('神秘的导师 [[艾莉丝]]'));
     });
 
-    testWidgets('WikiLinkParser buildWikiSpans creates linked and fallback spans',
-        (tester) async {
-      final nameMap = {'艾莉丝': charAlice, '罗兰': charRoland};
-      const text = '你好 [[艾莉丝]]，还有未知的 [[神秘人]]。';
+    testWidgets(
+      'WikiLinkParser buildWikiSpans creates linked and fallback spans',
+      (tester) async {
+        final nameMap = {'艾莉丝': charAlice, '罗兰': charRoland};
+        const text = '你好 [[艾莉丝]]，还有未知的 [[神秘人]]。';
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                final spans = WikiLinkParser.buildWikiSpans(
-                  text: text,
-                  nameToCharacterMap: nameMap,
-                  onCharacterTap: (_) {},
-                  context: context,
-                );
-                return RichText(text: TextSpan(children: spans));
-              },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  final spans = WikiLinkParser.buildWikiSpans(
+                    text: text,
+                    nameToCharacterMap: nameMap,
+                    onCharacterTap: (_) {},
+                    context: context,
+                  );
+                  return RichText(text: TextSpan(children: spans));
+                },
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // 验证已知角色“艾莉丝”与未知角色“神秘人”均有渲染
-      expect(find.text('艾莉丝'), findsOneWidget);
-      expect(find.text('神秘人'), findsOneWidget);
+        // 验证已知角色“艾莉丝”与未知角色“神秘人”均有渲染
+        expect(find.text('艾莉丝'), findsOneWidget);
+        expect(find.text('神秘人'), findsOneWidget);
 
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(milliseconds: 100));
-    });
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
 
-    test('characterBacklinksProvider correctly identifies reverse mentions', () async {
-      final container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          charactersByWorldProvider(10).overrideWith(
-            (ref) => Stream.value([charAlice, charBob, charRoland]),
+    test(
+      'characterBacklinksProvider correctly identifies reverse mentions',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            charactersByWorldProvider(10).overrideWith(
+              (ref) => Stream.value([charAlice, charBob, charRoland]),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // 等待 Stream 发出首轮数据
+        await container.read(charactersByWorldProvider(10).future);
+
+        // 查询罗兰被谁引用
+        final rolandBacklinks = container.read(
+          characterBacklinksProvider(
+            const BacklinkQuery(
+              worldId: 10,
+              characterId: 3,
+              characterName: '罗兰',
+            ),
           ),
-        ],
-      );
-      addTearDown(container.dispose);
+        );
 
-      // 等待 Stream 发出首轮数据
-      await container.read(charactersByWorldProvider(10).future);
+        // 艾莉丝（提到了罗兰）与博尔特（提到了罗兰）
+        expect(rolandBacklinks.length, equals(2));
+        final sourceNames = rolandBacklinks
+            .map((b) => b.sourceCharacter.name)
+            .toSet();
+        expect(sourceNames.contains('艾莉丝'), isTrue);
+        expect(sourceNames.contains('博尔特'), isTrue);
+        expect(rolandBacklinks.first.snippets.isNotEmpty, isTrue);
 
-      // 查询罗兰被谁引用
-      final rolandBacklinks = container.read(
-        characterBacklinksProvider(
-          const BacklinkQuery(
-            worldId: 10,
-            characterId: 3,
-            characterName: '罗兰',
+        // 查询艾莉丝被谁引用
+        final aliceBacklinks = container.read(
+          characterBacklinksProvider(
+            const BacklinkQuery(
+              worldId: 10,
+              characterId: 1,
+              characterName: '艾莉丝',
+            ),
           ),
-        ),
-      );
+        );
+        // 只有博尔特提到了艾莉丝
+        expect(aliceBacklinks.length, equals(1));
+        expect(aliceBacklinks.first.sourceCharacter.name, equals('博尔特'));
+      },
+    );
 
-      // 艾莉丝（提到了罗兰）与博尔特（提到了罗兰）
-      expect(rolandBacklinks.length, equals(2));
-      final sourceNames =
-          rolandBacklinks.map((b) => b.sourceCharacter.name).toSet();
-      expect(sourceNames.contains('艾莉丝'), isTrue);
-      expect(sourceNames.contains('博尔特'), isTrue);
-      expect(rolandBacklinks.first.snippets.isNotEmpty, isTrue);
-
-      // 查询艾莉丝被谁引用
-      final aliceBacklinks = container.read(
-        characterBacklinksProvider(
-          const BacklinkQuery(
-            worldId: 10,
-            characterId: 1,
-            characterName: '艾莉丝',
-          ),
-        ),
-      );
-      // 只有博尔特提到了艾莉丝
-      expect(aliceBacklinks.length, equals(1));
-      expect(aliceBacklinks.first.sourceCharacter.name, equals('博尔特'));
-    });
-
-    testWidgets('CharacterDescriptionSection renders rich text and backlinks',
-        (tester) async {
+    testWidgets('CharacterDescriptionSection renders rich text and backlinks', (
+      tester,
+    ) async {
       // 当前被查看的人物是罗兰（有艾莉丝和博尔特反向引用他）
       await tester.pumpWidget(
         ProviderScope(
@@ -194,7 +201,10 @@ void main() {
       expect(find.textContaining('孤独的极光圣殿守护者'), findsOneWidget);
 
       // 验证反向引用面板（被 2 位角色提及）
-      expect(find.textContaining('反向引用 (Backlinks) · 被 2 位角色提及'), findsOneWidget);
+      expect(
+        find.textContaining('反向引用 (Backlinks) · 被 2 位角色提及'),
+        findsOneWidget,
+      );
       expect(find.text('艾莉丝'), findsOneWidget);
       expect(find.text('博尔特'), findsOneWidget);
 

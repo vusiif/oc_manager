@@ -23,7 +23,8 @@ class BookletExportDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<BookletExportDialog> createState() => _BookletExportDialogState();
+  ConsumerState<BookletExportDialog> createState() =>
+      _BookletExportDialogState();
 }
 
 class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
@@ -41,7 +42,9 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final charactersAsync = ref.watch(charactersByWorldProvider(widget.world.id));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.world.id),
+    );
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -74,14 +77,19 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                       children: [
                         const Text(
                           '生成世界设定集 (Booklet Export)',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '将「${widget.world.name}」一键编译为出版级独立设定集或知识库文档',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -89,7 +97,9 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: _isExporting ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isExporting
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -102,7 +112,10 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                     // Format Selection
                     const Text(
                       '出版导出格式',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     SegmentedButton<BookletFormat>(
@@ -129,9 +142,15 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -149,7 +168,10 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                     // Section Switches
                     const Text(
                       '包含章节模块',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     CheckboxListTile(
@@ -157,21 +179,29 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                       title: const Text('世界序章与核心背景概况'),
                       subtitle: const Text('包含世界命名、核心背景大纲与全局资产总览'),
                       value: _includeWorldOverview,
-                      onChanged: _isExporting ? null : (v) => setState(() => _includeWorldOverview = v ?? true),
+                      onChanged: _isExporting
+                          ? null
+                          : (v) => setState(
+                              () => _includeWorldOverview = v ?? true,
+                            ),
                     ),
                     CheckboxListTile(
                       dense: true,
                       title: const Text('组织势力与派系一览'),
                       subtitle: const Text('收录世界内的所有阵营名称与从属角色成员'),
                       value: _includeGroups,
-                      onChanged: _isExporting ? null : (v) => setState(() => _includeGroups = v ?? true),
+                      onChanged: _isExporting
+                          ? null
+                          : (v) => setState(() => _includeGroups = v ?? true),
                     ),
                     CheckboxListTile(
                       dense: true,
                       title: const Text('纪元编年史与大事件'),
                       subtitle: const Text('按纪年排版的历史大事记、重要度星级与分类'),
                       value: _includeTimeline,
-                      onChanged: _isExporting ? null : (v) => setState(() => _includeTimeline = v ?? true),
+                      onChanged: _isExporting
+                          ? null
+                          : (v) => setState(() => _includeTimeline = v ?? true),
                     ),
                     CheckboxListTile(
                       dense: true,
@@ -200,14 +230,22 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                               title: const Text('六维特质雷达图'),
                               subtitle: const Text('包含纯矢量多边形 SVG 雷达图与数值分级评估表'),
                               value: _includeRadarStats,
-                              onChanged: _isExporting ? null : (v) => setState(() => _includeRadarStats = v ?? true),
+                              onChanged: _isExporting
+                                  ? null
+                                  : (v) => setState(
+                                      () => _includeRadarStats = v ?? true,
+                                    ),
                             ),
                             CheckboxListTile(
                               dense: true,
                               title: const Text('差分画廊与立绘相册'),
                               subtitle: const Text('打包并内嵌角色的所有差分立绘切片与图片描述'),
                               value: _includeGalleries,
-                              onChanged: _isExporting ? null : (v) => setState(() => _includeGalleries = v ?? true),
+                              onChanged: _isExporting
+                                  ? null
+                                  : (v) => setState(
+                                      () => _includeGalleries = v ?? true,
+                                    ),
                             ),
                           ],
                         ),
@@ -218,7 +256,10 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                       title: const Text('全局人际关系拓扑'),
                       subtitle: const Text('收录所有单向/双向人物关系连结矩阵'),
                       value: _includeRelations,
-                      onChanged: _isExporting ? null : (v) => setState(() => _includeRelations = v ?? true),
+                      onChanged: _isExporting
+                          ? null
+                          : (v) =>
+                                setState(() => _includeRelations = v ?? true),
                     ),
                     const SizedBox(height: 12),
 
@@ -226,7 +267,9 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                     charactersAsync.when(
                       data: (chars) {
                         if (chars.isEmpty) return const SizedBox.shrink();
-                        final isAllSelected = _selectedCharacterIds == null || _selectedCharacterIds!.length == chars.length;
+                        final isAllSelected =
+                            _selectedCharacterIds == null ||
+                            _selectedCharacterIds!.length == chars.length;
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -235,7 +278,10 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                               children: [
                                 Text(
                                   '收录角色选择 (${_selectedCharacterIds?.length ?? chars.length}/${chars.length})',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 TextButton(
                                   onPressed: _isExporting
@@ -257,7 +303,9 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                               spacing: 8,
                               runSpacing: 4,
                               children: chars.map((c) {
-                                final isSelected = _selectedCharacterIds == null || _selectedCharacterIds!.contains(c.id);
+                                final isSelected =
+                                    _selectedCharacterIds == null ||
+                                    _selectedCharacterIds!.contains(c.id);
                                 return FilterChip(
                                   label: Text(c.name),
                                   selected: isSelected,
@@ -265,13 +313,19 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                                       ? null
                                       : (selected) {
                                           setState(() {
-                                            final current = Set<int>.from(_selectedCharacterIds ?? chars.map((e) => e.id));
+                                            final current = Set<int>.from(
+                                              _selectedCharacterIds ??
+                                                  chars.map((e) => e.id),
+                                            );
                                             if (selected) {
                                               current.add(c.id);
                                             } else {
                                               current.remove(c.id);
                                             }
-                                            _selectedCharacterIds = current.length == chars.length ? null : current;
+                                            _selectedCharacterIds =
+                                                current.length == chars.length
+                                                ? null
+                                                : current;
                                           });
                                         },
                                 );
@@ -280,7 +334,8 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                           ],
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (_, _) => const SizedBox.shrink(),
                     ),
                   ],
@@ -293,7 +348,9 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isExporting ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isExporting
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: const Text('取消'),
                   ),
                   const SizedBox(width: 12),
@@ -303,7 +360,10 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.download),
                     label: Text(_isExporting ? '编译导出中...' : '开始编译导出'),
@@ -319,7 +379,13 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
 
   Future<void> _handleExport() async {
     final defaultExt = _format == BookletFormat.html ? 'html' : 'zip';
-    final nowStr = DateTime.now().toLocal().toString().split('.').first.replaceAll(':', '-').replaceAll(' ', '_');
+    final nowStr = DateTime.now()
+        .toLocal()
+        .toString()
+        .split('.')
+        .first
+        .replaceAll(':', '-')
+        .replaceAll(' ', '_');
     final defaultFileName = '${widget.world.name}_设定集_$nowStr.$defaultExt';
 
     final savePath = await FilePicker.platform.saveFile(
@@ -358,19 +424,16 @@ class _BookletExportDialogState extends ConsumerState<BookletExportDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('设定集导出成功！已保存至：$savePath'),
-            action: SnackBarAction(
-              label: '完成',
-              onPressed: () {},
-            ),
+            action: SnackBarAction(label: '完成', onPressed: () {}),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
       }
     }
   }

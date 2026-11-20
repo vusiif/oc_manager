@@ -50,7 +50,9 @@ class _OcAvatarState extends State<OcAvatar> {
       if (mounted) setState(() => _resolvedFile = null);
       return;
     }
-    final file = await ImageStorageService.instance.resolveImageFile(widget.avatarPath);
+    final file = await ImageStorageService.instance.resolveImageFile(
+      widget.avatarPath,
+    );
     if (mounted) {
       setState(() {
         _resolvedFile = file;
@@ -87,20 +89,12 @@ class _OcAvatarState extends State<OcAvatar> {
 
     if (widget.shape == BoxShape.circle) {
       return ClipOval(
-        child: SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: child,
-        ),
+        child: SizedBox(width: widget.size, height: widget.size, child: child),
       );
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: SizedBox(
-          width: widget.size,
-          height: widget.size,
-          child: child,
-        ),
+        child: SizedBox(width: widget.size, height: widget.size, child: child),
       );
     }
   }

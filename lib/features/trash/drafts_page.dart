@@ -12,9 +12,7 @@ class DraftsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('草稿箱'),
-      ),
+      appBar: AppBar(title: const Text('草稿箱')),
       body: FutureBuilder<List<Character>>(
         future: _loadDrafts(ref),
         builder: (context, snapshot) {
@@ -110,7 +108,10 @@ class DraftsPage extends ConsumerWidget {
   }
 
   void _publishDraft(WidgetRef ref, Character character) async {
-    await ref.read(databaseProvider).characterDao.updateCharacter(
+    await ref
+        .read(databaseProvider)
+        .characterDao
+        .updateCharacter(
           CharactersCompanion(
             id: drift.Value(character.id),
             worldId: drift.Value(character.worldId),
@@ -126,7 +127,10 @@ class DraftsPage extends ConsumerWidget {
   }
 
   void _confirmDelete(
-      BuildContext context, WidgetRef ref, Character character) {
+    BuildContext context,
+    WidgetRef ref,
+    Character character,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

@@ -84,8 +84,9 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
       // 等待离屏与主线程渲染帧稳定
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final boundary = _posterKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _posterKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) {
         throw Exception('未能获取海报渲染对象');
       }
@@ -122,9 +123,9 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -137,8 +138,9 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
     final worldAsync = ref.watch(worldByIdProvider(widget.worldId));
     final statsAsync = ref.watch(characterStatsProvider(widget.character.id));
     final tagsAsync = ref.watch(characterTagsProvider(widget.character.id));
-    final galleriesAsync =
-        ref.watch(characterGalleriesProvider(widget.character.id));
+    final galleriesAsync = ref.watch(
+      characterGalleriesProvider(widget.character.id),
+    );
 
     final worldName = worldAsync.valueOrNull?.name ?? '未知世界';
     final stats = statsAsync.valueOrNull ?? [];
@@ -174,7 +176,10 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
 
             final previewWidget = Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 16,
+                ),
                 child: RepaintBoundary(
                   key: _posterKey,
                   child: _CharacterPosterCard(
@@ -194,10 +199,7 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
               ),
             );
 
-            final controlsWidget = _buildControlsDrawer(
-              theme,
-              galleries,
-            );
+            final controlsWidget = _buildControlsDrawer(theme, galleries);
 
             if (isWide) {
               return Row(
@@ -213,10 +215,7 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
                   ),
                   const VerticalDivider(width: 1),
                   // 右侧参数配置抽屉
-                  SizedBox(
-                    width: 360,
-                    child: controlsWidget,
-                  ),
+                  SizedBox(width: 360, child: controlsWidget),
                 ],
               );
             } else {
@@ -224,10 +223,7 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
                 children: [
                   Expanded(child: previewWidget),
                   const Divider(height: 1),
-                  SizedBox(
-                    height: 260,
-                    child: controlsWidget,
-                  ),
+                  SizedBox(height: 260, child: controlsWidget),
                 ],
               );
             }
@@ -245,9 +241,12 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
       padding: const EdgeInsets.all(20),
       children: [
         // 1. 排版风格
-        Text('排版视觉风格',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          '排版视觉风格',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -266,9 +265,12 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
 
         // 2. 选择主推立绘（来自画廊）
         if (galleries.isNotEmpty) ...[
-          Text('展示立绘/差分选择',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            '展示立绘/差分选择',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 10),
           SizedBox(
             height: 72,
@@ -296,8 +298,9 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: FutureBuilder<File?>(
-                      future: ImageStorageService.instance
-                          .resolveImageFile(g.imagePath),
+                      future: ImageStorageService.instance.resolveImageFile(
+                        g.imagePath,
+                      ),
                       builder: (context, snapshot) {
                         final file = snapshot.data;
                         if (file != null && file.existsSync()) {
@@ -318,9 +321,12 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
         ],
 
         // 3. 经典名言 / 台词
-        Text('角色名言 / 题记',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          '角色名言 / 题记',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: _quoteController,
@@ -335,9 +341,12 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
         const SizedBox(height: 20),
 
         // 4. 模块内容开关
-        Text('模块显示开关',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          '模块显示开关',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 6),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -366,9 +375,12 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
         const SizedBox(height: 20),
 
         // 5. 导出清晰度倍率
-        Text('导出清晰度倍率',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          '导出清晰度倍率',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         SegmentedButton<double>(
           segments: const [
@@ -497,8 +509,9 @@ class _CharacterPosterCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: style.accentColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(4),
-              border:
-                  Border.all(color: style.accentColor.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: style.accentColor.withValues(alpha: 0.4),
+              ),
             ),
             child: Text(
               style.headerLabel,
@@ -535,7 +548,9 @@ class _CharacterPosterCard extends StatelessWidget {
         color: style.cardBgColor,
         child: imagePath != null && imagePath!.isNotEmpty
             ? FutureBuilder<File?>(
-                future: ImageStorageService.instance.resolveImageFile(imagePath),
+                future: ImageStorageService.instance.resolveImageFile(
+                  imagePath,
+                ),
                 builder: (context, snapshot) {
                   final file = snapshot.data;
                   if (file != null && file.existsSync()) {
@@ -712,9 +727,7 @@ class _CharacterPosterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: style.accentColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
-        border: Border(
-          left: BorderSide(color: style.accentColor, width: 3.5),
-        ),
+        border: Border(left: BorderSide(color: style.accentColor, width: 3.5)),
       ),
       child: Text(
         '“$quoteText”',
@@ -732,11 +745,7 @@ class _CharacterPosterCard extends StatelessWidget {
   Widget _buildStatsSection(_PosterStyle style) {
     final radarItems = [
       for (final s in stats)
-        RadarStatItem(
-          label: s.label,
-          value: s.value,
-          maxValue: s.maxValue,
-        ),
+        RadarStatItem(label: s.label, value: s.value, maxValue: s.maxValue),
     ];
 
     return Container(
@@ -792,12 +801,15 @@ class _CharacterPosterCard extends StatelessWidget {
                         : s.value.toStringAsFixed(1);
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: style.bgColor.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: style.cardBorderColor.withValues(alpha: 0.6)),
+                          color: style.cardBorderColor.withValues(alpha: 0.6),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

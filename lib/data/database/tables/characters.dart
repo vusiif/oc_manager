@@ -6,7 +6,8 @@ class Characters extends Table {
   IntColumn get worldId => integer().references(Worlds, #id)();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get avatarPath => text().nullable()();
-  TextColumn get gender => text().withLength(min: 0, max: 20).withDefault(const Constant(''))();
+  TextColumn get gender =>
+      text().withLength(min: 0, max: 20).withDefault(const Constant(''))();
   TextColumn get description => text().withDefault(const Constant(''))();
   IntColumn get status => integer().withDefault(const Constant(0))();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
@@ -36,9 +37,9 @@ class CharacterGalleries extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get characterId => integer().references(Characters, #id)();
   TextColumn get imagePath => text()();
-  TextColumn get caption => text().withLength(min: 0, max: 100).withDefault(const Constant(''))();
+  TextColumn get caption =>
+      text().withLength(min: 0, max: 100).withDefault(const Constant(''))();
   BoolColumn get isPrimary => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
-

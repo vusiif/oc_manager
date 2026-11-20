@@ -8,11 +8,7 @@ class GroupDialog extends ConsumerStatefulWidget {
   final int worldId;
   final Group? group;
 
-  const GroupDialog({
-    super.key,
-    required this.worldId,
-    this.group,
-  });
+  const GroupDialog({super.key, required this.worldId, this.group});
 
   @override
   ConsumerState<GroupDialog> createState() => _GroupDialogState();
@@ -26,9 +22,7 @@ class _GroupDialogState extends ConsumerState<GroupDialog> {
   void initState() {
     super.initState();
     _isEdit = widget.group != null;
-    _nameController = TextEditingController(
-      text: widget.group?.name ?? '',
-    );
+    _nameController = TextEditingController(text: widget.group?.name ?? '');
   }
 
   @override
@@ -72,14 +66,11 @@ class _GroupDialogState extends ConsumerState<GroupDialog> {
     if (name.isEmpty) return;
 
     if (_isEdit) {
-      ref.read(groupActionsProvider).update(
-            widget.group!.copyWith(name: name),
-          );
+      ref.read(groupActionsProvider).update(widget.group!.copyWith(name: name));
     } else {
-      ref.read(groupActionsProvider).create(
-            worldId: widget.worldId,
-            name: name,
-          );
+      ref
+          .read(groupActionsProvider)
+          .create(worldId: widget.worldId, name: name);
     }
     Navigator.pop(context);
   }

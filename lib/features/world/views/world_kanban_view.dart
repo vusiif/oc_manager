@@ -138,17 +138,11 @@ class _WorldKanbanViewState extends ConsumerState<WorldKanbanView> {
     final columns = <_GroupColumnData>[];
 
     for (final g in widget.groups) {
-      columns.add(_GroupColumnData(
-        groupId: g.id,
-        title: g.name,
-      ));
+      columns.add(_GroupColumnData(groupId: g.id, title: g.name));
     }
 
     // 未分组列
-    columns.add(const _GroupColumnData(
-      groupId: null,
-      title: '未归属阵营',
-    ));
+    columns.add(const _GroupColumnData(groupId: null, title: '未归属阵营'));
 
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -172,10 +166,7 @@ class _GroupColumnData {
   final int? groupId;
   final String title;
 
-  const _GroupColumnData({
-    required this.groupId,
-    required this.title,
-  });
+  const _GroupColumnData({required this.groupId, required this.title});
 }
 
 class _GroupKanbanColumnWrapper extends ConsumerWidget {
@@ -206,8 +197,9 @@ class _GroupKanbanColumnWrapper extends ConsumerWidget {
         onCharacterSelected: onCharacterSelected,
         onAcceptCharacter: (char) async {
           final groupDao = ref.read(groupDaoProvider);
-          final currentGroupIds =
-              await groupDao.getGroupIdsByCharacter(char.id);
+          final currentGroupIds = await groupDao.getGroupIdsByCharacter(
+            char.id,
+          );
           if (!currentGroupIds.contains(col.groupId!)) {
             await groupDao.setCharacterGroups(char.id, [col.groupId!]);
             ref.invalidate(charactersByGroupProvider);
@@ -217,7 +209,9 @@ class _GroupKanbanColumnWrapper extends ConsumerWidget {
       );
     } else {
       // 未分组人物筛选与响应式展示
-      final unassignedAsync = ref.watch(unassignedCharactersByWorldProvider(worldId));
+      final unassignedAsync = ref.watch(
+        unassignedCharactersByWorldProvider(worldId),
+      );
       final unassignedChars = unassignedAsync.valueOrNull ?? [];
 
       return _KanbanColumn(
@@ -272,7 +266,9 @@ class _KanbanColumnState extends State<_KanbanColumn> {
     return Container(
       width: 280,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.35,
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _isDragOver
@@ -288,7 +284,9 @@ class _KanbanColumnState extends State<_KanbanColumn> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: widget.color.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(11),
+              ),
             ),
             child: Row(
               children: [
@@ -304,8 +302,10 @@ class _KanbanColumnState extends State<_KanbanColumn> {
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: widget.color.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
@@ -350,7 +350,9 @@ class _KanbanColumnState extends State<_KanbanColumn> {
                           fontSize: 12.5,
                           color: _isDragOver
                               ? widget.color
-                              : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              : theme.colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.6,
+                                ),
                         ),
                       ),
                     ),
@@ -385,10 +387,7 @@ class _DraggableKanbanCard extends ConsumerWidget {
   final Character character;
   final VoidCallback onTap;
 
-  const _DraggableKanbanCard({
-    required this.character,
-    required this.onTap,
-  });
+  const _DraggableKanbanCard({required this.character, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -484,7 +483,11 @@ class _DraggableKanbanCard extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(statusConfig.icon, size: 11, color: statusConfig.color),
+                    Icon(
+                      statusConfig.icon,
+                      size: 11,
+                      color: statusConfig.color,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       statusConfig.label,
@@ -535,10 +538,7 @@ class _DraggableKanbanCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         child: Opacity(opacity: 0.9, child: cardContent),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.35,
-        child: cardContent,
-      ),
+      childWhenDragging: Opacity(opacity: 0.35, child: cardContent),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),

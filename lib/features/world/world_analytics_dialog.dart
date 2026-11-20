@@ -60,10 +60,10 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final charactersAsync =
-        ref.watch(charactersByWorldProvider(widget.worldId));
-    final relationsAsync =
-        ref.watch(relationsByWorldProvider(widget.worldId));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.worldId),
+    );
+    final relationsAsync = ref.watch(relationsByWorldProvider(widget.worldId));
     final groupsAsync = ref.watch(groupsByWorldProvider(widget.worldId));
 
     final characters = charactersAsync.valueOrNull ?? [];
@@ -80,10 +80,7 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 920,
-          maxHeight: 700,
-        ),
+        constraints: const BoxConstraints(maxWidth: 920, maxHeight: 700),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -95,7 +92,9 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.6,
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -138,103 +137,103 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
                   ),
                 ],
               ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
 
-            // 主内容
-            if (_loadingGroups)
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (data.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.analytics_outlined,
-                        size: 56,
-                        color: theme.colorScheme.outline,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '该世界观下暂无人物数据',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: theme.colorScheme.onSurfaceVariant,
+              // 主内容
+              if (_loadingGroups)
+                const Expanded(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (data.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.analytics_outlined,
+                          size: 56,
+                          color: theme.colorScheme.outline,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        Text(
+                          '该世界观下暂无人物数据',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // 1. 核心大盘指标卡片
+                        _buildMetricCards(context, data),
+                        const SizedBox(height: 20),
+
+                        // 2. 双环形图（创作阶段 + 性别构成）
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildChartCard(
+                                context,
+                                title: '创作阶段分布',
+                                icon: Icons.track_changes_rounded,
+                                slices: data.statusStats,
+                                centerValue: '${data.totalCharacters}',
+                                centerTitle: '总人物',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildChartCard(
+                                context,
+                                title: '角色性别构成',
+                                icon: Icons.pie_chart_rounded,
+                                slices: data.genderStats,
+                                centerValue:
+                                    '${(data.finalizedRate).toStringAsFixed(0)}%',
+                                centerTitle: '定稿率',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // 3. 组织阵营分布与人际枢纽榜单
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 势力阵营分布
+                            Expanded(
+                              flex: 5,
+                              child: _buildGroupBarsCard(context, data),
+                            ),
+                            const SizedBox(width: 16),
+                            // 网络核心纽带榜
+                            Expanded(
+                              flex: 6,
+                              child: _buildCentralityCard(context, data),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-            else
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // 1. 核心大盘指标卡片
-                      _buildMetricCards(context, data),
-                      const SizedBox(height: 20),
-
-                      // 2. 双环形图（创作阶段 + 性别构成）
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _buildChartCard(
-                              context,
-                              title: '创作阶段分布',
-                              icon: Icons.track_changes_rounded,
-                              slices: data.statusStats,
-                              centerValue: '${data.totalCharacters}',
-                              centerTitle: '总人物',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildChartCard(
-                              context,
-                              title: '角色性别构成',
-                              icon: Icons.pie_chart_rounded,
-                              slices: data.genderStats,
-                              centerValue:
-                                  '${(data.finalizedRate).toStringAsFixed(0)}%',
-                              centerTitle: '定稿率',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 3. 组织阵营分布与人际枢纽榜单
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 势力阵营分布
-                          Expanded(
-                            flex: 5,
-                            child: _buildGroupBarsCard(context, data),
-                          ),
-                          const SizedBox(width: 16),
-                          // 网络核心纽带榜
-                          Expanded(
-                            flex: 6,
-                            child: _buildCentralityCard(context, data),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   /// 核心数字指标统计行
@@ -365,10 +364,7 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 1),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 10, color: color),
-                  ),
+                  Text(subtitle, style: TextStyle(fontSize: 10, color: color)),
                 ],
               ],
             ),
@@ -425,9 +421,7 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
                 centerTitle: centerTitle,
               ),
               const SizedBox(width: 16),
-              Expanded(
-                child: DonutLegend(slices: slices),
-              ),
+              Expanded(child: DonutLegend(slices: slices)),
             ],
           ),
         ],
@@ -436,8 +430,7 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
   }
 
   /// 组织势力规模横向进度柱
-  Widget _buildGroupBarsCard(
-      BuildContext context, WorldAnalyticsData data) {
+  Widget _buildGroupBarsCard(BuildContext context, WorldAnalyticsData data) {
     final theme = Theme.of(context);
     final groups = data.groupStats;
 
@@ -455,15 +448,15 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
         children: [
           Row(
             children: [
-              Icon(Icons.groups_rounded,
-                  size: 16, color: theme.colorScheme.primary),
+              Icon(
+                Icons.groups_rounded,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               const Text(
                 '阵营与组织势力规模',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -532,8 +525,7 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
   }
 
   /// 关系网络中心性人物榜 (Top Hub Characters)
-  Widget _buildCentralityCard(
-      BuildContext context, WorldAnalyticsData data) {
+  Widget _buildCentralityCard(BuildContext context, WorldAnalyticsData data) {
     final theme = Theme.of(context);
     final ranking = data.centralityRanking.take(5).toList();
 
@@ -551,16 +543,16 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
         children: [
           Row(
             children: [
-              const Icon(Icons.stars_rounded,
-                  size: 17, color: Color(0xFFF59E0B)),
+              const Icon(
+                Icons.stars_rounded,
+                size: 17,
+                color: Color(0xFFF59E0B),
+              ),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   '人际网络核心纽带人物 (Top Hubs)',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -595,17 +587,20 @@ class _WorldAnalyticsDialogState extends ConsumerState<WorldAnalyticsDialog> {
                   onTap: () {
                     Navigator.of(context).pop();
                     context.push(
-                        '/world/${widget.worldId}/character/${char.id}');
+                      '/world/${widget.worldId}/character/${char.id}',
+                    );
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 6),
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: index == 0
                           ? const Color(0xFFF59E0B).withValues(alpha: 0.08)
                           : theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.3),
+                                .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(

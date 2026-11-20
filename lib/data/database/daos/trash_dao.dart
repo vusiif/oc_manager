@@ -1,3 +1,4 @@
+import 'dart:ui' show Offset;
 import 'package:drift/drift.dart';
 import '../app_database.dart';
 import '../tables/trash.dart';
@@ -16,9 +17,9 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
   Future<int> removeFromTrash(int id) =>
       (delete(trash)..where((t) => t.id.equals(id))).go();
 
-  Future<int> cleanOldTrash(DateTime before) =>
-      (delete(trash)..where((t) => t.deletedAt.isSmallerThanValue(before)))
-          .go();
+  Future<int> cleanOldTrash(DateTime before) => (delete(
+    trash,
+  )..where((t) => t.deletedAt.isSmallerThanValue(before))).go();
 
   // 备份
   Future<List<Backup>> getAllBackups() => select(backups).get();
@@ -31,10 +32,11 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
 
   // 图布局（按世界观获取，并确保单个角色仅保留最新一条有效坐标）
   Future<List<GraphLayout>> getLayoutsByWorld(int worldId) async {
-    final rows = await (select(graphLayouts)
-          ..where((t) => t.worldId.equals(worldId))
-          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
-        .get();
+    final rows =
+        await (select(graphLayouts)
+              ..where((t) => t.worldId.equals(worldId))
+              ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+            .get();
     final latestByCharacter = <int, GraphLayout>{};
     for (final row in rows) {
       latestByCharacter[row.characterId] = row;
@@ -47,26 +49,28 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
     final worldId = entry.worldId.value;
     final characterId = entry.characterId.value;
 
-    final existing = await (select(graphLayouts)
-          ..where((t) =>
-              t.worldId.equals(worldId) & t.characterId.equals(characterId))
-          ..orderBy([(t) => OrderingTerm.desc(t.id)]))
-        .get();
+    final existing =
+        await (select(graphLayouts)
+              ..where(
+                (t) =>
+                    t.worldId.equals(worldId) &
+                    t.characterId.equals(characterId),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.id)]))
+            .get();
 
     if (existing.isNotEmpty) {
       final latestId = existing.first.id;
       await (update(graphLayouts)..where((t) => t.id.equals(latestId))).write(
-        GraphLayoutsCompanion(
-          x: entry.x,
-          y: entry.y,
-        ),
+        GraphLayoutsCompanion(x: entry.x, y: entry.y),
       );
       if (existing.length > 1) {
-        await (delete(graphLayouts)
-              ..where((t) =>
+        await (delete(graphLayouts)..where(
+              (t) =>
                   t.worldId.equals(worldId) &
                   t.characterId.equals(characterId) &
-                  t.id.isNotValue(latestId)))
+                  t.id.isNotValue(latestId),
+            ))
             .go();
       }
       return latestId;
@@ -79,9 +83,55 @@ class TrashDao extends DatabaseAccessor<AppDatabase> with _$TrashDaoMixin {
       (delete(graphLayouts)..where((t) => t.worldId.equals(worldId))).go();
 
   Future<void> deleteLayout(int worldId, int characterId) =>
-      (delete(graphLayouts)
-            ..where((t) =>
-                t.worldId.equals(worldId) &
-                t.characterId.equals(characterId)))
+      (delete(graphLayouts)..where(
+            (t) =>
+                t.worldId.equals(worldId) & t.characterId.equals(characterId),
+          ))
           .go();
+
+  /// 清理重复的历史布局坐标，确保 (worldId, characterId) 严格唯一（保留最新自增 ID 的那一条）
+  Future<int> cleanupDuplicateLayouts({int? worldId}) async {
+    final query = select(graphLayouts);
+    if (worldId != null) {
+      query.where((t) => t.worldId.equals(worldId));
+    }
+    query.orderBy([(t) => OrderingTerm.desc(t.id)]);
+    final rows = await query.get();
+
+    final seen = <String, int>{};
+    final idsToDelete = <int>[];
+
+    for (final row in rows) {
+      final key = '${row.worldId}_${row.characterId}';
+      if (!seen.containsKey(key)) {
+        seen[key] = row.id;
+      } else {
+        idsToDelete.add(row.id);
+      }
+    }
+
+    if (idsToDelete.isNotEmpty) {
+      await (delete(graphLayouts)..where((t) => t.id.isIn(idsToDelete))).go();
+    }
+    return idsToDelete.length;
+  }
+
+  /// 批量保存布局坐标（在单个数据库事务内执行 upsert，拖拽后批量提交或一键排列时显著提升吞吐）
+  Future<void> batchSaveLayouts(int worldId, Map<int, Offset> positions) async {
+    if (positions.isEmpty) return;
+    await db.transaction(() async {
+      for (final entry in positions.entries) {
+        final characterId = entry.key;
+        final pos = entry.value;
+        await saveLayout(
+          GraphLayoutsCompanion(
+            worldId: Value(worldId),
+            characterId: Value(characterId),
+            x: Value(pos.dx),
+            y: Value(pos.dy),
+          ),
+        );
+      }
+    });
+  }
 }

@@ -41,50 +41,49 @@ void main() {
       expect(PosterThemeType.dossier.label, equals('绝密档案风'));
     });
 
-    testWidgets('CharacterPosterCard renders in all 4 visual themes without overflow',
-        (WidgetTester tester) async {
-      // 插入测试世界
-      await db.worldDao.createWorld(
-        const WorldsCompanion(id: Value(10), name: Value('极光圣域')),
-      );
+    testWidgets(
+      'CharacterPosterCard renders in all 4 visual themes without overflow',
+      (WidgetTester tester) async {
+        // 插入测试世界
+        await db.worldDao.createWorld(
+          const WorldsCompanion(id: Value(10), name: Value('极光圣域')),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: CharacterPosterDialog(
-                character: testCharacter,
-                worldId: 10,
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [databaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              home: Scaffold(
+                body: CharacterPosterDialog(
+                  character: testCharacter,
+                  worldId: 10,
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // 验证标题与基本信息渲染
-      expect(find.textContaining('极光骑士罗兰'), findsWidgets);
-      expect(find.text('导出 PNG 海报'), findsOneWidget);
-      expect(find.text('排版视觉风格'), findsOneWidget);
+        // 验证标题与基本信息渲染
+        expect(find.textContaining('极光骑士罗兰'), findsWidgets);
+        expect(find.text('导出 PNG 海报'), findsOneWidget);
+        expect(find.text('排版视觉风格'), findsOneWidget);
 
-      // 切换风格并验证
-      await tester.tap(find.text('古典传奇风'));
-      await tester.pumpAndSettle();
+        // 切换风格并验证
+        await tester.tap(find.text('古典传奇风'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('赛博霓虹风'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('赛博霓虹风'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('绝密档案风'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('绝密档案风'));
+        await tester.pumpAndSettle();
 
-      // 卸载 Widget 树
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(milliseconds: 100));
-    });
+        // 卸载 Widget 树
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
   });
 }
-

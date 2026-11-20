@@ -42,6 +42,15 @@ class ImageStorageService {
     return galleryDir;
   }
 
+  static const validImageExtensions = {
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.webp',
+    '.gif',
+    '.bmp',
+  };
+
   /// Copies an image from [sourcePath] into the app's gallery directory.
   /// Returns a portable relative path, e.g. "gallery/char_1_1697481234.png".
   Future<String> saveGalleryImage({
@@ -49,7 +58,8 @@ class ImageStorageService {
     required int characterId,
   }) async {
     final galleryDir = await getGalleryDir();
-    final ext = p.extension(sourcePath).isNotEmpty ? p.extension(sourcePath) : '.jpg';
+    final rawExt = p.extension(sourcePath).toLowerCase();
+    final ext = validImageExtensions.contains(rawExt) ? rawExt : '.jpg';
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final fileName = 'char_${characterId}_$timestamp$ext';
     final targetPath = p.join(galleryDir.path, fileName);
@@ -67,7 +77,8 @@ class ImageStorageService {
     int? characterId,
   }) async {
     final avatarsDir = await getAvatarsDir();
-    final ext = p.extension(sourcePath).isNotEmpty ? p.extension(sourcePath) : '.jpg';
+    final rawExt = p.extension(sourcePath).toLowerCase();
+    final ext = validImageExtensions.contains(rawExt) ? rawExt : '.jpg';
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final prefix = characterId != null ? 'char_$characterId' : 'avatar';
     final fileName = '${prefix}_$timestamp$ext';
@@ -80,6 +91,16 @@ class ImageStorageService {
     return p.join('avatars', fileName).replaceAll(r'\', '/');
   }
 
+  /// Safely deletes an image from the sandbox if it exists.
+  Future<bool> deleteImage(String? storedPath) async {
+    final file = await resolveImageFile(storedPath);
+    if (file != null && await file.exists()) {
+      await file.delete();
+      return true;
+    }
+    return false;
+  }
+
   /// Resolves a stored path (relative or absolute) to a concrete [File].
   /// Enforces sandbox boundary for relative paths and validates image extensions.
   /// Returns null if the file does not exist or violates security constraints.
@@ -89,7 +110,6 @@ class ImageStorageService {
     final trimmed = storedPath.trim();
     final base = await getBaseDir();
     final baseCanonical = p.canonicalize(base.path);
-    const validExtensions = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'};
 
     // 1. If absolute, verify existence and ensure it is an image file
     if (p.isAbsolute(trimmed)) {
@@ -97,7 +117,7 @@ class ImageStorageService {
       final absFile = File(absCanonical);
       if (absFile.existsSync()) {
         final ext = p.extension(absCanonical).toLowerCase();
-        if (validExtensions.contains(ext)) {
+        if (validImageExtensions.contains(ext)) {
           return absFile;
         }
       }
@@ -107,7 +127,13 @@ class ImageStorageService {
     // 2. Relative path must stay strictly inside oc_manager sandbox (prevent Path Traversal)
     final targetPath = p.join(base.path, trimmed);
     final targetCanonical = p.canonicalize(targetPath);
-    if (!p.isWithin(baseCanonical, targetCanonical) && targetCanonical != baseCanonical) {
+    if (!p.isWithin(baseCanonical, targetCanonical) &&
+        targetCanonical != baseCanonical) {
+      return null;
+    }
+
+    final ext = p.extension(targetCanonical).toLowerCase();
+    if (!validImageExtensions.contains(ext)) {
       return null;
     }
 
@@ -119,14 +145,13 @@ class ImageStorageService {
   static File? tryResolveSync(String? storedPath, String? baseDirPath) {
     if (storedPath == null || storedPath.trim().isEmpty) return null;
     final trimmed = storedPath.trim();
-    const validExtensions = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'};
 
     if (p.isAbsolute(trimmed)) {
       final absCanonical = p.canonicalize(trimmed);
       final absFile = File(absCanonical);
       if (absFile.existsSync()) {
         final ext = p.extension(absCanonical).toLowerCase();
-        if (validExtensions.contains(ext)) return absFile;
+        if (validImageExtensions.contains(ext)) return absFile;
       }
       return null;
     }
@@ -134,9 +159,13 @@ class ImageStorageService {
     if (baseDirPath != null) {
       final baseCanonical = p.canonicalize(baseDirPath);
       final targetCanonical = p.canonicalize(p.join(baseDirPath, trimmed));
-      if (!p.isWithin(baseCanonical, targetCanonical) && targetCanonical != baseCanonical) {
+      if (!p.isWithin(baseCanonical, targetCanonical) &&
+          targetCanonical != baseCanonical) {
         return null;
       }
+      final ext = p.extension(targetCanonical).toLowerCase();
+      if (!validImageExtensions.contains(ext)) return null;
+
       final relFile = File(targetCanonical);
       if (relFile.existsSync()) return relFile;
     }

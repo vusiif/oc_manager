@@ -2,7 +2,8 @@ import 'package:drift/drift.dart';
 
 class Trash extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get itemType => text().withLength(min: 1, max: 20)(); // world / character
+  TextColumn get itemType =>
+      text().withLength(min: 1, max: 20)(); // world / character
   IntColumn get itemId => integer()();
   TextColumn get itemData => text()(); // JSON
   DateTimeColumn get deletedAt => dateTime().withDefault(currentDateAndTime)();
@@ -21,4 +22,5 @@ class GraphLayouts extends Table {
   IntColumn get characterId => integer()();
   RealColumn get x => real().withDefault(const Constant(0))();
   RealColumn get y => real().withDefault(const Constant(0))();
+  IntColumn get canvasId => integer().nullable()();
 }

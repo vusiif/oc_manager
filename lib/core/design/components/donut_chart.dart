@@ -84,10 +84,7 @@ class _DonutChartPainter extends CustomPainter {
   final List<CategorySlice> slices;
   final double strokeWidth;
 
-  _DonutChartPainter({
-    required this.slices,
-    required this.strokeWidth,
-  });
+  _DonutChartPainter({required this.slices, required this.strokeWidth});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -134,10 +131,7 @@ class _DonutChartPainter extends CustomPainter {
 class DonutLegend extends StatelessWidget {
   final List<CategorySlice> slices;
 
-  const DonutLegend({
-    super.key,
-    required this.slices,
-  });
+  const DonutLegend({super.key, required this.slices});
 
   @override
   Widget build(BuildContext context) {

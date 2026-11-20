@@ -24,7 +24,8 @@ class OcPackageExportDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<OcPackageExportDialog> createState() => _OcPackageExportDialogState();
+  ConsumerState<OcPackageExportDialog> createState() =>
+      _OcPackageExportDialogState();
 }
 
 class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
@@ -36,7 +37,9 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.world.name);
-    _descController = TextEditingController(text: widget.world.description ?? '');
+    _descController = TextEditingController(
+      text: widget.world.description ?? '',
+    );
   }
 
   @override
@@ -80,14 +83,19 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
                       children: [
                         const Text(
                           '导出数据分享包 (.ocpkg)',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '打包全部数据、立绘与画廊为便携单文件，可在其他设备无损导入',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -120,7 +128,9 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
@@ -143,7 +153,9 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isExporting ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isExporting
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: const Text('取消'),
                   ),
                   const SizedBox(width: 12),
@@ -153,7 +165,10 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.file_download),
                     label: Text(_isExporting ? '打包中...' : '导出 .ocpkg'),
@@ -193,16 +208,16 @@ class _OcPackageExportDialogState extends ConsumerState<OcPackageExportDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已成功导出分享包：$savePath')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已成功导出分享包：$savePath')));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
       }
     }
   }
@@ -223,7 +238,8 @@ class OcPackageImportDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<OcPackageImportDialog> createState() => _OcPackageImportDialogState();
+  ConsumerState<OcPackageImportDialog> createState() =>
+      _OcPackageImportDialogState();
 }
 
 class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
@@ -265,7 +281,10 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
 
       final path = result.files.single.path!;
       final service = ref.read(ocPackageServiceProvider);
-      final inspection = await service.inspectPackage(path);
+      final inspection = await service.inspectPackage(
+        path,
+        targetWorldId: widget.targetWorldId,
+      );
 
       if (mounted) {
         setState(() {
@@ -317,14 +336,19 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                       children: [
                         const Text(
                           '导入数据分享包 (.ocpkg)',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '安全解析外部数据包并合并至当前知识库',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -332,7 +356,9 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isImporting
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -352,24 +378,31 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                         ),
                       )
                     : _errorMessage != null
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                                const SizedBox(height: 12),
-                                Text('解析失败：$_errorMessage', textAlign: TextAlign.center),
-                                const SizedBox(height: 16),
-                                FilledButton(
-                                  onPressed: _pickAndInspectFile,
-                                  child: const Text('重新选择文件'),
-                                ),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red,
                             ),
-                          )
-                        : _inspection != null
-                            ? _buildInspectionView()
-                            : const SizedBox.shrink(),
+                            const SizedBox(height: 12),
+                            Text(
+                              '解析失败：$_errorMessage',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: _pickAndInspectFile,
+                              child: const Text('重新选择文件'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _inspection != null
+                    ? _buildInspectionView()
+                    : const SizedBox.shrink(),
               ),
 
               const SizedBox(height: 16),
@@ -380,7 +413,9 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
+                      onPressed: _isImporting
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('取消'),
                     ),
                     const SizedBox(width: 12),
@@ -390,7 +425,10 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Icon(Icons.download_done),
                       label: Text(_isImporting ? '导入合并中...' : '开始安全导入'),
@@ -407,15 +445,20 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
   Widget _buildInspectionView() {
     final ins = _inspection!;
     final counts = ins.manifest.entityCounts;
-    final hasConflict = ins.existingConflictedCharacters.isNotEmpty || ins.hasWorldConflict;
+    final hasConflict =
+        ins.existingConflictedCharacters.isNotEmpty || ins.hasWorldConflict;
 
     return ListView(
       children: [
         // Summary Card
         Card(
           elevation: 0,
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -427,11 +470,17 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                     const SizedBox(width: 8),
                     Text(
                       ins.manifest.title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(4),
@@ -447,9 +496,13 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                     ),
                   ],
                 ),
-                if (ins.manifest.description != null && ins.manifest.description!.isNotEmpty) ...[
+                if (ins.manifest.description != null &&
+                    ins.manifest.description!.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(ins.manifest.description!, style: const TextStyle(fontSize: 13)),
+                  Text(
+                    ins.manifest.description!,
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ],
                 const Divider(height: 24),
                 Wrap(
@@ -457,7 +510,10 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                   runSpacing: 8,
                   children: [
                     _buildStatPill('收录角色', '${counts['characters'] ?? 0} 位'),
-                    _buildStatPill('编年事件', '${counts['timelineEvents'] ?? 0} 条'),
+                    _buildStatPill(
+                      '编年事件',
+                      '${counts['timelineEvents'] ?? 0} 条',
+                    ),
                     _buildStatPill('关系纽带', '${counts['relations'] ?? 0} 条'),
                     _buildStatPill('包含画廊/图片', '${ins.mediaCount} 个文件'),
                   ],
@@ -478,13 +534,17 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
           spacing: 6,
           runSpacing: 6,
           children: ins.characterNames.map((name) {
-            final isConflicted = ins.existingConflictedCharacters.contains(name);
+            final isConflicted = ins.existingConflictedCharacters.contains(
+              name,
+            );
             return Chip(
               avatar: isConflicted
                   ? const Icon(Icons.warning, size: 16, color: Colors.amber)
                   : const Icon(Icons.person, size: 16),
               label: Text(name),
-              backgroundColor: isConflicted ? Colors.amber.withValues(alpha: 0.15) : null,
+              backgroundColor: isConflicted
+                  ? Colors.amber.withValues(alpha: 0.15)
+                  : null,
             );
           }).toList(),
         ),
@@ -506,7 +566,10 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
                 Expanded(
                   child: Text(
                     '检测到包内有 ${ins.existingConflictedCharacters.length} 位角色与当前数据库同名。请选择冲突解决策略：',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -554,8 +617,14 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$label：', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          '$label：',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -592,9 +661,9 @@ class _OcPackageImportDialogState extends ConsumerState<OcPackageImportDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isImporting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导入失败：$e')));
       }
     }
   }

@@ -6,7 +6,10 @@ import 'package:flutter/painting.dart';
 /// 图像主色调调色板提取工具
 class PaletteExtractor {
   /// 从本地图片文件中提取前 [maxColors] 种最具代表性的主色调
-  static Future<List<Color>> extractPalette(File imageFile, {int maxColors = 5}) async {
+  static Future<List<Color>> extractPalette(
+    File imageFile, {
+    int maxColors = 5,
+  }) async {
     try {
       if (!imageFile.existsSync()) return [];
       final bytes = await imageFile.readAsBytes();
@@ -17,7 +20,10 @@ class PaletteExtractor {
   }
 
   /// 从图片字节中提取主色调
-  static Future<List<Color>> extractFromBytes(Uint8List bytes, {int maxColors = 5}) async {
+  static Future<List<Color>> extractFromBytes(
+    Uint8List bytes, {
+    int maxColors = 5,
+  }) async {
     try {
       final codec = await ui.instantiateImageCodec(
         bytes,
@@ -26,7 +32,9 @@ class PaletteExtractor {
       );
       final frame = await codec.getNextFrame();
       final image = frame.image;
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
       if (byteData == null) return [];
 
       final buffer = byteData.buffer.asUint8List();
@@ -92,9 +100,24 @@ class PaletteExtractor {
 
   /// 将 Color 转换为标准的 '#RRGGBB' 十六进制文本
   static String toHex(Color color) {
-    final r = (color.r * 255).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
-    final g = (color.g * 255).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
-    final b = (color.b * 255).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
+    final r = (color.r * 255)
+        .round()
+        .clamp(0, 255)
+        .toRadixString(16)
+        .padLeft(2, '0')
+        .toUpperCase();
+    final g = (color.g * 255)
+        .round()
+        .clamp(0, 255)
+        .toRadixString(16)
+        .padLeft(2, '0')
+        .toUpperCase();
+    final b = (color.b * 255)
+        .round()
+        .clamp(0, 255)
+        .toRadixString(16)
+        .padLeft(2, '0')
+        .toUpperCase();
     return '#$r$g$b';
   }
 }

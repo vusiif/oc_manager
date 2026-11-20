@@ -21,9 +21,7 @@ void main() {
     setUp(() {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-        ],
+        overrides: [databaseProvider.overrideWithValue(db)],
       );
     });
 
@@ -115,8 +113,9 @@ void main() {
       expect(updatedChar.status, equals(2));
     });
 
-    testWidgets('WorldKanbanView renders status columns and character cards',
-        (tester) async {
+    testWidgets('WorldKanbanView renders status columns and character cards', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1400, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -126,9 +125,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-          ],
+          overrides: [databaseProvider.overrideWithValue(db)],
           child: MaterialApp(
             home: Scaffold(
               body: WorldKanbanView(
@@ -161,13 +158,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     });
 
-    testWidgets('WorldTableView renders columns, filters and sorts correctly',
-        (tester) async {
+    testWidgets('WorldTableView renders columns, filters and sorts correctly', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-          ],
+          overrides: [databaseProvider.overrideWithValue(db)],
           child: MaterialApp(
             home: Scaffold(
               body: WorldTableView(
@@ -215,49 +211,50 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     });
 
-    testWidgets('WorldDetailPage switches between cards, kanban and table views',
-        (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            databaseProvider.overrideWithValue(db),
-            worldByIdProvider(10)
-                .overrideWith((ref) => Future.value(testWorld)),
-            charactersByWorldProvider(10)
-                .overrideWith((ref) => Stream.value([char1, char2, char3])),
-            groupsByWorldProvider(10)
-                .overrideWith((ref) => Stream.value([])),
-          ],
-          child: const MaterialApp(
-            home: WorldDetailPage(worldId: 10),
+    testWidgets(
+      'WorldDetailPage switches between cards, kanban and table views',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              databaseProvider.overrideWithValue(db),
+              worldByIdProvider(
+                10,
+              ).overrideWith((ref) => Future.value(testWorld)),
+              charactersByWorldProvider(
+                10,
+              ).overrideWith((ref) => Stream.value([char1, char2, char3])),
+              groupsByWorldProvider(10).overrideWith((ref) => Stream.value([])),
+            ],
+            child: const MaterialApp(home: WorldDetailPage(worldId: 10)),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // 默认是卡片流视图
-      expect(find.text('瓦罗兰特'), findsOneWidget);
-      expect(find.byType(SegmentedButton<WorldViewMode>), findsOneWidget);
+        // 默认是卡片流视图
+        expect(find.text('瓦罗兰特'), findsOneWidget);
+        expect(find.byType(SegmentedButton<WorldViewMode>), findsOneWidget);
 
-      // 切换到看板视图
-      await tester.tap(find.byIcon(Icons.view_kanban_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(WorldKanbanView), findsOneWidget);
-      expect(find.text('构思草稿'), findsWidgets);
+        // 切换到看板视图
+        await tester.tap(find.byIcon(Icons.view_kanban_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byType(WorldKanbanView), findsOneWidget);
+        expect(find.text('构思草稿'), findsWidgets);
 
-      // 切换到表格视图
-      await tester.tap(find.byIcon(Icons.table_chart_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(WorldTableView), findsOneWidget);
+        // 切换到表格视图
+        await tester.tap(find.byIcon(Icons.table_chart_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byType(WorldTableView), findsOneWidget);
 
-      // 切换回卡片视图
-      await tester.tap(find.byIcon(Icons.grid_view_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(WorldTableView), findsNothing);
-      expect(find.byType(WorldKanbanView), findsNothing);
+        // 切换回卡片视图
+        await tester.tap(find.byIcon(Icons.grid_view_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byType(WorldTableView), findsNothing);
+        expect(find.byType(WorldKanbanView), findsNothing);
 
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(milliseconds: 100));
-    });
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
   });
 }

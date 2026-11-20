@@ -12,8 +12,8 @@ void main() {
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      return tempBaseDir.path;
-    });
+          return tempBaseDir.path;
+        });
   });
 
   tearDownAll(() {
@@ -31,7 +31,9 @@ void main() {
       final result1 = await service.resolveImageFile('../../secret.txt');
       expect(result1, isNull);
 
-      final result2 = await service.resolveImageFile('avatars/../../windows/system32/cmd.exe');
+      final result2 = await service.resolveImageFile(
+        'avatars/../../windows/system32/cmd.exe',
+      );
       expect(result2, isNull);
     });
 
@@ -58,7 +60,9 @@ void main() {
       validImg.writeAsStringSync('dummy_png_bytes');
 
       try {
-        final resolved = await service.resolveImageFile('avatars/test_avatar.png');
+        final resolved = await service.resolveImageFile(
+          'avatars/test_avatar.png',
+        );
         expect(resolved, isNotNull);
         expect(resolved!.existsSync(), isTrue);
       } finally {

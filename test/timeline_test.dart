@@ -20,9 +20,7 @@ void main() {
     setUp(() {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-        ],
+        overrides: [databaseProvider.overrideWithValue(db)],
       );
     });
 
@@ -37,10 +35,7 @@ void main() {
       );
 
       final charId = await db.characterDao.createCharacter(
-        CharactersCompanion(
-          worldId: Value(worldId),
-          name: const Value('梅琳娜'),
-        ),
+        CharactersCompanion(worldId: Value(worldId), name: const Value('梅琳娜')),
       );
 
       // 1. 创建世界事件与角色事件
@@ -110,10 +105,10 @@ void main() {
         ),
       );
 
-      final updatedCharEvents =
-          await db.timelineDao.getEventsByCharacter(charId);
-      final updatedEv =
-          updatedCharEvents.firstWhere((e) => e.id == evChar1);
+      final updatedCharEvents = await db.timelineDao.getEventsByCharacter(
+        charId,
+      );
+      final updatedEv = updatedCharEvents.firstWhere((e) => e.id == evChar1);
       expect(updatedEv.title, equals('与褪色者结下命运誓约'));
       expect(updatedEv.year, equals('神圣历 200 年初冬'));
       expect(updatedEv.importance, equals(3));
@@ -125,116 +120,126 @@ void main() {
       expect(afterDelete.first.id, equals(evChar1));
     });
 
-    test('Trash: soft-delete character cascades timeline and restores fully',
-        () async {
-      final trashActions = container.read(trashActionsProvider);
+    test(
+      'Trash: soft-delete character cascades timeline and restores fully',
+      () async {
+        final trashActions = container.read(trashActionsProvider);
 
-      final worldId = await db.worldDao.createWorld(
-        const WorldsCompanion(name: Value('赛博都市')),
-      );
+        final worldId = await db.worldDao.createWorld(
+          const WorldsCompanion(name: Value('赛博都市')),
+        );
 
-      final charId = await db.characterDao.createCharacter(
-        CharactersCompanion(
-          worldId: Value(worldId),
-          name: const Value('V'),
-        ),
-      );
+        final charId = await db.characterDao.createCharacter(
+          CharactersCompanion(worldId: Value(worldId), name: const Value('V')),
+        );
 
-      final char = await db.characterDao.getCharacterById(charId);
+        final char = await db.characterDao.getCharacterById(charId);
 
-      // 创建该角色的生平事件
-      await db.timelineDao.createEvent(
-        TimelineEventsCompanion(
-          worldId: Value(worldId),
-          characterId: Value(charId),
-          year: const Value('2077 年'),
-          title: const Value('潜入绀碧大厦'),
-          description: const Value('盗取 Relic 芯片'),
-          category: const Value('crisis'),
-          importance: const Value(3),
-        ),
-      );
+        // 创建该角色的生平事件
+        await db.timelineDao.createEvent(
+          TimelineEventsCompanion(
+            worldId: Value(worldId),
+            characterId: Value(charId),
+            year: const Value('2077 年'),
+            title: const Value('潜入绀碧大厦'),
+            description: const Value('盗取 Relic 芯片'),
+            category: const Value('crisis'),
+            importance: const Value(3),
+          ),
+        );
 
-      // 确认当前存在 1 条事件
-      final beforeDelete = await db.timelineDao.getEventsByCharacter(charId);
-      expect(beforeDelete.length, equals(1));
+        // 确认当前存在 1 条事件
+        final beforeDelete = await db.timelineDao.getEventsByCharacter(charId);
+        expect(beforeDelete.length, equals(1));
 
-      // 软删除角色
-      await trashActions.deleteCharacter(char);
+        // 软删除角色
+        await trashActions.deleteCharacter(char);
 
-      // 角色被删除，生平事件应被清空
-      final afterDelete = await db.timelineDao.getEventsByCharacter(charId);
-      expect(afterDelete, isEmpty);
+        // 角色被删除，生平事件应被清空
+        final afterDelete = await db.timelineDao.getEventsByCharacter(charId);
+        expect(afterDelete, isEmpty);
 
-      // 从回收站恢复
-      final trashItems = await db.trashDao.getAllTrash();
-      expect(trashItems.length, equals(1));
-      await trashActions.restoreCharacter(trashItems.first);
+        // 从回收站恢复
+        final trashItems = await db.trashDao.getAllTrash();
+        expect(trashItems.length, equals(1));
+        await trashActions.restoreCharacter(trashItems.first);
 
-      // 恢复后验证事件完整还原
-      final restoredEvents = await db.timelineDao.getEventsByCharacter(charId);
-      expect(restoredEvents.length, equals(1));
-      expect(restoredEvents.first.title, equals('潜入绀碧大厦'));
-      expect(restoredEvents.first.year, equals('2077 年'));
-      expect(restoredEvents.first.category, equals('crisis'));
-      expect(restoredEvents.first.importance, equals(3));
-    });
+        // 恢复后验证事件完整还原
+        final restoredEvents = await db.timelineDao.getEventsByCharacter(
+          charId,
+        );
+        expect(restoredEvents.length, equals(1));
+        expect(restoredEvents.first.title, equals('潜入绀碧大厦'));
+        expect(restoredEvents.first.year, equals('2077 年'));
+        expect(restoredEvents.first.category, equals('crisis'));
+        expect(restoredEvents.first.importance, equals(3));
+      },
+    );
 
-    test('Trash: soft-delete world cascades all timeline events and restores fully',
-        () async {
-      final trashActions = container.read(trashActionsProvider);
+    test(
+      'Trash: soft-delete world cascades all timeline events and restores fully',
+      () async {
+        final trashActions = container.read(trashActionsProvider);
 
-      final worldId = await db.worldDao.createWorld(
-        const WorldsCompanion(name: Value('星际联邦')),
-      );
-      final world = await db.worldDao.getWorldById(worldId);
+        final worldId = await db.worldDao.createWorld(
+          const WorldsCompanion(name: Value('星际联邦')),
+        );
+        final world = await db.worldDao.getWorldById(worldId);
 
-      // 世界事件与角色事件
-      await db.timelineDao.createEvent(
-        TimelineEventsCompanion(
-          worldId: Value(worldId),
-          year: const Value('星历 0 年'),
-          title: const Value('超光速跃迁引擎发明'),
-          category: const Value('origin'),
-        ),
-      );
+        // 世界事件与角色事件
+        await db.timelineDao.createEvent(
+          TimelineEventsCompanion(
+            worldId: Value(worldId),
+            year: const Value('星历 0 年'),
+            title: const Value('超光速跃迁引擎发明'),
+            category: const Value('origin'),
+          ),
+        );
 
-      final charId = await db.characterDao.createCharacter(
-        CharactersCompanion(
-          worldId: Value(worldId),
-          name: const Value('柯克舰长'),
-        ),
-      );
+        final charId = await db.characterDao.createCharacter(
+          CharactersCompanion(
+            worldId: Value(worldId),
+            name: const Value('柯克舰长'),
+          ),
+        );
 
-      await db.timelineDao.createEvent(
-        TimelineEventsCompanion(
-          worldId: Value(worldId),
-          characterId: Value(charId),
-          year: const Value('星历 2265 年'),
-          title: const Value('五年探索任务启航'),
-          category: const Value('achievement'),
-        ),
-      );
+        await db.timelineDao.createEvent(
+          TimelineEventsCompanion(
+            worldId: Value(worldId),
+            characterId: Value(charId),
+            year: const Value('星历 2265 年'),
+            title: const Value('五年探索任务启航'),
+            category: const Value('achievement'),
+          ),
+        );
 
-      expect((await db.timelineDao.getEventsByWorld(worldId)).length, equals(2));
+        expect(
+          (await db.timelineDao.getEventsByWorld(worldId)).length,
+          equals(2),
+        );
 
-      // 软删除世界
-      await trashActions.deleteWorld(world);
-      expect((await db.timelineDao.getEventsByWorld(worldId)).length, equals(0));
+        // 软删除世界
+        await trashActions.deleteWorld(world);
+        expect(
+          (await db.timelineDao.getEventsByWorld(worldId)).length,
+          equals(0),
+        );
 
-      // 还原世界
-      final trashItems = await db.trashDao.getAllTrash();
-      expect(trashItems.length, equals(1));
-      await trashActions.restoreWorld(trashItems.first);
+        // 还原世界
+        final trashItems = await db.trashDao.getAllTrash();
+        expect(trashItems.length, equals(1));
+        await trashActions.restoreWorld(trashItems.first);
 
-      // 还原后验证
-      final restoredWorldEvents =
-          await db.timelineDao.getEventsByWorld(worldId);
-      expect(restoredWorldEvents.length, equals(2));
-      final titles = restoredWorldEvents.map((e) => e.title).toSet();
-      expect(titles.contains('超光速跃迁引擎发明'), isTrue);
-      expect(titles.contains('五年探索任务启航'), isTrue);
-    });
+        // 还原后验证
+        final restoredWorldEvents = await db.timelineDao.getEventsByWorld(
+          worldId,
+        );
+        expect(restoredWorldEvents.length, equals(2));
+        final titles = restoredWorldEvents.map((e) => e.title).toSet();
+        expect(titles.contains('超光速跃迁引擎发明'), isTrue);
+        expect(titles.contains('五年探索任务启航'), isTrue);
+      },
+    );
 
     test('TimelineCategoryConfig enumeration and fallback', () {
       expect(TimelineCategoryConfig.all.length, equals(6));
@@ -251,8 +256,9 @@ void main() {
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
-            characterTimelineEventsProvider(charId)
-                .overrideWith((ref) => Stream.value([])),
+            characterTimelineEventsProvider(
+              charId,
+            ).overrideWith((ref) => Stream.value([])),
           ],
           child: const MaterialApp(
             home: Scaffold(
@@ -295,8 +301,9 @@ void main() {
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
-            characterTimelineEventsProvider(charId)
-                .overrideWith((ref) => Stream.value([testEvent])),
+            characterTimelineEventsProvider(
+              charId,
+            ).overrideWith((ref) => Stream.value([testEvent])),
           ],
           child: const MaterialApp(
             home: Scaffold(
@@ -319,8 +326,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     });
 
-    testWidgets('ChroniclePage renders full chronicle view and empty state',
-        (tester) async {
+    testWidgets('ChroniclePage renders full chronicle view and empty state', (
+      tester,
+    ) async {
       const worldId = 50;
 
       final testWorld = World(
@@ -376,16 +384,17 @@ void main() {
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
-            worldByIdProvider(worldId)
-                .overrideWith((ref) => Future.value(testWorld)),
-            charactersByWorldProvider(worldId)
-                .overrideWith((ref) => Stream.value([testCharacter])),
-            worldTimelineEventsProvider(worldId)
-                .overrideWith((ref) => Stream.value([testEvent1, testEvent2])),
+            worldByIdProvider(
+              worldId,
+            ).overrideWith((ref) => Future.value(testWorld)),
+            charactersByWorldProvider(
+              worldId,
+            ).overrideWith((ref) => Stream.value([testCharacter])),
+            worldTimelineEventsProvider(
+              worldId,
+            ).overrideWith((ref) => Stream.value([testEvent1, testEvent2])),
           ],
-          child: const MaterialApp(
-            home: ChroniclePage(worldId: worldId),
-          ),
+          child: const MaterialApp(home: ChroniclePage(worldId: worldId)),
         ),
       );
       await tester.pumpAndSettle();

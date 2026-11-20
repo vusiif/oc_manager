@@ -30,8 +30,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.template?.name ?? '');
+    _nameController = TextEditingController(text: widget.template?.name ?? '');
     _loadFields();
   }
 
@@ -41,13 +40,16 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
           .read(templateDaoProvider)
           .getTemplateFields(widget.template!.id);
       _fields = fields
-          .map((f) => _FieldEntry(
-                id: f.id,
-                nameController: TextEditingController(text: f.fieldName),
-                type: f.fieldType,
-                defaultController:
-                    TextEditingController(text: f.defaultValue ?? ''),
-              ))
+          .map(
+            (f) => _FieldEntry(
+              id: f.id,
+              nameController: TextEditingController(text: f.fieldName),
+              type: f.fieldType,
+              defaultController: TextEditingController(
+                text: f.defaultValue ?? '',
+              ),
+            ),
+          )
           .toList();
     }
     setState(() => _loading = false);
@@ -93,8 +95,10 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('字段列表',
-                            style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          '字段列表',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         TextButton.icon(
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text('添加字段'),
@@ -107,12 +111,13 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Center(
-                          child: Text('还没有字段，点击上方添加',
-                              style: TextStyle(color: Colors.grey)),
+                          child: Text(
+                            '还没有字段，点击上方添加',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
                       ),
-                    for (int i = 0; i < _fields.length; i++)
-                      _buildFieldTile(i),
+                    for (int i = 0; i < _fields.length; i++) _buildFieldTile(i),
                   ],
                 ),
               ),
@@ -122,10 +127,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: Text(isEditing ? '保存' : '创建'),
-        ),
+        ElevatedButton(onPressed: _save, child: Text(isEditing ? '保存' : '创建')),
       ],
     );
   }
@@ -162,11 +164,15 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
                       isDense: true,
                     ),
                     items: _fieldTypes
-                        .map((t) => DropdownMenuItem(
-                              value: t.$1,
-                              child: Text(t.$2,
-                                  style: const TextStyle(fontSize: 13)),
-                            ))
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t.$1,
+                            child: Text(
+                              t.$2,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) {
                       if (v != null) setState(() => field.type = v);
@@ -195,20 +201,22 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
 
   void _addField() {
     setState(() {
-      _fields.add(_FieldEntry(
-        nameController: TextEditingController(),
-        type: 'text',
-        defaultController: TextEditingController(),
-      ));
+      _fields.add(
+        _FieldEntry(
+          nameController: TextEditingController(),
+          type: 'text',
+          defaultController: TextEditingController(),
+        ),
+      );
     });
   }
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入模板名称')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入模板名称')));
       return;
     }
 
@@ -219,9 +227,7 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
       await actions.update(widget.template!.id, name);
       templateId = widget.template!.id;
       // 删除旧字段，重新创建
-      await ref
-          .read(templateDaoProvider)
-          .deleteAllTemplateFields(templateId);
+      await ref.read(templateDaoProvider).deleteAllTemplateFields(templateId);
     } else {
       templateId = await actions.create(name: name);
     }

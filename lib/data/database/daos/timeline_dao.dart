@@ -13,28 +13,40 @@ class TimelineDao extends DatabaseAccessor<AppDatabase>
   Future<List<TimelineEvent>> getEventsByWorld(int worldId) =>
       (select(timelineEvents)
             ..where((t) => t.worldId.equals(worldId))
-            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.sortOrder),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
           .get();
 
   /// 监听该世界观下的所有事件
   Stream<List<TimelineEvent>> watchEventsByWorld(int worldId) =>
       (select(timelineEvents)
             ..where((t) => t.worldId.equals(worldId))
-            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.sortOrder),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
           .watch();
 
   /// 获取某角色的个人生平事件
   Future<List<TimelineEvent>> getEventsByCharacter(int characterId) =>
       (select(timelineEvents)
             ..where((t) => t.characterId.equals(characterId))
-            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.sortOrder),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
           .get();
 
   /// 监听某角色的个人生平事件
   Stream<List<TimelineEvent>> watchEventsByCharacter(int characterId) =>
       (select(timelineEvents)
             ..where((t) => t.characterId.equals(characterId))
-            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder), (t) => OrderingTerm.asc(t.id)]))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.sortOrder),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
           .watch();
 
   Future<int> createEvent(TimelineEventsCompanion entry) =>
@@ -46,13 +58,10 @@ class TimelineDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteEvent(int id) =>
       (delete(timelineEvents)..where((t) => t.id.equals(id))).go();
 
-  Future<void> deleteAllEventsByCharacter(int characterId) =>
-      (delete(timelineEvents)
-            ..where((t) => t.characterId.equals(characterId)))
-          .go();
+  Future<void> deleteAllEventsByCharacter(int characterId) => (delete(
+    timelineEvents,
+  )..where((t) => t.characterId.equals(characterId))).go();
 
   Future<void> deleteAllEventsByWorld(int worldId) =>
-      (delete(timelineEvents)
-            ..where((t) => t.worldId.equals(worldId)))
-          .go();
+      (delete(timelineEvents)..where((t) => t.worldId.equals(worldId))).go();
 }

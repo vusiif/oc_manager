@@ -3,38 +3,51 @@ import 'package:drift/drift.dart';
 import '../data/database/app_database.dart';
 import 'database_provider.dart';
 
-final groupsByWorldProvider =
-    StreamProvider.family<List<Group>, int>((ref, worldId) {
+final groupsByWorldProvider = StreamProvider.family<List<Group>, int>((
+  ref,
+  worldId,
+) {
   return ref.watch(groupDaoProvider).watchGroupsByWorld(worldId);
 });
 
-final groupByIdProvider =
-    FutureProvider.family<Group, int>((ref, id) {
+final groupByIdProvider = FutureProvider.family<Group, int>((ref, id) {
   return ref.watch(groupDaoProvider).getGroupById(id);
 });
 
 // 获取分组下的人物列表
-final charactersByGroupProvider =
-    FutureProvider.family<List<Character>, int>((ref, groupId) async {
-  final characterIds = await ref.read(groupDaoProvider).getCharacterIdsByGroup(groupId);
+final charactersByGroupProvider = FutureProvider.family<List<Character>, int>((
+  ref,
+  groupId,
+) async {
+  final characterIds = await ref
+      .read(groupDaoProvider)
+      .getCharacterIdsByGroup(groupId);
   if (characterIds.isEmpty) return [];
-  final allChars = await ref.read(characterDaoProvider).getCharactersByIds(characterIds);
+  final allChars = await ref
+      .read(characterDaoProvider)
+      .getCharactersByIds(characterIds);
   return allChars;
 });
 
 // 获取世界观下未加入任何分组的人物列表
 final unassignedCharactersByWorldProvider =
     FutureProvider.family<List<Character>, int>((ref, worldId) async {
-  final db = ref.read(databaseProvider);
-  final allWorldChars = await (db.select(db.characters)..where((c) => c.worldId.equals(worldId))).get();
-  final allCharGroups = await db.select(db.characterGroups).get();
-  final assignedCharIds = allCharGroups.map((cg) => cg.characterId).toSet();
-  return allWorldChars.where((c) => !assignedCharIds.contains(c.id)).toList();
-});
+      final db = ref.read(databaseProvider);
+      final allWorldChars = await (db.select(
+        db.characters,
+      )..where((c) => c.worldId.equals(worldId))).get();
+      final allCharGroups = await db.select(db.characterGroups).get();
+      final assignedCharIds = allCharGroups.map((cg) => cg.characterId).toSet();
+      return allWorldChars
+          .where((c) => !assignedCharIds.contains(c.id))
+          .toList();
+    });
 
 // 获取人物所属的分组 ID 列表
-final characterGroupIdsProvider =
-    FutureProvider.family<List<int>, int>((ref, characterId) async {
+final characterGroupIdsProvider = FutureProvider.family<List<int>, int>((
+  ref,
+  characterId,
+) async {
   return ref.read(groupDaoProvider).getGroupIdsByCharacter(characterId);
 });
 
@@ -50,7 +63,9 @@ class GroupActions {
     required String name,
     int sortOrder = 0,
   }) async {
-    return _ref.read(groupDaoProvider).createGroup(
+    return _ref
+        .read(groupDaoProvider)
+        .createGroup(
           GroupsCompanion(
             worldId: Value(worldId),
             name: Value(name),
@@ -73,7 +88,9 @@ class GroupActions {
   }
 
   Future<void> removeCharacterFromGroup(int characterId, int groupId) async {
-    await _ref.read(groupDaoProvider).removeCharacterFromGroup(characterId, groupId);
+    await _ref
+        .read(groupDaoProvider)
+        .removeCharacterFromGroup(characterId, groupId);
     _ref.invalidate(charactersByGroupProvider);
   }
 

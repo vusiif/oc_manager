@@ -47,24 +47,30 @@ class BookletExportService {
     required BookletExportOptions options,
   }) async {
     // 1. Load world entity
-    final world = await (db.select(db.worlds)..where((t) => t.id.equals(worldId))).getSingleOrNull();
+    final world = await (db.select(
+      db.worlds,
+    )..where((t) => t.id.equals(worldId))).getSingleOrNull();
     if (world == null) {
       throw Exception('World not found with ID: $worldId');
     }
 
     // 2. Load characters
-    var charQuery = db.select(db.characters)..where((t) => t.worldId.equals(worldId));
+    var charQuery = db.select(db.characters)
+      ..where((t) => t.worldId.equals(worldId));
     final allCharacters = await charQuery.get();
     final characters = options.selectedCharacterIds != null
-        ? allCharacters.where((c) => options.selectedCharacterIds!.contains(c.id)).toList()
+        ? allCharacters
+              .where((c) => options.selectedCharacterIds!.contains(c.id))
+              .toList()
         : allCharacters;
     final characterIds = characters.map((c) => c.id).toSet();
 
     // 3. Load groups and memberships
-    final groups = await (db.select(db.groups)
-          ..where((t) => t.worldId.equals(worldId))
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final groups =
+        await (db.select(db.groups)
+              ..where((t) => t.worldId.equals(worldId))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
     final characterGroups = await db.select(db.characterGroups).get();
     final charGroupMap = <int, List<int>>{};
     for (final cg in characterGroups) {
@@ -74,9 +80,9 @@ class BookletExportService {
     }
 
     // 4. Load stats
-    final allStats = await (db.select(db.characterStats)
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final allStats = await (db.select(
+      db.characterStats,
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).get();
     final statsMap = <int, List<CharacterStat>>{};
     for (final s in allStats) {
       if (characterIds.contains(s.characterId)) {
@@ -85,9 +91,9 @@ class BookletExportService {
     }
 
     // 5. Load galleries
-    final allGalleries = await (db.select(db.characterGalleries)
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final allGalleries = await (db.select(
+      db.characterGalleries,
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).get();
     final galleriesMap = <int, List<CharacterGallery>>{};
     for (final g in allGalleries) {
       if (characterIds.contains(g.characterId)) {
@@ -96,15 +102,21 @@ class BookletExportService {
     }
 
     // 6. Load timeline events
-    final timelineEvents = await (db.select(db.timelineEvents)
-          ..where((t) => t.worldId.equals(worldId))
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final timelineEvents =
+        await (db.select(db.timelineEvents)
+              ..where((t) => t.worldId.equals(worldId))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
 
     // 7. Load relations
     final allRelations = await db.select(db.relations).get();
-    final relations = allRelations.where((r) =>
-        characterIds.contains(r.fromCharacterId) && characterIds.contains(r.toCharacterId)).toList();
+    final relations = allRelations
+        .where(
+          (r) =>
+              characterIds.contains(r.fromCharacterId) &&
+              characterIds.contains(r.toCharacterId),
+        )
+        .toList();
 
     // 8. Generate output according to chosen format
     if (options.format == BookletFormat.html) {
@@ -164,7 +176,10 @@ class BookletExportService {
         if (file != null && await file.exists()) {
           try {
             final bytes = await file.readAsBytes();
-            final ext = p.extension(file.path).toLowerCase().replaceAll('.', '');
+            final ext = p
+                .extension(file.path)
+                .toLowerCase()
+                .replaceAll('.', '');
             final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
             avatarBase64Map[c.id] = 'data:$mime;base64,${base64Encode(bytes)}';
           } catch (_) {}
@@ -182,9 +197,13 @@ class BookletExportService {
           if (file != null && await file.exists()) {
             try {
               final bytes = await file.readAsBytes();
-              final ext = p.extension(file.path).toLowerCase().replaceAll('.', '');
+              final ext = p
+                  .extension(file.path)
+                  .toLowerCase()
+                  .replaceAll('.', '');
               final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
-              galleryBase64Map[cId]![g.id] = 'data:$mime;base64,${base64Encode(bytes)}';
+              galleryBase64Map[cId]![g.id] =
+                  'data:$mime;base64,${base64Encode(bytes)}';
             } catch (_) {}
           }
         }
@@ -198,7 +217,9 @@ class BookletExportService {
     sb.writeln('<html lang="zh-CN">');
     sb.writeln('<head>');
     sb.writeln('<meta charset="UTF-8">');
-    sb.writeln('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+    sb.writeln(
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    );
     sb.writeln('<title>${_escapeHtml(world.name)} - 官方出版级设定集</title>');
     sb.writeln('<style>');
     sb.writeln(_buildBookletCss());
@@ -283,7 +304,9 @@ class BookletExportService {
           <div class="timeline-list">
       ''');
       for (final ev in timelineEvents) {
-        final relCharName = ev.characterId != null ? charNameMap[ev.characterId] : null;
+        final relCharName = ev.characterId != null
+            ? charNameMap[ev.characterId]
+            : null;
         final stars = '★' * ev.importance + '☆' * (3 - ev.importance);
         sb.writeln('''
           <div class="timeline-item">
@@ -316,18 +339,20 @@ class BookletExportService {
             .toList();
 
         // Specific character relations
-        final charRels = relations.where((r) => r.fromCharacterId == c.id || r.toCharacterId == c.id).toList();
+        final charRels = relations
+            .where((r) => r.fromCharacterId == c.id || r.toCharacterId == c.id)
+            .toList();
 
         // Specific character timeline events
-        final charTimeline = timelineEvents.where((e) => e.characterId == c.id).toList();
+        final charTimeline = timelineEvents
+            .where((e) => e.characterId == c.id)
+            .toList();
 
         sb.writeln('''
           <section class="page character-profile-page">
             <div class="character-header">
               <div class="character-avatar-wrap">
-                ${avatarUrl != null
-                    ? '<img class="character-avatar" src="$avatarUrl" alt="${_escapeHtml(c.name)}"/>'
-                    : '<div class="character-avatar-placeholder">${_escapeHtml(c.name.isNotEmpty ? c.name[0] : "?")}</div>'}
+                ${avatarUrl != null ? '<img class="character-avatar" src="$avatarUrl" alt="${_escapeHtml(c.name)}"/>' : '<div class="character-avatar-placeholder">${_escapeHtml(c.name.isNotEmpty ? c.name[0] : "?")}</div>'}
               </div>
               <div class="character-summary">
                 <h2 class="character-name">${_escapeHtml(c.name)}</h2>
@@ -355,8 +380,12 @@ class BookletExportService {
                     <tbody>
           ''');
           for (final s in charStats) {
-            final pct = s.maxValue > 0 ? (s.value / s.maxValue * 100).round() : 0;
-            sb.writeln('<tr><td>${_escapeHtml(s.label)}</td><td>${s.value.toStringAsFixed(1)}</td><td>${s.maxValue.toStringAsFixed(1)}</td><td><strong>$pct%</strong></td></tr>');
+            final pct = s.maxValue > 0
+                ? (s.value / s.maxValue * 100).round()
+                : 0;
+            sb.writeln(
+              '<tr><td>${_escapeHtml(s.label)}</td><td>${s.value.toStringAsFixed(1)}</td><td>${s.maxValue.toStringAsFixed(1)}</td><td><strong>$pct%</strong></td></tr>',
+            );
           }
           sb.writeln('</tbody></table></div></div></div>');
         }
@@ -369,7 +398,9 @@ class BookletExportService {
               <ul class="simple-timeline">
           ''');
           for (final e in charTimeline) {
-            sb.writeln('<li><strong>${_escapeHtml(e.year)}</strong> · ${_escapeHtml(e.title)} <span class="text-muted">(${_escapeHtml(e.description)})</span></li>');
+            sb.writeln(
+              '<li><strong>${_escapeHtml(e.year)}</strong> · ${_escapeHtml(e.title)} <span class="text-muted">(${_escapeHtml(e.description)})</span></li>',
+            );
           }
           sb.writeln('</ul></div>');
         }
@@ -382,10 +413,16 @@ class BookletExportService {
               <div class="rel-chips">
           ''');
           for (final r in charRels) {
-            final otherId = r.fromCharacterId == c.id ? r.toCharacterId : r.fromCharacterId;
+            final otherId = r.fromCharacterId == c.id
+                ? r.toCharacterId
+                : r.fromCharacterId;
             final otherName = charNameMap[otherId] ?? '未知角色';
-            final arrow = r.isBidirectional ? '⮀' : (r.fromCharacterId == c.id ? '➔' : '⬅');
-            sb.writeln('<div class="rel-chip"><strong>${_escapeHtml(otherName)}</strong> $arrow <span class="rel-badge">${_escapeHtml(r.relationType)}</span> ${r.note != null && r.note!.isNotEmpty ? '<span class="text-muted">(${_escapeHtml(r.note!)})</span>' : ''}</div>');
+            final arrow = r.isBidirectional
+                ? '⮀'
+                : (r.fromCharacterId == c.id ? '➔' : '⬅');
+            sb.writeln(
+              '<div class="rel-chip"><strong>${_escapeHtml(otherName)}</strong> $arrow <span class="rel-badge">${_escapeHtml(r.relationType)}</span> ${r.note != null && r.note!.isNotEmpty ? '<span class="text-muted">(${_escapeHtml(r.note!)})</span>' : ''}</div>',
+            );
           }
           sb.writeln('</div></div>');
         }
@@ -425,10 +462,13 @@ class BookletExportService {
             <tbody>
       ''');
       for (final r in relations) {
-        final fromName = charNameMap[r.fromCharacterId] ?? 'ID:${r.fromCharacterId}';
+        final fromName =
+            charNameMap[r.fromCharacterId] ?? 'ID:${r.fromCharacterId}';
         final toName = charNameMap[r.toCharacterId] ?? 'ID:${r.toCharacterId}';
         final arrow = r.isBidirectional ? '互为 ⮀' : '单向 ➔';
-        sb.writeln('<tr><td><strong>${_escapeHtml(fromName)}</strong></td><td>$arrow</td><td><strong>${_escapeHtml(toName)}</strong></td><td><span class="badge">${_escapeHtml(r.relationType)}</span></td><td>${_escapeHtml(r.note ?? '')}</td></tr>');
+        sb.writeln(
+          '<tr><td><strong>${_escapeHtml(fromName)}</strong></td><td>$arrow</td><td><strong>${_escapeHtml(toName)}</strong></td><td><span class="badge">${_escapeHtml(r.relationType)}</span></td><td>${_escapeHtml(r.note ?? '')}</td></tr>',
+        );
       }
       sb.writeln('</tbody></table></section>');
     }
@@ -461,7 +501,8 @@ class BookletExportService {
     final imageService = ImageStorageService.instance;
 
     // 1. Export Assets folder into ZIP
-    final copiedAvatarMap = <int, String>{}; // charId -> relative path in assets
+    final copiedAvatarMap =
+        <int, String>{}; // charId -> relative path in assets
     for (final c in characters) {
       if (c.avatarPath != null) {
         final file = await imageService.resolveImageFile(c.avatarPath);
@@ -484,7 +525,9 @@ class BookletExportService {
           if (file != null && await file.exists()) {
             final fileName = 'gallery_${cId}_${g.id}${p.extension(file.path)}';
             final bytes = await file.readAsBytes();
-            archive.addFile(ArchiveFile('assets/$fileName', bytes.length, bytes));
+            archive.addFile(
+              ArchiveFile('assets/$fileName', bytes.length, bytes),
+            );
             copiedGalleryMap[cId]![g.id] = fileName;
           }
         }
@@ -495,7 +538,9 @@ class BookletExportService {
     final indexSb = StringBuffer();
     indexSb.writeln('# 📖 ${world.name} · 设定集');
     indexSb.writeln();
-    indexSb.writeln('> 导出时间：${DateTime.now().toLocal().toString().split('.').first}');
+    indexSb.writeln(
+      '> 导出时间：${DateTime.now().toLocal().toString().split('.').first}',
+    );
     indexSb.writeln();
     indexSb.writeln('## 📑 设定集目录');
     indexSb.writeln('- [[00_世界概况|00 · 世界概况与核心设定]]');
@@ -537,7 +582,9 @@ class BookletExportService {
             .toList();
         groupsSb.writeln('## 🏛️ ${g.name}');
         groupsSb.writeln();
-        groupsSb.writeln('**从属成员：** ${memberNames.isEmpty ? '暂无' : memberNames.join('、')}');
+        groupsSb.writeln(
+          '**从属成员：** ${memberNames.isEmpty ? '暂无' : memberNames.join('、')}',
+        );
         groupsSb.writeln();
       }
       _addArchiveString(archive, '01_组织势力.md', groupsSb.toString());
@@ -551,9 +598,13 @@ class BookletExportService {
       timeSb.writeln('| 纪年 / 时间 | 核心事件 | 重要度 | 类别 | 关联角色 | 详细叙述 |');
       timeSb.writeln('| :--- | :--- | :---: | :---: | :---: | :--- |');
       for (final ev in timelineEvents) {
-        final relCharName = ev.characterId != null ? '[[${charNameMap[ev.characterId]}]]' : '-';
+        final relCharName = ev.characterId != null
+            ? '[[${charNameMap[ev.characterId]}]]'
+            : '-';
         final stars = '★' * ev.importance;
-        timeSb.writeln('| ${ev.year} | **${ev.title}** | $stars | ${ev.category} | $relCharName | ${ev.description.replaceAll('\n', ' ')} |');
+        timeSb.writeln(
+          '| ${ev.year} | **${ev.title}** | $stars | ${ev.category} | $relCharName | ${ev.description.replaceAll('\n', ' ')} |',
+        );
       }
       _addArchiveString(archive, '02_编年简史.md', timeSb.toString());
     }
@@ -569,8 +620,12 @@ class BookletExportService {
             .map((gid) => groupMap[gid]?.name)
             .whereType<String>()
             .toList();
-        final charRels = relations.where((r) => r.fromCharacterId == c.id || r.toCharacterId == c.id).toList();
-        final charTimeline = timelineEvents.where((e) => e.characterId == c.id).toList();
+        final charRels = relations
+            .where((r) => r.fromCharacterId == c.id || r.toCharacterId == c.id)
+            .toList();
+        final charTimeline = timelineEvents
+            .where((e) => e.characterId == c.id)
+            .toList();
 
         // Frontmatter
         charSb.writeln('---');
@@ -593,7 +648,9 @@ class BookletExportService {
 
         charSb.writeln('## 👤 基础资料');
         charSb.writeln('- **性别**：${c.gender.isNotEmpty ? c.gender : "未知"}');
-        charSb.writeln('- **所属阵营**：${charGroups.isEmpty ? "无" : charGroups.join('、')}');
+        charSb.writeln(
+          '- **所属阵营**：${charGroups.isEmpty ? "无" : charGroups.join('、')}',
+        );
         charSb.writeln();
 
         // Stats
@@ -602,8 +659,12 @@ class BookletExportService {
           charSb.writeln('| 属性维度 | 数值 | 最大值 | 达成率 |');
           charSb.writeln('| :--- | :---: | :---: | :---: |');
           for (final s in charStats) {
-            final pct = s.maxValue > 0 ? (s.value / s.maxValue * 100).round() : 0;
-            charSb.writeln('| ${s.label} | ${s.value} | ${s.maxValue} | $pct% |');
+            final pct = s.maxValue > 0
+                ? (s.value / s.maxValue * 100).round()
+                : 0;
+            charSb.writeln(
+              '| ${s.label} | ${s.value} | ${s.maxValue} | $pct% |',
+            );
           }
           charSb.writeln();
         }
@@ -626,10 +687,16 @@ class BookletExportService {
         if (charRels.isNotEmpty) {
           charSb.writeln('## 🤝 人际网络');
           for (final r in charRels) {
-            final otherId = r.fromCharacterId == c.id ? r.toCharacterId : r.fromCharacterId;
+            final otherId = r.fromCharacterId == c.id
+                ? r.toCharacterId
+                : r.fromCharacterId;
             final otherName = charNameMap[otherId] ?? '未知角色';
-            final arrow = r.isBidirectional ? '⮀ 互为' : (r.fromCharacterId == c.id ? '➔ 对' : '⬅ 来自');
-            charSb.writeln('- $arrow [[$otherName]]：**${r.relationType}** ${r.note != null && r.note!.isNotEmpty ? "(${r.note})" : ""}');
+            final arrow = r.isBidirectional
+                ? '⮀ 互为'
+                : (r.fromCharacterId == c.id ? '➔ 对' : '⬅ 来自');
+            charSb.writeln(
+              '- $arrow [[$otherName]]：**${r.relationType}** ${r.note != null && r.note!.isNotEmpty ? "(${r.note})" : ""}',
+            );
           }
           charSb.writeln();
         }
@@ -649,7 +716,11 @@ class BookletExportService {
           }
         }
 
-        _addArchiveString(archive, '03_人物图鉴/${_sanitizeFileName(c.name)}.md', charSb.toString());
+        _addArchiveString(
+          archive,
+          '03_人物图鉴/${_sanitizeFileName(c.name)}.md',
+          charSb.toString(),
+        );
       }
     }
 
@@ -661,10 +732,13 @@ class BookletExportService {
       relSb.writeln('| 角色 A | 连结形态 | 角色 B | 关系类型 | 备注设定 |');
       relSb.writeln('| :--- | :---: | :--- | :---: | :--- |');
       for (final r in relations) {
-        final fromName = charNameMap[r.fromCharacterId] ?? 'ID:${r.fromCharacterId}';
+        final fromName =
+            charNameMap[r.fromCharacterId] ?? 'ID:${r.fromCharacterId}';
         final toName = charNameMap[r.toCharacterId] ?? 'ID:${r.toCharacterId}';
         final arrow = r.isBidirectional ? '⮀ 双向' : '➔ 单向';
-        relSb.writeln('| [[$fromName]] | $arrow | [[$toName]] | **${r.relationType}** | ${r.note ?? ""} |');
+        relSb.writeln(
+          '| [[$fromName]] | $arrow | [[$toName]] | **${r.relationType}** | ${r.note ?? ""} |',
+        );
       }
       _addArchiveString(archive, '04_关系网络拓扑.md', relSb.toString());
     }
@@ -692,7 +766,9 @@ class BookletExportService {
     final double angleStep = 2 * math.pi / count;
 
     final sb = StringBuffer();
-    sb.writeln('<svg class="radar-svg" viewBox="0 0 280 280" width="280" height="280" xmlns="http://www.w3.org/2000/svg">');
+    sb.writeln(
+      '<svg class="radar-svg" viewBox="0 0 280 280" width="280" height="280" xmlns="http://www.w3.org/2000/svg">',
+    );
 
     // Concentric web lines (4 levels)
     for (int level = 1; level <= 4; level++) {
@@ -704,7 +780,9 @@ class BookletExportService {
         final y = cy + r * math.sin(angle);
         points.add('${x.toStringAsFixed(1)},${y.toStringAsFixed(1)}');
       }
-      sb.writeln('<polygon points="${points.join(' ')}" fill="none" stroke="#e2e8f0" stroke-width="1"/>');
+      sb.writeln(
+        '<polygon points="${points.join(' ')}" fill="none" stroke="#e2e8f0" stroke-width="1"/>',
+      );
     }
 
     // Axis radiating lines
@@ -712,20 +790,26 @@ class BookletExportService {
       final angle = -math.pi / 2 + i * angleStep;
       final x = cx + radius * math.cos(angle);
       final y = cy + radius * math.sin(angle);
-      sb.writeln('<line x1="$cx" y1="$cy" x2="${x.toStringAsFixed(1)}" y2="${y.toStringAsFixed(1)}" stroke="#cbd5e1" stroke-width="1"/>');
+      sb.writeln(
+        '<line x1="$cx" y1="$cy" x2="${x.toStringAsFixed(1)}" y2="${y.toStringAsFixed(1)}" stroke="#cbd5e1" stroke-width="1"/>',
+      );
 
       // Labels outside vertices
       final labelR = radius + 22;
       final lx = cx + labelR * math.cos(angle);
       final ly = cy + labelR * math.sin(angle) + 4; // slight vertical centering
-      sb.writeln('<text x="${lx.toStringAsFixed(1)}" y="${ly.toStringAsFixed(1)}" font-size="11" font-weight="600" fill="#475569" text-anchor="middle">${_escapeHtml(stats[i].label)}</text>');
+      sb.writeln(
+        '<text x="${lx.toStringAsFixed(1)}" y="${ly.toStringAsFixed(1)}" font-size="11" font-weight="600" fill="#475569" text-anchor="middle">${_escapeHtml(stats[i].label)}</text>',
+      );
     }
 
     // Data polygon
     final dataPoints = <String>[];
     for (int i = 0; i < count; i++) {
       final s = stats[i];
-      final ratio = s.maxValue > 0 ? (s.value / s.maxValue).clamp(0.0, 1.0) : 0.0;
+      final ratio = s.maxValue > 0
+          ? (s.value / s.maxValue).clamp(0.0, 1.0)
+          : 0.0;
       final r = radius * ratio;
       final angle = -math.pi / 2 + i * angleStep;
       final x = cx + r * math.cos(angle);
@@ -733,17 +817,23 @@ class BookletExportService {
       dataPoints.add('${x.toStringAsFixed(1)},${y.toStringAsFixed(1)}');
     }
 
-    sb.writeln('<polygon points="${dataPoints.join(' ')}" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2.5"/>');
+    sb.writeln(
+      '<polygon points="${dataPoints.join(' ')}" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2.5"/>',
+    );
 
     // Data vertex dots
     for (int i = 0; i < count; i++) {
       final s = stats[i];
-      final ratio = s.maxValue > 0 ? (s.value / s.maxValue).clamp(0.0, 1.0) : 0.0;
+      final ratio = s.maxValue > 0
+          ? (s.value / s.maxValue).clamp(0.0, 1.0)
+          : 0.0;
       final r = radius * ratio;
       final angle = -math.pi / 2 + i * angleStep;
       final x = cx + r * math.cos(angle);
       final y = cy + r * math.sin(angle);
-      sb.writeln('<circle cx="${x.toStringAsFixed(1)}" cy="${y.toStringAsFixed(1)}" r="4" fill="#6366f1" stroke="#ffffff" stroke-width="1.5"/>');
+      sb.writeln(
+        '<circle cx="${x.toStringAsFixed(1)}" cy="${y.toStringAsFixed(1)}" r="4" fill="#6366f1" stroke="#ffffff" stroke-width="1.5"/>',
+      );
     }
 
     sb.writeln('</svg>');
@@ -773,7 +863,10 @@ class BookletExportService {
   }
 
   String _formatDescription(String raw) {
-    return raw.split('\n\n').map((p) => '<p>${_escapeHtml(p).replaceAll('\n', '<br/>')}</p>').join('');
+    return raw
+        .split('\n\n')
+        .map((p) => '<p>${_escapeHtml(p).replaceAll('\n', '<br/>')}</p>')
+        .join('');
   }
 
   String _formatWikiLinks(String raw) {

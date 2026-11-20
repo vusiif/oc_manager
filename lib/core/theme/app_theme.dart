@@ -94,9 +94,7 @@ class AppTheme {
         color: AppColors.lightSurface,
       ),
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.radiusLg,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.lightBorder,
@@ -150,9 +148,7 @@ class AppTheme {
         color: AppColors.darkSurface,
       ),
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.radiusLg,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkBorder,

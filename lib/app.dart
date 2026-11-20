@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/command_palette/command_palette_dialog.dart';
 import 'features/main_shell.dart';
 import 'features/search/search_page.dart';
 import 'features/tag/tag_management_page.dart';
@@ -10,60 +12,78 @@ import 'features/trash/drafts_page.dart';
 import 'features/trash/trash_page.dart';
 import 'features/relation/relation_graph_page.dart';
 import 'features/world/chronicle_page.dart';
+import 'features/world/lore_encyclopedia_page.dart';
+import 'features/world/knowledge_network/knowledge_network_page.dart';
+import 'features/story/story_workbench_page.dart';
 import 'features/character/character_detail_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/template/template_management_page.dart';
 import 'providers/settings_provider.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final _router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const MainShell(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const MainShell()),
     GoRoute(
       path: '/world/:worldId/graph',
       builder: (context, state) {
-        final worldId = int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
         return RelationGraphPage(worldId: worldId);
       },
     ),
     GoRoute(
       path: '/world/:worldId/chronicle',
       builder: (context, state) {
-        final worldId = int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
         return ChroniclePage(worldId: worldId);
+      },
+    ),
+    GoRoute(
+      path: '/world/:worldId/lore',
+      builder: (context, state) {
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        return LoreEncyclopediaPage(worldId: worldId);
+      },
+    ),
+    GoRoute(
+      path: '/world/:worldId/knowledge-network',
+      builder: (context, state) {
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        return KnowledgeNetworkPage(worldId: worldId);
+      },
+    ),
+    GoRoute(
+      path: '/world/:worldId/story',
+      builder: (context, state) {
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        return StoryWorkbenchPage(worldId: worldId);
       },
     ),
     GoRoute(
       path: '/world/:worldId/character/:characterId',
       builder: (context, state) {
-        final worldId = int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
+        final worldId =
+            int.tryParse(state.pathParameters['worldId'] ?? '') ?? 0;
         final characterId =
             int.tryParse(state.pathParameters['characterId'] ?? '') ?? 0;
-        return CharacterDetailPage(
-          worldId: worldId,
-          characterId: characterId,
-        );
+        return CharacterDetailPage(worldId: worldId, characterId: characterId);
       },
     ),
-    GoRoute(
-      path: '/search',
-      builder: (context, state) => const SearchPage(),
-    ),
+    GoRoute(path: '/search', builder: (context, state) => const SearchPage()),
     GoRoute(
       path: '/tags',
       builder: (context, state) => const TagManagementPage(),
     ),
-    GoRoute(
-      path: '/drafts',
-      builder: (context, state) => const DraftsPage(),
-    ),
-    GoRoute(
-      path: '/trash',
-      builder: (context, state) => const TrashPage(),
-    ),
+    GoRoute(path: '/drafts', builder: (context, state) => const DraftsPage()),
+    GoRoute(path: '/trash', builder: (context, state) => const TrashPage()),
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsPage(),
@@ -88,6 +108,25 @@ class App extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme(),
       themeMode: themeModeAsync.valueOrNull ?? ThemeMode.system,
       routerConfig: _router,
+      builder: (context, child) {
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
+              final ctx = rootNavigatorKey.currentContext;
+              if (ctx != null) {
+                showCommandPalette(ctx);
+              }
+            },
+            const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
+              final ctx = rootNavigatorKey.currentContext;
+              if (ctx != null) {
+                showCommandPalette(ctx);
+              }
+            },
+          },
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

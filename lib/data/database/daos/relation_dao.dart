@@ -11,17 +11,17 @@ class RelationDao extends DatabaseAccessor<AppDatabase>
   RelationDao(super.db);
 
   Future<List<Relation>> getRelationsByCharacter(int characterId) =>
-      (select(relations)
-            ..where((t) =>
+      (select(relations)..where(
+            (t) =>
                 t.fromCharacterId.equals(characterId) |
-                t.toCharacterId.equals(characterId)))
+                t.toCharacterId.equals(characterId),
+          ))
           .get();
 
   Future<List<Relation>> getRelationsByWorld(int worldId) async {
     final query = select(relations).join([
       innerJoin(characters, characters.id.equalsExp(relations.fromCharacterId)),
-    ])
-      ..where(characters.worldId.equals(worldId));
+    ])..where(characters.worldId.equals(worldId));
     final results = await query.get();
     return results.map((row) => row.readTable(relations)).toList();
   }
@@ -36,9 +36,10 @@ class RelationDao extends DatabaseAccessor<AppDatabase>
       (delete(relations)..where((t) => t.id.equals(id))).go();
 
   Future<void> deleteRelationsByCharacter(int characterId) =>
-      (delete(relations)
-            ..where((t) =>
+      (delete(relations)..where(
+            (t) =>
                 t.fromCharacterId.equals(characterId) |
-                t.toCharacterId.equals(characterId)))
+                t.toCharacterId.equals(characterId),
+          ))
           .go();
 }

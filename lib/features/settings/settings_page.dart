@@ -3,12 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
 
 import '../../providers/settings_provider.dart';
-import '../../providers/database_provider.dart';
 import '../../data/database/app_database.dart';
+import '../../core/backup/project_backup_service.dart';
 import '../world/oc_package_dialogs.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -20,9 +19,7 @@ class SettingsPage extends ConsumerWidget {
     final themeMode = themeModeAsync.valueOrNull ?? ThemeMode.system;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-      ),
+      appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
           // 主题设置
@@ -42,7 +39,7 @@ class SettingsPage extends ConsumerWidget {
 
           const Divider(),
 
-          // 缓存管理
+          // 数据管理
           _SectionHeader(title: '数据管理'),
           ListTile(
             leading: const Icon(Icons.cleaning_services),
@@ -51,16 +48,22 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => _showClearCacheDialog(context),
           ),
           ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('备份数据'),
-            subtitle: const Text('导出数据库文件'),
-            onTap: () => _backupDatabase(context, ref),
+            leading: const Icon(Icons.storage),
+            title: const Text('导出数据库快照 (.db)'),
+            subtitle: const Text('仅结构化数据，生成事务一致性 SQLite 快照'),
+            onTap: () => _backupDatabaseSnapshot(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.archive),
+            title: const Text('导出完整项目包 (.zip)'),
+            subtitle: const Text('打包 SQLite 数据库及全部本地立绘与差分画廊'),
+            onTap: () => _backupFullProject(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.restore),
             title: const Text('恢复数据'),
-            subtitle: const Text('从备份文件恢复'),
-            onTap: () => _restoreDatabase(context, ref),
+            subtitle: const Text('从 .db 快照或 .zip 完整项目包还原（含安全还原点）'),
+            onTap: () => _restoreBackupDialog(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.unarchive_outlined),
@@ -76,7 +79,7 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于 OC Manager'),
-            subtitle: const Text('版本 1.5.0'),
+            subtitle: const Text('版本 1.5.1'),
             onTap: () => _showAboutDialog(context),
           ),
         ],
@@ -96,7 +99,10 @@ class SettingsPage extends ConsumerWidget {
   }
 
   void _showThemeDialog(
-      BuildContext context, WidgetRef ref, ThemeMode current) {
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode current,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -181,22 +187,25 @@ class SettingsPage extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('清理失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('清理失败：$e')));
       }
     }
   }
 
-  Future<void> _backupDatabase(BuildContext context, WidgetRef ref) async {
+  Future<void> _backupDatabaseSnapshot(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
       final now = DateTime.now();
       final dateStr =
           '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-      final defaultFileName = 'oc_manager_backup_$dateStr.db';
+      final defaultFileName = 'oc_manager_db_$dateStr.db';
 
       final result = await FilePicker.platform.saveFile(
-        dialogTitle: '选择备份保存位置',
+        dialogTitle: '选择数据库快照保存位置',
         fileName: defaultFileName,
         type: FileType.custom,
         allowedExtensions: ['db'],
@@ -204,126 +213,176 @@ class SettingsPage extends ConsumerWidget {
 
       if (result == null) return;
 
-      // 使用 SQLite 在线一致性备份 (VACUUM INTO)
-      final db = ref.read(databaseProvider);
-      await db.backupTo(result);
+      final backupService = ref.read(projectBackupServiceProvider);
+      await backupService.exportDatabaseSnapshot(result);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('备份成功，已生成一致性数据库快照')),
+          const SnackBar(content: Text('数据库快照导出成功 (SQLite 一致性快照)')),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('备份失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出数据库快照失败：$e')));
       }
     }
   }
 
-  void _restoreDatabase(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('恢复数据'),
-        content: const Text(
-          '恢复将覆盖当前所有数据，此操作不可撤销。\n\n建议先备份当前数据。确定继续吗？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _doRestore(context, ref);
-            },
-            child: const Text('选择备份文件', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _backupFullProject(BuildContext context, WidgetRef ref) async {
+    try {
+      final now = DateTime.now();
+      final dateStr =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+      final defaultFileName = 'oc_manager_project_$dateStr.zip';
+
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: '选择完整项目包保存位置',
+        fileName: defaultFileName,
+        type: FileType.custom,
+        allowedExtensions: ['zip', 'ocproject'],
+      );
+
+      if (result == null) return;
+
+      final backupService = ref.read(projectBackupServiceProvider);
+      await backupService.exportFullProjectBundle(result);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('完整项目备份包导出成功（含数据库与全部本地立绘）')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出完整项目包失败：$e')));
+      }
+    }
   }
 
-  Future<void> _doRestore(BuildContext context, WidgetRef ref) async {
+  Future<void> _restoreBackupDialog(BuildContext context, WidgetRef ref) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['db'],
-        dialogTitle: '选择备份文件',
+        allowedExtensions: ['db', 'zip', 'ocproject'],
+        dialogTitle: '选择备份文件 (.db 或 .zip)',
       );
 
       if (result == null || result.files.single.path == null) return;
 
-      final pickedFile = File(result.files.single.path!);
-      if (!await pickedFile.exists() || await pickedFile.length() == 0) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('选择的备份文件无效或为空')),
-          );
-        }
-        return;
-      }
+      final pickedPath = result.files.single.path!;
+      final backupService = ref.read(projectBackupServiceProvider);
 
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbFolder.path, 'oc_manager.db'));
-      final walFile = File(p.join(dbFolder.path, 'oc_manager.db-wal'));
-      final shmFile = File(p.join(dbFolder.path, 'oc_manager.db-shm'));
-      final rollbackBakFile =
-          File(p.join(dbFolder.path, 'oc_manager.db.rollback_bak'));
+      // Pre-inspection & integrity check
+      final inspection = await backupService.inspectBackup(pickedPath);
 
-      // 创建还原点：在覆盖前备份当前主库
-      if (await dbFile.exists()) {
-        await dbFile.copy(rollbackBakFile.path);
-      }
+      if (!context.mounted) return;
 
-      try {
-        // 关闭当前数据库连接
-        await ref.read(databaseProvider).close();
+      final typeLabel = inspection.type == BackupType.databaseOnly
+          ? '数据库快照 (.db)'
+          : '完整项目包 (.zip)';
+      final sizeStr = (inspection.fileSizeBytes / 1024 / 1024).toStringAsFixed(
+        2,
+      );
 
-        // 覆盖数据库文件
-        await pickedFile.copy(dbFile.path);
-
-        // 清理旧的 WAL / SHM 临时缓存，防止旧日志损坏新库
-        if (await walFile.exists()) await walFile.delete();
-        if (await shmFile.exists()) await shmFile.delete();
-
-        // 成功覆盖后移除临时还原点
-        if (await rollbackBakFile.exists()) {
-          await rollbackBakFile.delete();
-        }
-
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              title: const Text('恢复成功'),
-              content: const Text('数据已安全恢复，请重启应用以生效。'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('确定'),
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('确认恢复数据'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '备份类型：$typeLabel',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text('文件大小：$sizeStr MB'),
+              Text('包含世界观：${inspection.worldCount} 个'),
+              Text('包含人物角色：${inspection.characterCount} 位'),
+              if (inspection.type == BackupType.fullProject)
+                Text('包含本地图片：${inspection.mediaCount} 张'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.5),
+                  ),
                 ),
-              ],
+                child: const Text(
+                  '警告：恢复将覆盖当前数据库与关联图片！恢复开始前系统将自动创建防灾还原点，若恢复失败将自动安全回滚。',
+                  style: TextStyle(fontSize: 12, color: Colors.orange),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
             ),
-          );
-        }
-      } catch (innerError) {
-        // 恢复失败：自动从还原点回滚当前数据
-        if (await rollbackBakFile.exists()) {
-          await rollbackBakFile.copy(dbFile.path);
-          await rollbackBakFile.delete();
-        }
-        rethrow;
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await _executeRestore(context, ref, backupService, pickedPath);
+              },
+              child: const Text('确认覆盖并恢复'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('校验备份文件失败：$e')));
+      }
+    }
+  }
+
+  Future<void> _executeRestore(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectBackupService backupService,
+    String backupPath,
+  ) async {
+    try {
+      final restoreResult = await backupService.restoreBackup(
+        backupPath: backupPath,
+      );
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('恢复成功'),
+            content: Text(
+              '数据已安全恢复！共恢复 ${restoreResult.restoredWorlds} 个世界观、${restoreResult.restoredCharacters} 位角色'
+              '${restoreResult.type == BackupType.fullProject ? '、${restoreResult.restoredMediaFiles} 张本地立绘' : ''}。\n\n请重启应用以刷新全部缓存。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('恢复失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('恢复失败（已自动触发还原点回滚）：$e')));
       }
     }
   }
@@ -443,7 +502,10 @@ class _BasicInfoFieldsSection extends ConsumerWidget {
   }
 
   void _confirmDeleteField(
-      BuildContext context, WidgetRef ref, BasicInfoField field) {
+    BuildContext context,
+    WidgetRef ref,
+    BasicInfoField field,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -485,10 +547,7 @@ class _FieldTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Switch(
-            value: field.isVisible,
-            onChanged: onToggle,
-          ),
+          Switch(value: field.isVisible, onChanged: onToggle),
           IconButton(
             icon: const Icon(Icons.delete, size: 20),
             onPressed: onDelete,

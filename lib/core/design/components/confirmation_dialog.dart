@@ -14,9 +14,7 @@ Future<bool> showConfirmDialog({
     context: context,
     builder: (context) {
       return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.radiusLg,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
@@ -33,21 +31,18 @@ Future<bool> showConfirmDialog({
         actions: [
           TextButton(
             style: TextButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.radiusMd,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
             ),
             onPressed: () => Navigator.pop(context, false),
             child: Text(cancelLabel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor:
-                  isDestructive ? AppColors.danger : AppColors.brand,
+              backgroundColor: isDestructive
+                  ? AppColors.danger
+                  : AppColors.brand,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.radiusMd,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(confirmLabel),

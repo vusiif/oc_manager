@@ -14,9 +14,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(testDb),
-        ],
+        overrides: [databaseProvider.overrideWithValue(testDb)],
         child: const App(),
       ),
     );
@@ -28,15 +26,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Sidebar should toggle with animation', (WidgetTester tester) async {
+  testWidgets('Sidebar should toggle with animation', (
+    WidgetTester tester,
+  ) async {
     final testDb = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(() async => await testDb.close());
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(testDb),
-        ],
+        overrides: [databaseProvider.overrideWithValue(testDb)],
         child: const App(),
       ),
     );
@@ -77,4 +75,3 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 }
-

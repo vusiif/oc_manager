@@ -38,9 +38,9 @@ class _CharacterGallerySectionState
       _showUploadDialog(picked.path);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择图片失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('选择图片失败: $e')));
       }
     }
   }
@@ -67,10 +67,7 @@ class _CharacterGallerySectionState
                     child: SizedBox(
                       width: 140,
                       height: 180,
-                      child: Image.file(
-                        File(pickedPath),
-                        fit: BoxFit.cover,
-                      ),
+                      child: Image.file(File(pickedPath), fit: BoxFit.cover),
                     ),
                   ),
                 ),
@@ -101,7 +98,10 @@ class _CharacterGallerySectionState
                 const SizedBox(height: 12),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('同时设为角色主封面/头像', style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    '同时设为角色主封面/头像',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: isPrimary,
                   onChanged: (v) => setDlgState(() => isPrimary = v ?? false),
                 ),
@@ -117,13 +117,15 @@ class _CharacterGallerySectionState
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
-                  final relPath =
-                      await ImageStorageService.instance.saveGalleryImage(
-                    sourcePath: pickedPath,
-                    characterId: widget.characterId,
-                  );
+                  final relPath = await ImageStorageService.instance
+                      .saveGalleryImage(
+                        sourcePath: pickedPath,
+                        characterId: widget.characterId,
+                      );
 
-                  await ref.read(characterActionsProvider).addGalleryImage(
+                  await ref
+                      .read(characterActionsProvider)
+                      .addGalleryImage(
                         characterId: widget.characterId,
                         imagePath: relPath,
                         caption: captionCtrl.text.trim(),
@@ -136,9 +138,9 @@ class _CharacterGallerySectionState
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('保存立绘失败: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('保存立绘失败: $e')));
                   }
                 }
               },
@@ -218,10 +220,9 @@ class _CharacterGallerySectionState
         galleries: galleries,
         initialIndex: initialIndex,
         onSetPrimary: (gallery) async {
-          await ref.read(characterActionsProvider).setPrimaryGalleryImage(
-                widget.characterId,
-                gallery.id,
-              );
+          await ref
+              .read(characterActionsProvider)
+              .setPrimaryGalleryImage(widget.characterId, gallery.id);
           ref.invalidate(characterByIdProvider(widget.characterId));
           ref.invalidate(charactersByWorldProvider(widget.worldId));
         },
@@ -232,8 +233,9 @@ class _CharacterGallerySectionState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final galleriesAsync =
-        ref.watch(characterGalleriesProvider(widget.characterId));
+    final galleriesAsync = ref.watch(
+      characterGalleriesProvider(widget.characterId),
+    );
 
     return Card(
       child: Padding(
@@ -251,16 +253,15 @@ class _CharacterGallerySectionState
                 const SizedBox(width: 8),
                 const Text(
                   '立绘画廊与差分',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
                 galleriesAsync.when(
                   data: (list) => Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(10),
@@ -314,7 +315,10 @@ class _CharacterGallerySectionState
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
-                            icon: const Icon(Icons.upload_file_rounded, size: 16),
+                            icon: const Icon(
+                              Icons.upload_file_rounded,
+                              size: 16,
+                            ),
                             label: const Text('上传第一张立绘'),
                             onPressed: _pickAndUpload,
                           ),
@@ -425,17 +429,18 @@ class _CharacterGallerySectionState
           InkWell(
             onTap: () => _openLightbox(allItems, index),
             child: FutureBuilder<File?>(
-              future: ImageStorageService.instance.resolveImageFile(item.imagePath),
+              future: ImageStorageService.instance.resolveImageFile(
+                item.imagePath,
+              ),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                  return const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
                 }
                 final file = snapshot.data;
                 if (file != null && file.existsSync()) {
-                  return Image.file(
-                    file,
-                    fit: BoxFit.cover,
-                  );
+                  return Image.file(file, fit: BoxFit.cover);
                 }
                 return Center(
                   child: Icon(
@@ -532,8 +537,11 @@ class _CharacterGallerySectionState
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline_rounded,
-                            size: 16, color: Colors.red),
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 16,
+                          color: Colors.red,
+                        ),
                         SizedBox(width: 8),
                         Text('删除此立绘', style: TextStyle(color: Colors.red)),
                       ],
@@ -542,10 +550,9 @@ class _CharacterGallerySectionState
                 ],
                 onSelected: (val) {
                   if (val == 'set_primary') {
-                    ref.read(characterActionsProvider).setPrimaryGalleryImage(
-                          widget.characterId,
-                          item.id,
-                        );
+                    ref
+                        .read(characterActionsProvider)
+                        .setPrimaryGalleryImage(widget.characterId, item.id);
                     ref.invalidate(characterByIdProvider(widget.characterId));
                     ref.invalidate(charactersByWorldProvider(widget.worldId));
                   } else if (val == 'view_lightbox') {
@@ -660,14 +667,18 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
               left: 0,
               right: 0,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 color: Colors.black45,
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white24,
                         borderRadius: BorderRadius.circular(12),
@@ -694,7 +705,9 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.shade700,
                           borderRadius: BorderRadius.circular(8),
@@ -721,8 +734,11 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
                       ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: Colors.white, size: 26),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
                       tooltip: '关闭预览',
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -736,8 +752,9 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
               top: 60,
               bottom: 110,
               child: FutureBuilder<File?>(
-                future: ImageStorageService.instance
-                    .resolveImageFile(current.imagePath),
+                future: ImageStorageService.instance.resolveImageFile(
+                  current.imagePath,
+                ),
                 builder: (context, snapshot) {
                   final file = snapshot.data;
                   if (file == null || !file.existsSync()) {
@@ -753,12 +770,7 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
                     transformationController: _transformController,
                     minScale: 0.5,
                     maxScale: 5.0,
-                    child: Center(
-                      child: Image.file(
-                        file,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                    child: Center(child: Image.file(file, fit: BoxFit.contain)),
                   );
                 },
               ),
@@ -802,8 +814,9 @@ class _GalleryLightboxDialogState extends State<_GalleryLightboxDialog> {
               left: 0,
               right: 0,
               child: FutureBuilder<File?>(
-                future: ImageStorageService.instance
-                    .resolveImageFile(current.imagePath),
+                future: ImageStorageService.instance.resolveImageFile(
+                  current.imagePath,
+                ),
                 builder: (context, snapshot) {
                   final file = snapshot.data;
                   if (file == null || !file.existsSync()) {
@@ -892,7 +905,9 @@ class _ColorPaletteBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white12,
                             borderRadius: BorderRadius.circular(20),
@@ -908,7 +923,9 @@ class _ColorPaletteBar extends StatelessWidget {
                                   color: c,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                      color: Colors.white, width: 1.5),
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 6),

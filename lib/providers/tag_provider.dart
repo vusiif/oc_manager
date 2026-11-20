@@ -7,8 +7,10 @@ final tagsProvider = StreamProvider<List<Tag>>((ref) {
   return ref.watch(tagDaoProvider).watchAllTags();
 });
 
-final characterTagsProvider =
-    FutureProvider.family<List<Tag>, int>((ref, characterId) {
+final characterTagsProvider = FutureProvider.family<List<Tag>, int>((
+  ref,
+  characterId,
+) {
   return ref.watch(tagDaoProvider).getTagsByCharacter(characterId);
 });
 
@@ -20,16 +22,15 @@ class TagActions {
   TagActions(this._ref);
 
   Future<int> create(String name, String color) async {
-    return _ref.read(tagDaoProvider).createTag(
-          TagsCompanion(
-            name: Value(name),
-            color: Value(color),
-          ),
-        );
+    return _ref
+        .read(tagDaoProvider)
+        .createTag(TagsCompanion(name: Value(name), color: Value(color)));
   }
 
   Future<bool> update(Tag tag) async {
-    return _ref.read(tagDaoProvider).updateTag(
+    return _ref
+        .read(tagDaoProvider)
+        .updateTag(
           TagsCompanion(
             id: Value(tag.id),
             name: Value(tag.name),

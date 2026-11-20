@@ -19,8 +19,7 @@ class TrashPage extends ConsumerWidget {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'empty',
-                child: Text('清空回收站',
-                    style: TextStyle(color: Colors.red)),
+                child: Text('清空回收站', style: TextStyle(color: Colors.red)),
               ),
             ],
             onSelected: (value) {
@@ -40,11 +39,12 @@ class TrashPage extends ConsumerWidget {
                 children: [
                   Icon(Icons.delete_outline, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('回收站是空的',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  Text(
+                    '回收站是空的',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
                   SizedBox(height: 8),
-                  Text('删除的人物和世界观会出现在这里',
-                      style: TextStyle(color: Colors.grey)),
+                  Text('删除的人物和世界观会出现在这里', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -55,13 +55,11 @@ class TrashPage extends ConsumerWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              final data =
-                  jsonDecode(item.itemData) as Map<String, dynamic>;
+              final data = jsonDecode(item.itemData) as Map<String, dynamic>;
               final name = data['name'] as String? ?? '未知';
               final isCharacter = item.itemType == 'character';
               final deletedAt = item.deletedAt;
-              final daysLeft =
-                  30 - DateTime.now().difference(deletedAt).inDays;
+              final daysLeft = 30 - DateTime.now().difference(deletedAt).inDays;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -82,12 +80,14 @@ class TrashPage extends ConsumerWidget {
                       IconButton(
                         icon: const Icon(Icons.restore, size: 20),
                         tooltip: '恢复',
-                        onPressed: () =>
-                            _restore(context, ref, item),
+                        onPressed: () => _restore(context, ref, item),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_forever,
-                            size: 20, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_forever,
+                          size: 20,
+                          color: Colors.red,
+                        ),
                         tooltip: '永久删除',
                         onPressed: () =>
                             _confirmPermanentDelete(context, ref, item),
@@ -109,8 +109,7 @@ class TrashPage extends ConsumerWidget {
     return '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  void _restore(
-      BuildContext context, WidgetRef ref, dynamic item) async {
+  void _restore(BuildContext context, WidgetRef ref, dynamic item) async {
     final actions = ref.read(trashActionsProvider);
     if (item.itemType == 'character') {
       await actions.restoreCharacter(item);
@@ -118,14 +117,17 @@ class TrashPage extends ConsumerWidget {
       await actions.restoreWorld(item);
     }
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已恢复')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已恢复')));
     }
   }
 
   void _confirmPermanentDelete(
-      BuildContext context, WidgetRef ref, dynamic item) {
+    BuildContext context,
+    WidgetRef ref,
+    dynamic item,
+  ) {
     final data = jsonDecode(item.itemData) as Map<String, dynamic>;
     final name = data['name'] as String? ?? '未知';
 
@@ -141,13 +143,10 @@ class TrashPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref
-                  .read(trashActionsProvider)
-                  .permanentDelete(item.id);
+              await ref.read(trashActionsProvider).permanentDelete(item.id);
               if (context.mounted) Navigator.pop(context);
             },
-            child:
-                const Text('永久删除', style: TextStyle(color: Colors.red)),
+            child: const Text('永久删除', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -170,8 +169,7 @@ class TrashPage extends ConsumerWidget {
               await ref.read(trashActionsProvider).emptyTrash();
               if (context.mounted) Navigator.pop(context);
             },
-            child:
-                const Text('清空', style: TextStyle(color: Colors.red)),
+            child: const Text('清空', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

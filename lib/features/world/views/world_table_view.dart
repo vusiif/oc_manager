@@ -6,12 +6,7 @@ import '../../../core/constants/character_status.dart';
 import '../../../core/design/components/oc_avatar.dart';
 import '../../../providers/character_provider.dart';
 
-enum TableSortColumn {
-  name,
-  gender,
-  status,
-  updatedAt,
-}
+enum TableSortColumn { name, gender, status, updatedAt }
 
 /// 世界观多维表格矩阵视图 (Interactive Table / Matrix View)
 class WorldTableView extends ConsumerStatefulWidget {
@@ -98,7 +93,9 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
         // 顶部筛选与搜索栏
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.25,
+          ),
           child: Column(
             children: [
               Row(
@@ -121,7 +118,9 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                               : null,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 8),
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -139,8 +138,7 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                     hint: const Text('全部性别', style: TextStyle(fontSize: 13)),
                     underline: const SizedBox.shrink(),
                     items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text('全部性别')),
+                      const DropdownMenuItem(value: null, child: Text('全部性别')),
                       for (final g in allGenders)
                         DropdownMenuItem(value: g, child: Text(g)),
                     ],
@@ -154,8 +152,7 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                     hint: const Text('全部状态', style: TextStyle(fontSize: 13)),
                     underline: const SizedBox.shrink(),
                     items: [
-                      const DropdownMenuItem(
-                          value: null, child: Text('全部状态')),
+                      const DropdownMenuItem(value: null, child: Text('全部状态')),
                       for (final s in CharacterCreationStatus.all)
                         DropdownMenuItem(
                           value: s.code,
@@ -174,8 +171,11 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
 
                   // 收藏 / 置顶 FilterChips
                   FilterChip(
-                    avatar: const Icon(Icons.star_rounded,
-                        size: 14, color: Color(0xFFF59E0B)),
+                    avatar: const Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: Color(0xFFF59E0B),
+                    ),
                     label: const Text('仅收藏'),
                     selected: _onlyFavorite,
                     visualDensity: VisualDensity.compact,
@@ -183,8 +183,11 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                   ),
                   const SizedBox(width: 6),
                   FilterChip(
-                    avatar: Icon(Icons.push_pin_rounded,
-                        size: 14, color: theme.colorScheme.primary),
+                    avatar: Icon(
+                      Icons.push_pin_rounded,
+                      size: 14,
+                      color: theme.colorScheme.primary,
+                    ),
                     label: const Text('仅置顶'),
                     selected: _onlyPinned,
                     visualDensity: VisualDensity.compact,
@@ -228,31 +231,32 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                       sortColumnIndex: _getSortIndex(),
                       sortAscending: _sortAscending,
                       headingRowColor: WidgetStatePropertyAll(
-                        theme.colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.4),
+                        theme.colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                       columns: [
                         const DataColumn(label: Text('立绘/头像')),
                         DataColumn(
                           label: const Text('姓名'),
-                          onSort: (idx, asc) => _changeSort(
-                              TableSortColumn.name, idx, asc),
+                          onSort: (idx, asc) =>
+                              _changeSort(TableSortColumn.name, idx, asc),
                         ),
                         DataColumn(
                           label: const Text('性别'),
-                          onSort: (idx, asc) => _changeSort(
-                              TableSortColumn.gender, idx, asc),
+                          onSort: (idx, asc) =>
+                              _changeSort(TableSortColumn.gender, idx, asc),
                         ),
                         DataColumn(
                           label: const Text('创作阶段'),
-                          onSort: (idx, asc) => _changeSort(
-                              TableSortColumn.status, idx, asc),
+                          onSort: (idx, asc) =>
+                              _changeSort(TableSortColumn.status, idx, asc),
                         ),
                         const DataColumn(label: Text('快捷标记')),
                         DataColumn(
                           label: const Text('最近更新'),
-                          onSort: (idx, asc) => _changeSort(
-                              TableSortColumn.updatedAt, idx, asc),
+                          onSort: (idx, asc) =>
+                              _changeSort(TableSortColumn.updatedAt, idx, asc),
                         ),
                         const DataColumn(label: Text('操作')),
                       ],
@@ -286,8 +290,9 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                                   Icon(
                                     Icons.arrow_forward_ios_rounded,
                                     size: 11,
-                                    color: theme.colorScheme.primary
-                                        .withValues(alpha: 0.6),
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.6,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -307,8 +312,11 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(s.icon,
-                                              size: 13, color: s.color),
+                                          Icon(
+                                            s.icon,
+                                            size: 13,
+                                            color: s.color,
+                                          ),
                                           const SizedBox(width: 6),
                                           Text(
                                             s.label,
@@ -386,8 +394,10 @@ class _WorldTableViewState extends ConsumerState<WorldTableView> {
                             // 7. 操作
                             DataCell(
                               IconButton(
-                                icon: const Icon(Icons.arrow_circle_right_outlined,
-                                    size: 18),
+                                icon: const Icon(
+                                  Icons.arrow_circle_right_outlined,
+                                  size: 18,
+                                ),
                                 tooltip: '打开人物详情档案',
                                 onPressed: () =>
                                     widget.onCharacterSelected?.call(c.id),

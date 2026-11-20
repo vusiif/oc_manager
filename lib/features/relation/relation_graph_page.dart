@@ -12,8 +12,14 @@ import '../../providers/relation_provider.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/design/components/confirmation_dialog.dart';
+import 'package:flutter/services.dart';
+
 import '../character/character_dialog.dart';
 import 'graph_geometry.dart';
+import 'graph_history_manager.dart';
+import 'graph_svg_exporter.dart';
+import 'relation_advanced_analysis.dart';
+import 'widgets/graph_minimap.dart';
 
 class RelationGraphPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -37,10 +43,166 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   int? _connectingFromId;
   Offset? _connectingCurrentPos;
 
+  // P2-04 智能排版与高级分析状态
+  Map<int, Offset>? _layoutSnapshotBeforeAuto;
+  RelationFilterState _filterState = const RelationFilterState();
+
+  // GRAPH-001 多命名画布状态
+  int? _selectedCanvasId;
+  bool _hasEnsuredDefaultCanvas = false;
+
+  // GRAPH-002 撤销/重做历史管理器
+  final GraphHistoryManager _historyManager = GraphHistoryManager();
+  final Map<int, Offset> _nodeDragStartPositions = {};
+
+  // GRAPH-005 大画布全局导览视口状态
+  Size _currentViewport = const Size(1200, 800);
+
+  void _navigateToPosition(Offset targetWorldPos) {
+    if (!mounted) return;
+    final currentScale = _transformController.value.getMaxScaleOnAxis();
+    final clampedScale = currentScale.clamp(0.1, 3.0);
+    final tx = _currentViewport.width / 2 - targetWorldPos.dx * clampedScale;
+    final ty = _currentViewport.height / 2 - targetWorldPos.dy * clampedScale;
+
+    _transformController.value = Matrix4.identity()
+      ..storage[0] = clampedScale
+      ..storage[5] = clampedScale
+      ..storage[12] = tx
+      ..storage[13] = ty;
+    _persistCurrentViewport();
+  }
+
+  @override
+  void didUpdateWidget(RelationGraphPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.worldId != widget.worldId) {
+      _historyManager.clear();
+      _selectedCanvasId = null;
+      _hasEnsuredDefaultCanvas = false;
+      _positions.clear();
+      _loadedFromDbCharacters.clear();
+    }
+  }
+
   @override
   void dispose() {
+    _historyManager.dispose();
     _transformController.dispose();
     super.dispose();
+  }
+
+  bool _isEditingText() {
+    final focusedWidget = FocusManager.instance.primaryFocus?.context?.widget;
+    return focusedWidget is EditableText;
+  }
+
+  void _persistCurrentViewport() {
+    if (_selectedCanvasId == null || !mounted) return;
+    final matrix = _transformController.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final tx = matrix.getTranslation().x;
+    final ty = matrix.getTranslation().y;
+    ref
+        .read(canvasActionsProvider)
+        .saveViewport(_selectedCanvasId!, tx, ty, scale);
+  }
+
+  void _persistCurrentFilterConfig() {
+    if (_selectedCanvasId == null || !mounted) return;
+    ref
+        .read(canvasActionsProvider)
+        .saveFilterConfig(_selectedCanvasId!, _filterState.toJsonString());
+  }
+
+  void _applyAutoLayout(
+    AutoLayoutMode mode,
+    List<Character> characters,
+    List<Relation> relations,
+  ) {
+    if (characters.isEmpty) return;
+
+    // 1. 拍摄当前全量手工排版快照，用于撤销回滚
+    final oldPositions = Map<int, Offset>.of(_positions);
+
+    // 2. 计算算法排布坐标
+    final newLayout = GraphAutoLayoutEngine.computeLayout(
+      mode: mode,
+      characters: characters,
+      relations: relations,
+    );
+
+    setState(() {
+      _positions.addAll(newLayout);
+      for (final cid in newLayout.keys) {
+        _loadedFromDbCharacters.add(cid);
+      }
+      _graphRevision++;
+    });
+
+    final targetCanvasId = _selectedCanvasId;
+
+    // 3. 批量持久化到数据库
+    ref
+        .read(graphLayoutActionsProvider)
+        .batchSavePositions(
+          widget.worldId,
+          newLayout,
+          canvasId: targetCanvasId,
+        );
+
+    // 4. 记录到 Undo/Redo 历史栈 (GRAPH-002)
+    _historyManager.record(
+      BatchMoveCommand(
+        descriptionText: '应用【${mode.label}】',
+        oldPositions: oldPositions,
+        newPositions: Map<int, Offset>.of(_positions),
+        onUpdateMemory: (posMap) {
+          if (!mounted) return;
+          setState(() {
+            _positions.clear();
+            _positions.addAll(posMap);
+            _graphRevision++;
+          });
+          final size = MediaQuery.of(context).size;
+          _fitCanvasToNodes(size);
+        },
+        onPersist: (posMap) async {
+          await ref
+              .read(graphLayoutActionsProvider)
+              .batchSavePositions(
+                widget.worldId,
+                posMap,
+                canvasId: targetCanvasId,
+              );
+        },
+      ),
+    );
+
+    // 5. 自适应居中展示
+    final size = MediaQuery.of(context).size;
+    _fitCanvasToNodes(size);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已应用【${mode.label}】'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '撤销排版',
+          textColor: Colors.amberAccent,
+          onPressed: _undoAutoLayout,
+        ),
+      ),
+    );
+  }
+
+  void _undoAutoLayout() {
+    if (_historyManager.canUndo) {
+      _historyManager.undo();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已撤销自动排版')));
+    }
   }
 
   void _syncPositions(List<Character> characters, List<GraphLayout> layouts) {
@@ -60,15 +222,22 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   }
 
   void _savePosition(int characterId, Offset pos) {
-    ref.read(graphLayoutActionsProvider).savePosition(
+    ref
+        .read(graphLayoutActionsProvider)
+        .savePosition(
           widget.worldId,
           characterId,
           pos.dx,
           pos.dy,
+          canvasId: _selectedCanvasId,
         );
   }
 
-  void _dropCharacter(int characterId, Offset screenDropPos) {
+  void _dropCharacter(
+    int characterId,
+    Offset screenDropPos, {
+    String characterName = '',
+  }) {
     final inverse = Matrix4.inverted(_transformController.value);
     final canvasPos = MatrixUtils.transformPoint(inverse, screenDropPos);
     setState(() {
@@ -77,18 +246,137 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       _graphRevision++;
     });
     _savePosition(characterId, canvasPos);
+
+    final targetCanvasId = _selectedCanvasId;
+    _historyManager.record(
+      AddNodeCommand(
+        characterId: characterId,
+        characterName: characterName.isEmpty
+            ? 'ID:$characterId'
+            : characterName,
+        pos: canvasPos,
+        onAddMemory: (id, pos) {
+          if (!mounted) return;
+          setState(() {
+            _positions[id] = pos;
+            _loadedFromDbCharacters.add(id);
+            _graphRevision++;
+          });
+        },
+        onRemoveMemory: (id) {
+          if (!mounted) return;
+          setState(() {
+            _positions.remove(id);
+            _loadedFromDbCharacters.remove(id);
+            _graphRevision++;
+          });
+        },
+        onPersistAdd: (id, pos) async {
+          await ref
+              .read(graphLayoutActionsProvider)
+              .savePosition(
+                widget.worldId,
+                id,
+                pos.dx,
+                pos.dy,
+                canvasId: targetCanvasId,
+              );
+        },
+        onPersistRemove: (id) async {
+          await ref
+              .read(graphLayoutActionsProvider)
+              .removePosition(widget.worldId, id, canvasId: targetCanvasId);
+        },
+      ),
+    );
   }
 
-  void _removeFromCanvas(int characterId) {
+  void _removeFromCanvas(int characterId, {String characterName = ''}) {
+    final currentPos = _positions[characterId];
     setState(() {
       _positions.remove(characterId);
       _loadedFromDbCharacters.remove(characterId);
       _graphRevision++;
     });
-    ref.read(graphLayoutActionsProvider).removePosition(
-          widget.worldId,
-          characterId,
-        );
+    final targetCanvasId = _selectedCanvasId;
+    ref
+        .read(graphLayoutActionsProvider)
+        .removePosition(widget.worldId, characterId, canvasId: targetCanvasId);
+
+    if (currentPos != null) {
+      _historyManager.record(
+        RemoveNodeCommand(
+          characterId: characterId,
+          characterName: characterName.isEmpty
+              ? 'ID:$characterId'
+              : characterName,
+          pos: currentPos,
+          onAddMemory: (id, pos) {
+            if (!mounted) return;
+            setState(() {
+              _positions[id] = pos;
+              _loadedFromDbCharacters.add(id);
+              _graphRevision++;
+            });
+          },
+          onRemoveMemory: (id) {
+            if (!mounted) return;
+            setState(() {
+              _positions.remove(id);
+              _loadedFromDbCharacters.remove(id);
+              _graphRevision++;
+            });
+          },
+          onPersistAdd: (id, pos) async {
+            await ref
+                .read(graphLayoutActionsProvider)
+                .savePosition(
+                  widget.worldId,
+                  id,
+                  pos.dx,
+                  pos.dy,
+                  canvasId: targetCanvasId,
+                );
+          },
+          onPersistRemove: (id) async {
+            await ref
+                .read(graphLayoutActionsProvider)
+                .removePosition(widget.worldId, id, canvasId: targetCanvasId);
+          },
+        ),
+      );
+    }
+  }
+
+  void _recordUpdateRelation(Relation oldRel, Relation newRel, String desc) {
+    _historyManager.record(
+      UpdateRelationCommand(
+        oldRelation: oldRel,
+        newRelation: newRel,
+        descriptionText: desc,
+        onUpdate: (rel) async {
+          await ref.read(relationActionsProvider).update(rel);
+          ref.invalidate(relationsByWorldProvider(widget.worldId));
+        },
+      ),
+    );
+  }
+
+  void _recordDeleteRelation(Relation rel, String desc) {
+    _historyManager.record(
+      DeleteRelationCommand(
+        deletedRelation: rel,
+        descriptionText: desc,
+        onDelete: (id) async {
+          await ref.read(relationActionsProvider).delete(id);
+          ref.invalidate(relationsByWorldProvider(widget.worldId));
+        },
+        onRestore: (r) async {
+          await ref.read(relationActionsProvider).restore(r);
+          ref.invalidate(relationsByWorldProvider(widget.worldId));
+        },
+      ),
+    );
   }
 
   /// 适应画布：将所有节点自动居中并自适应缩放到视野中
@@ -123,16 +411,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     final tx = viewportSize.width / 2 - contentCenterX * scale;
     final ty = viewportSize.height / 2 - contentCenterY * scale;
 
-    // ignore: deprecated_member_use
-    final matrix = Matrix4.identity()
-      // ignore: deprecated_member_use
-      ..translate(tx, ty)
-      // ignore: deprecated_member_use
-      ..scale(scale);
-
     setState(() {
-      _transformController.value = matrix;
+      _transformController.value = _matrixFromViewport(tx, ty, scale);
     });
+    _persistCurrentViewport();
   }
 
   void _onStartConnecting(int characterId, Offset startPos) {
@@ -183,16 +465,22 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
   // --- 添加关系对话框 ---
 
-  void _showAddRelationDialog(List<Character> characters,
-      {int? fromId, int? toId}) {
+  void _showAddRelationDialog(
+    List<Character> characters, {
+    int? fromId,
+    int? toId,
+  }) {
     if (characters.length < 2) return;
 
     int? selectedFrom = fromId ?? characters[0].id;
-    int? selectedTo = toId ??
-        characters.firstWhere(
-          (c) => c.id != selectedFrom,
-          orElse: () => characters[0],
-        ).id;
+    int? selectedTo =
+        toId ??
+        characters
+            .firstWhere(
+              (c) => c.id != selectedFrom,
+              orElse: () => characters[0],
+            )
+            .id;
     String selectedType = '朋友';
     bool isCustomType = false;
     bool isBidirectional = true;
@@ -212,8 +500,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   initialValue: selectedFrom,
                   decoration: const InputDecoration(labelText: '起始人物'),
                   items: characters
-                      .map((c) =>
-                          DropdownMenuItem(value: c.id, child: Text(c.name)))
+                      .map(
+                        (c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => selectedFrom = v),
                 ),
@@ -222,16 +512,20 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   initialValue: selectedTo,
                   decoration: const InputDecoration(labelText: '目标人物'),
                   items: characters
-                      .map((c) =>
-                          DropdownMenuItem(value: c.id, child: Text(c.name)))
+                      .map(
+                        (c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => selectedTo = v),
                 ),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('关系类型',
-                      style: Theme.of(context).textTheme.bodySmall),
+                  child: Text(
+                    '关系类型',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -248,11 +542,9 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                         }),
                       ),
                     ChoiceChip(
-                      label: const Text('自定义…',
-                          style: TextStyle(fontSize: 12)),
+                      label: const Text('自定义…', style: TextStyle(fontSize: 12)),
                       selected: isCustomType,
-                      onSelected: (_) =>
-                          setState(() => isCustomType = true),
+                      onSelected: (_) => setState(() => isCustomType = true),
                     ),
                   ],
                 ),
@@ -295,17 +587,60 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                     selectedTo != null &&
                     selectedFrom != selectedTo &&
                     type.isNotEmpty) {
-                  await ref.read(relationActionsProvider).create(
+                  final note = noteController.text.trim().isEmpty
+                      ? null
+                      : noteController.text.trim();
+                  final id = await ref
+                      .read(relationActionsProvider)
+                      .create(
                         fromCharacterId: selectedFrom!,
                         toCharacterId: selectedTo!,
                         relationType: type,
                         isBidirectional: isBidirectional,
-                        note: noteController.text.trim().isEmpty
-                            ? null
-                            : noteController.text.trim(),
+                        note: note,
                       );
-                  ref.invalidate(
-                      relationsByWorldProvider(widget.worldId));
+                  ref.invalidate(relationsByWorldProvider(widget.worldId));
+
+                  final fromCharName =
+                      characters
+                          .where((c) => c.id == selectedFrom)
+                          .map((c) => c.name)
+                          .firstOrNull ??
+                      '?';
+                  final toCharName =
+                      characters
+                          .where((c) => c.id == selectedTo)
+                          .map((c) => c.name)
+                          .firstOrNull ??
+                      '?';
+
+                  _historyManager.record(
+                    CreateRelationCommand(
+                      relation: Relation(
+                        id: id,
+                        fromCharacterId: selectedFrom!,
+                        toCharacterId: selectedTo!,
+                        relationType: type,
+                        isBidirectional: isBidirectional,
+                        note: note,
+                        relationGroupId: null,
+                      ),
+                      descriptionText: '$fromCharName 与 $toCharName 的【$type】',
+                      onDelete: (relId) async {
+                        await ref.read(relationActionsProvider).delete(relId);
+                        ref.invalidate(
+                          relationsByWorldProvider(widget.worldId),
+                        );
+                      },
+                      onRestore: (rel) async {
+                        await ref.read(relationActionsProvider).restore(rel);
+                        ref.invalidate(
+                          relationsByWorldProvider(widget.worldId),
+                        );
+                      },
+                    ),
+                  );
+
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -314,18 +649,21 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      customTypeController.dispose();
+      noteController.dispose();
+    });
   }
 
   // --- 管理人物关系对话框 ---
 
   void _showRelationManager(
-      Character character, List<Character> allCharacters, List<Relation> relations) {
+    Character character,
+    List<Character> allCharacters,
+    List<Relation> relations,
+  ) {
     String nameOf(int id) =>
-        allCharacters
-            .where((c) => c.id == id)
-            .map((c) => c.name)
-            .firstOrNull ??
+        allCharacters.where((c) => c.id == id).map((c) => c.name).firstOrNull ??
         '?';
 
     showDialog(
@@ -336,9 +674,11 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final myRelations = localRelations
-                .where((r) =>
-                    r.fromCharacterId == character.id ||
-                    r.toCharacterId == character.id)
+                .where(
+                  (r) =>
+                      r.fromCharacterId == character.id ||
+                      r.toCharacterId == character.id,
+                )
                 .toList();
 
             return AlertDialog(
@@ -349,8 +689,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
-                          child: Text('暂无关系',
-                              style: TextStyle(color: Colors.grey)),
+                          child: Text(
+                            '暂无关系',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
                       )
                     : ListView.builder(
@@ -362,10 +704,9 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                               ? nameOf(rel.toCharacterId)
                               : nameOf(rel.fromCharacterId);
                           final arrow = rel.isBidirectional ? ' ↔ ' : ' → ';
-                          final direction =
-                              rel.fromCharacterId == character.id
-                                  ? ''
-                                  : '(反向)';
+                          final direction = rel.fromCharacterId == character.id
+                              ? ''
+                              : '(反向)';
                           final groupTag = rel.relationGroupId != null
                               ? ' [组]'
                               : '';
@@ -377,25 +718,33 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                               style: const TextStyle(fontSize: 14),
                             ),
                             subtitle: rel.note != null && rel.note!.isNotEmpty
-                                ? Text(rel.note!,
-                                    style: const TextStyle(fontSize: 12))
+                                ? Text(
+                                    rel.note!,
+                                    style: const TextStyle(fontSize: 12),
+                                  )
                                 : null,
                             trailing: IconButton(
-                              icon: Icon(Icons.delete_outline,
-                                  size: 20,
-                                  color:
-                                      Theme.of(context).colorScheme.error),
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                               onPressed: () async {
                                 await ref
                                     .read(relationActionsProvider)
                                     .delete(rel.id);
                                 setDialogState(() {
                                   localRelations.removeWhere(
-                                      (r) => r.id == rel.id);
+                                    (r) => r.id == rel.id,
+                                  );
                                 });
                                 ref.invalidate(
-                                    relationsByWorldProvider(
-                                        widget.worldId));
+                                  relationsByWorldProvider(widget.worldId),
+                                );
+                                _recordDeleteRelation(
+                                  rel,
+                                  '${nameOf(rel.fromCharacterId)} 与 ${nameOf(rel.toCharacterId)} 的【${rel.relationType}】',
+                                );
                               },
                             ),
                           );
@@ -412,8 +761,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   label: const Text('添加关系'),
                   onPressed: () {
                     Navigator.pop(context);
-                    _showAddRelationDialog(allCharacters,
-                        fromId: character.id);
+                    _showAddRelationDialog(allCharacters, fromId: character.id);
                   },
                 ),
               ],
@@ -444,8 +792,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('父母（可多选）',
-                      style: Theme.of(context).textTheme.bodySmall),
+                  Text('父母（可多选）', style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
@@ -454,8 +801,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                       for (final c in characters)
                         FilterChip(
                           avatar: _genderIcon(c.gender),
-                          label: Text(c.name,
-                              style: const TextStyle(fontSize: 12)),
+                          label: Text(
+                            c.name,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           selected: parentIds.contains(c.id),
                           onSelected: (selected) => setState(() {
                             if (selected) {
@@ -469,8 +818,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text('子女（可多选）',
-                      style: Theme.of(context).textTheme.bodySmall),
+                  Text('子女（可多选）', style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
@@ -479,8 +827,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                       for (final c in characters)
                         FilterChip(
                           avatar: _genderIcon(c.gender),
-                          label: Text(c.name,
-                              style: const TextStyle(fontSize: 12)),
+                          label: Text(
+                            c.name,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           selected: childIds.contains(c.id),
                           onSelected: (selected) => setState(() {
                             if (selected) {
@@ -496,8 +846,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: noteController,
-                    decoration:
-                        const InputDecoration(labelText: '备注（可选）'),
+                    decoration: const InputDecoration(labelText: '备注（可选）'),
                   ),
                 ],
               ),
@@ -510,7 +859,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
               ElevatedButton(
                 onPressed: () async {
                   if (parentIds.length < 2 || childIds.isEmpty) return;
-                  await ref
+                  final created = await ref
                       .read(relationActionsProvider)
                       .createFamilyRelation(
                         parentIds: parentIds,
@@ -519,8 +868,27 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                             ? null
                             : noteController.text.trim(),
                       );
-                  ref.invalidate(
-                      relationsByWorldProvider(widget.worldId));
+                  ref.invalidate(relationsByWorldProvider(widget.worldId));
+
+                  _historyManager.record(
+                    BatchCreateRelationsCommand(
+                      relations: created,
+                      descriptionText: '添加家谱亲子关系',
+                      onDelete: (relId) async {
+                        await ref.read(relationActionsProvider).delete(relId);
+                        ref.invalidate(
+                          relationsByWorldProvider(widget.worldId),
+                        );
+                      },
+                      onRestore: (rel) async {
+                        await ref.read(relationActionsProvider).restore(rel);
+                        ref.invalidate(
+                          relationsByWorldProvider(widget.worldId),
+                        );
+                      },
+                    ),
+                  );
+
                   if (context.mounted) Navigator.pop(context);
                 },
                 child: const Text('添加'),
@@ -591,32 +959,57 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(fromName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(
+                      fromName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Icon(
-                      rel.isBidirectional ? Icons.compare_arrows : Icons.arrow_forward,
+                      rel.isBidirectional
+                          ? Icons.compare_arrows
+                          : Icons.arrow_forward,
                       size: 20,
                       color: rel.isBidirectional ? Colors.blue : Colors.orange,
                     ),
                     const SizedBox(width: 10),
-                    Text(toName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(
+                      toName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
-                  const Text('类型: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const Text(
+                    '类型: ',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   Chip(
-                    label: Text(rel.relationType, style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      rel.relationType,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -632,21 +1025,37 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
               ),
               if (rel.note != null && rel.note!.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('备注: ${rel.note}', style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
+                Text(
+                  '备注: ${rel.note}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ],
           ),
           actions: [
             // 切换双向/单向
             TextButton.icon(
-              icon: Icon(rel.isBidirectional ? Icons.arrow_forward : Icons.sync_alt, size: 16),
+              icon: Icon(
+                rel.isBidirectional ? Icons.arrow_forward : Icons.sync_alt,
+                size: 16,
+              ),
               label: Text(rel.isBidirectional ? '设为单向' : '设为双向'),
               onPressed: () async {
                 Navigator.pop(ctx);
-                await ref.read(relationActionsProvider).update(
-                      rel.copyWith(isBidirectional: !rel.isBidirectional),
-                    );
+                final oldRel = rel;
+                final newRel = rel.copyWith(
+                  isBidirectional: !rel.isBidirectional,
+                );
+                await ref.read(relationActionsProvider).update(newRel);
                 ref.invalidate(relationsByWorldProvider(widget.worldId));
+                _recordUpdateRelation(
+                  oldRel,
+                  newRel,
+                  '$fromName 与 $toName 关系方向模式',
+                );
               },
             ),
             // 反转方向 (仅单向有效)
@@ -656,13 +1065,18 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                 label: const Text('反转'),
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  await ref.read(relationActionsProvider).update(
-                        rel.copyWith(
-                          fromCharacterId: rel.toCharacterId,
-                          toCharacterId: rel.fromCharacterId,
-                        ),
-                      );
+                  final oldRel = rel;
+                  final newRel = rel.copyWith(
+                    fromCharacterId: rel.toCharacterId,
+                    toCharacterId: rel.fromCharacterId,
+                  );
+                  await ref.read(relationActionsProvider).update(newRel);
                   ref.invalidate(relationsByWorldProvider(widget.worldId));
+                  _recordUpdateRelation(
+                    oldRel,
+                    newRel,
+                    '$fromName 与 $toName 关系方向反转',
+                  );
                 },
               ),
             // 编辑类型与备注
@@ -676,13 +1090,18 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             ),
             // 删除关系
             TextButton.icon(
-              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 16,
+                color: Colors.red,
+              ),
               label: const Text('删除', style: TextStyle(color: Colors.red)),
               onPressed: () async {
                 final confirmed = await showConfirmDialog(
                   context: context,
                   title: '删除关系',
-                  content: '确定要删除【$fromName】与【$toName】之间的“${rel.relationType}”关系吗？',
+                  content:
+                      '确定要删除【$fromName】与【$toName】之间的“${rel.relationType}”关系吗？',
                   confirmLabel: '删除',
                   isDestructive: true,
                 );
@@ -691,6 +1110,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   await ref.read(relationActionsProvider).delete(rel.id);
                   ref.invalidate(relationsByWorldProvider(widget.worldId));
                   setState(() => _selectedRelationId = null);
+                  _recordDeleteRelation(
+                    rel,
+                    '$fromName 与 $toName 的【${rel.relationType}】',
+                  );
                 }
               },
             ),
@@ -713,7 +1136,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('关系类型', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              const Text(
+                '关系类型',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -742,13 +1168,14 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             ElevatedButton(
               onPressed: () async {
                 final note = noteController.text.trim();
-                await ref.read(relationActionsProvider).update(
-                      rel.copyWith(
-                        relationType: currentType,
-                        note: Value(note.isEmpty ? null : note),
-                      ),
-                    );
+                final oldRel = rel;
+                final newRel = rel.copyWith(
+                  relationType: currentType,
+                  note: Value(note.isEmpty ? null : note),
+                );
+                await ref.read(relationActionsProvider).update(newRel);
                 ref.invalidate(relationsByWorldProvider(widget.worldId));
+                _recordUpdateRelation(oldRel, newRel, '$fromName 与 $toName 关系');
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('保存'),
@@ -759,11 +1186,14 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     );
   }
 
-  Future<void> _exportToImage(List<Character> characters, List<Relation> relations) async {
+  Future<void> _exportToImage(
+    List<Character> characters,
+    List<Relation> relations,
+  ) async {
     if (_positions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('画布上暂无人物，无法导出')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('画布上暂无人物，无法导出')));
       return;
     }
 
@@ -791,7 +1221,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgPaint = Paint()..color = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF8F9FA);
+    final bgPaint = Paint()
+      ..color = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF8F9FA);
     canvas.drawRect(Rect.fromLTWH(0, 0, width, height), bgPaint);
 
     canvas.translate(-exportRect.left, -exportRect.top);
@@ -840,9 +1271,56 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     await File(savePath).writeAsBytes(pngBytes);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('关系图已成功导出至: $savePath')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('关系图已成功导出至: $savePath')));
+    }
+  }
+
+  Future<void> _exportToSvg(
+    List<Character> characters,
+    List<Relation> relations,
+  ) async {
+    if (_positions.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('画布上暂无人物，无法导出')));
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final svgString = GraphSvgExporter.exportToSvg(
+      characters: characters,
+      relations: relations,
+      positions: _positions,
+      isDark: isDark,
+    );
+
+    final now = DateTime.now();
+    final dateStr =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    final defaultFileName = 'relation_graph_$dateStr.svg';
+
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: '选择导出矢量图保存位置',
+      fileName: defaultFileName,
+      type: FileType.custom,
+      allowedExtensions: ['svg'],
+    );
+
+    if (result == null) return;
+
+    var savePath = result;
+    if (!savePath.toLowerCase().endsWith('.svg')) {
+      savePath += '.svg';
+    }
+
+    await File(savePath).writeAsString(svgString);
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('矢量关系图已成功导出至: $savePath')));
     }
   }
 
@@ -860,8 +1338,15 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     final initial = c.name.isNotEmpty ? c.name[0] : '?';
 
     if (c.gender == '男') {
-      final rect = Rect.fromCenter(center: pos, width: half * 2, height: half * 2);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), shapePaint);
+      final rect = Rect.fromCenter(
+        center: pos,
+        width: half * 2,
+        height: half * 2,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+        shapePaint,
+      );
     } else if (c.gender == '女') {
       canvas.drawCircle(pos, half, shapePaint);
     } else {
@@ -912,20 +1397,590 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     return null;
   }
 
+  Matrix4 _matrixFromViewport(double tx, double ty, double scale) {
+    final s = scale > 0 ? scale : 1.0;
+    return Matrix4.identity()
+      ..storage[0] = s
+      ..storage[5] = s
+      ..storage[12] = tx
+      ..storage[13] = ty;
+  }
+
+  Future<void> _switchToCanvas(GraphCanvas targetCanvas) async {
+    if (_selectedCanvasId == targetCanvas.id) return;
+
+    // 1. Save current viewport and filter
+    if (_selectedCanvasId != null) {
+      final matrix = _transformController.value;
+      final scale = matrix.getMaxScaleOnAxis();
+      final tx = matrix.getTranslation().x;
+      final ty = matrix.getTranslation().y;
+      await ref
+          .read(canvasActionsProvider)
+          .saveViewport(_selectedCanvasId!, tx, ty, scale);
+      await ref
+          .read(canvasActionsProvider)
+          .saveFilterConfig(_selectedCanvasId!, _filterState.toJsonString());
+    }
+
+    // 2. Clear current in-memory positions & loaded flags
+    setState(() {
+      _selectedCanvasId = targetCanvas.id;
+      _positions.clear();
+      _loadedFromDbCharacters.clear();
+    });
+
+    // 3. Restore target viewport
+    _transformController.value = _matrixFromViewport(
+      targetCanvas.viewportX,
+      targetCanvas.viewportY,
+      targetCanvas.zoomScale,
+    );
+
+    // 4. Restore target filter
+    if (targetCanvas.filterConfig != null &&
+        targetCanvas.filterConfig!.isNotEmpty) {
+      setState(() {
+        _filterState = RelationFilterState.fromJsonString(
+          targetCanvas.filterConfig!,
+        );
+      });
+    } else {
+      setState(() {
+        _filterState = const RelationFilterState();
+      });
+    }
+
+    // 5. Clear undo/redo history to prevent cross-canvas contamination (GRAPH-002)
+    _historyManager.clear();
+
+    setState(() {
+      _graphRevision++;
+    });
+  }
+
+  Future<void> _showNewCanvasDialog() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController();
+    final descController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('新建命名画布'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: '画布名称',
+                hintText: '如：主角团羁绊、主要势力派系、家族谱系...',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: '画布描述 (可选)',
+                hintText: '简要说明该画布的用途与视角',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+
+    final name = controller.text.trim();
+    final desc = descController.text.trim().isEmpty
+        ? null
+        : descController.text.trim();
+    controller.dispose();
+    descController.dispose();
+
+    if (result == true && name.isNotEmpty && mounted) {
+      final newCanvas = await ref
+          .read(canvasActionsProvider)
+          .create(widget.worldId, name, description: desc);
+      if (mounted) {
+        await _switchToCanvas(newCanvas);
+        messenger.showSnackBar(SnackBar(content: Text('已创建并切换至画布【$name】')));
+      }
+    }
+  }
+
+  Future<void> _showDuplicateCanvasDialog(GraphCanvas currentCanvas) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController(
+      text: '${currentCanvas.name} (副本)',
+    );
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('复制当前画布'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: '新画布名称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('复制'),
+          ),
+        ],
+      ),
+    );
+
+    final name = controller.text.trim();
+    controller.dispose();
+
+    if (result == true && name.isNotEmpty && mounted) {
+      final matrix = _transformController.value;
+      await ref
+          .read(canvasActionsProvider)
+          .saveViewport(
+            currentCanvas.id,
+            matrix.getTranslation().x,
+            matrix.getTranslation().y,
+            matrix.getMaxScaleOnAxis(),
+          );
+      final newCanvas = await ref
+          .read(canvasActionsProvider)
+          .duplicate(currentCanvas.id, name);
+      if (mounted) {
+        await _switchToCanvas(newCanvas);
+        messenger.showSnackBar(
+          SnackBar(content: Text('已成功复制画布【$name】，节点位置与视口已完整继承')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showRenameCanvasDialog(GraphCanvas currentCanvas) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController(text: currentCanvas.name);
+    final descController = TextEditingController(
+      text: currentCanvas.description ?? '',
+    );
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重命名画布'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: '画布名称'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: '描述 (可选)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(ctx, true);
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    final newName = controller.text.trim();
+    final newDesc = descController.text.trim().isEmpty
+        ? null
+        : descController.text.trim();
+    controller.dispose();
+    descController.dispose();
+
+    if (result == true && newName.isNotEmpty && mounted) {
+      await ref
+          .read(canvasActionsProvider)
+          .rename(currentCanvas.id, newName, newDesc: newDesc);
+      if (mounted) {
+        setState(() => _graphRevision++);
+        messenger.showSnackBar(SnackBar(content: Text('画布已重命名为【$newName】')));
+      }
+    }
+  }
+
+  Future<void> _setDefaultCanvas(GraphCanvas canvas) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(canvasActionsProvider).setDefault(widget.worldId, canvas.id);
+    if (mounted) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('已将【${canvas.name}】设为默认画布')),
+      );
+    }
+  }
+
+  Future<void> _showDeleteCanvasDialog(
+    GraphCanvas canvas,
+    List<GraphCanvas> allCanvases,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (allCanvases.length <= 1) {
+      messenger.showSnackBar(const SnackBar(content: Text('不能删除唯一的画布')));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('删除画布【${canvas.name}】？'),
+        content: const Text(
+          '此操作将移除该画布下的节点位置与视口排版，但绝不会删除世界观中的任何人物档案和角色关系数据。\n\n确认删除吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final remaining = allCanvases.where((c) => c.id != canvas.id).toList();
+      final nextCanvas = remaining.firstWhere(
+        (c) => c.isDefault,
+        orElse: () => remaining.first,
+      );
+
+      await ref.read(canvasActionsProvider).delete(canvas.id);
+
+      if (mounted) {
+        await _switchToCanvas(nextCanvas);
+        messenger.showSnackBar(
+          SnackBar(content: Text('画布【${canvas.name}】已安全删除，人物与关系数据已保留')),
+        );
+      }
+    }
+  }
+
+  Widget _buildCanvasSelector(List<GraphCanvas> canvases, bool isDark) {
+    if (canvases.isEmpty) {
+      return const Text('关系图');
+    }
+
+    final currentCanvas = canvases.firstWhere(
+      (c) => c.id == _selectedCanvasId,
+      orElse: () => canvases.first,
+    );
+
+    return PopupMenuButton<String>(
+      tooltip: '切换或管理画布',
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.palette_outlined,
+              size: 16,
+              color: AppColors.brand,
+            ),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Text(
+                currentCanvas.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (currentCanvas.isDefault) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.brand.withAlpha(isDark ? 50 : 25),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  '默认',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down, size: 18),
+          ],
+        ),
+      ),
+      itemBuilder: (context) {
+        return [
+          const PopupMenuItem<String>(
+            enabled: false,
+            child: Text(
+              '当前世界观画布',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          ...canvases.map((c) {
+            final isSelected = c.id == currentCanvas.id;
+            return PopupMenuItem<String>(
+              value: 'select_${c.id}',
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: isSelected ? AppColors.brand : Colors.grey,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      c.name,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isSelected ? AppColors.brand : null,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (c.isDefault)
+                    const Text(
+                      '默认',
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                ],
+              ),
+            );
+          }),
+          const PopupMenuDivider(),
+          const PopupMenuItem<String>(
+            value: 'action_new',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.add_rounded, size: 20),
+              title: Text('新建画布...'),
+            ),
+          ),
+          const PopupMenuItem<String>(
+            value: 'action_duplicate',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.copy_rounded, size: 18),
+              title: Text('复制当前画布...'),
+            ),
+          ),
+          const PopupMenuItem<String>(
+            value: 'action_rename',
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.drive_file_rename_outline_rounded, size: 18),
+              title: Text('重命名画布...'),
+            ),
+          ),
+          if (!currentCanvas.isDefault)
+            const PopupMenuItem<String>(
+              value: 'action_set_default',
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.star_outline_rounded, size: 18),
+                title: Text('设为默认画布'),
+              ),
+            ),
+          if (canvases.length > 1)
+            const PopupMenuItem<String>(
+              value: 'action_delete',
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: Colors.redAccent,
+                ),
+                title: Text('删除此画布', style: TextStyle(color: Colors.redAccent)),
+              ),
+            ),
+        ];
+      },
+      onSelected: (val) {
+        if (val.startsWith('select_')) {
+          final id = int.tryParse(val.replaceFirst('select_', ''));
+          if (id != null) {
+            final target = canvases.firstWhere((c) => c.id == id);
+            _switchToCanvas(target);
+          }
+        } else if (val == 'action_new') {
+          _showNewCanvasDialog();
+        } else if (val == 'action_duplicate') {
+          _showDuplicateCanvasDialog(currentCanvas);
+        } else if (val == 'action_rename') {
+          _showRenameCanvasDialog(currentCanvas);
+        } else if (val == 'action_set_default') {
+          _setDefaultCanvas(currentCanvas);
+        } else if (val == 'action_delete') {
+          _showDeleteCanvasDialog(currentCanvas, canvases);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final charactersAsync =
-        ref.watch(charactersByWorldProvider(widget.worldId));
-    final relationsAsync =
-        ref.watch(relationsByWorldProvider(widget.worldId));
-    final layoutsAsync =
-        ref.watch(graphLayoutsProvider(widget.worldId));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.worldId),
+    );
+    final relationsAsync = ref.watch(relationsByWorldProvider(widget.worldId));
+    final canvasesAsync = ref.watch(canvasesByWorldProvider(widget.worldId));
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final canvases = canvasesAsync.valueOrNull ?? [];
+    if (canvases.isEmpty &&
+        !canvasesAsync.isLoading &&
+        !_hasEnsuredDefaultCanvas) {
+      _hasEnsuredDefaultCanvas = true;
+      Future.microtask(() async {
+        if (mounted) {
+          final def = await ref
+              .read(canvasActionsProvider)
+              .ensureDefault(widget.worldId);
+          if (mounted && _selectedCanvasId == null) {
+            setState(() {
+              _selectedCanvasId = def.id;
+            });
+          }
+        }
+      });
+    } else if (canvases.isNotEmpty && _selectedCanvasId == null) {
+      final defaultCanvas = canvases.firstWhere(
+        (c) => c.isDefault,
+        orElse: () => canvases.first,
+      );
+      _selectedCanvasId = defaultCanvas.id;
+      _transformController.value = _matrixFromViewport(
+        defaultCanvas.viewportX,
+        defaultCanvas.viewportY,
+        defaultCanvas.zoomScale,
+      );
+      if (defaultCanvas.filterConfig != null &&
+          defaultCanvas.filterConfig!.isNotEmpty) {
+        _filterState = RelationFilterState.fromJsonString(
+          defaultCanvas.filterConfig!,
+        );
+      }
+    }
+
+    final layoutsAsync = _selectedCanvasId != null
+        ? ref.watch(layoutsByCanvasProvider(_selectedCanvasId!))
+        : ref.watch(graphLayoutsProvider(widget.worldId));
+
+    final scaffold = Scaffold(
       appBar: AppBar(
-        title: const Text('关系图'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('关系图'),
+            const SizedBox(width: 10),
+            _buildCanvasSelector(canvases, isDark),
+          ],
+        ),
         actions: [
+          ListenableBuilder(
+            listenable: _historyManager,
+            builder: (context, _) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.undo_rounded),
+                    tooltip: _historyManager.canUndo
+                        ? '撤销: ${_historyManager.undoDescription} (Ctrl+Z)'
+                        : '撤销 (Ctrl+Z)',
+                    onPressed: _historyManager.canUndo
+                        ? () => _historyManager.undo()
+                        : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.redo_rounded),
+                    tooltip: _historyManager.canRedo
+                        ? '重做: ${_historyManager.redoDescription} (Ctrl+Y)'
+                        : '重做 (Ctrl+Y)',
+                    onPressed: _historyManager.canRedo
+                        ? () => _historyManager.redo()
+                        : null,
+                  ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add_link),
             tooltip: '添加人物关系',
@@ -951,13 +2006,105 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.download_rounded),
-            tooltip: '导出为图片 (PNG)',
+            icon: const Icon(Icons.route_rounded),
+            tooltip: '人脉寻径 (最短关系链路分析)',
             onPressed: () {
               final chars = charactersAsync.valueOrNull ?? [];
               final rels = relationsAsync.valueOrNull ?? [];
-              _exportToImage(chars, rels);
+              showDialog(
+                context: context,
+                builder: (_) => RelationPathDialog(
+                  characters: chars,
+                  relations: rels,
+                  onHighlightPath: (pathResult) {
+                    setState(() {
+                      _filterState = _filterState.copyWith(
+                        highlightedPath: () => pathResult,
+                      );
+                      _graphRevision++;
+                    });
+                    _persistCurrentFilterConfig();
+                  },
+                ),
+              );
             },
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.auto_awesome_mosaic_rounded),
+            tooltip: '智能排版算法与布局',
+            onSelected: (modeStr) {
+              if (modeStr == 'undo') {
+                _undoAutoLayout();
+                return;
+              }
+              final chars = charactersAsync.valueOrNull ?? [];
+              final rels = relationsAsync.valueOrNull ?? [];
+              final mode = AutoLayoutMode.values.firstWhere(
+                (m) => m.name == modeStr,
+              );
+              _applyAutoLayout(mode, chars, rels);
+            },
+            itemBuilder: (context) => [
+              for (final m in AutoLayoutMode.values)
+                PopupMenuItem(
+                  value: m.name,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hub_outlined, size: 18),
+                      const SizedBox(width: 8),
+                      Text(m.label),
+                    ],
+                  ),
+                ),
+              if (_layoutSnapshotBeforeAuto != null) ...[
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'undo',
+                  child: Row(
+                    children: [
+                      Icon(Icons.undo_rounded, size: 18, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('撤销排版恢复', style: TextStyle(color: Colors.orange)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.download_rounded),
+            tooltip: '导出关系图谱',
+            onSelected: (value) {
+              final chars = charactersAsync.valueOrNull ?? [];
+              final rels = relationsAsync.valueOrNull ?? [];
+              if (value == 'png') {
+                _exportToImage(chars, rels);
+              } else if (value == 'svg') {
+                _exportToSvg(chars, rels);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'png',
+                child: Row(
+                  children: [
+                    Icon(Icons.image_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('导出为高清图片 (PNG)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'svg',
+                child: Row(
+                  children: [
+                    Icon(Icons.polyline_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text('导出为矢量图谱 (SVG)'),
+                  ],
+                ),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.restore),
@@ -1025,7 +2172,9 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                               const Divider(height: 1),
                               Expanded(
                                 child: ListView.builder(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   itemCount: characters.length,
                                   itemBuilder: (context, index) {
                                     final c = characters[index];
@@ -1035,21 +2184,31 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                                         : theme.colorScheme.primary;
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       child: Draggable<int>(
                                         data: c.id,
                                         feedback: Material(
                                           elevation: 6,
                                           child: _buildShape(
-                                            c.gender, 28, color, c.name),
+                                            c.gender,
+                                            28,
+                                            color,
+                                            c.name,
+                                          ),
                                         ),
                                         childWhenDragging: Opacity(
                                           opacity: 0.3,
                                           child: _SidebarItem(
-                                              character: c, placed: placed),
+                                            character: c,
+                                            placed: placed,
+                                          ),
                                         ),
                                         child: _SidebarItem(
-                                            character: c, placed: placed),
+                                          character: c,
+                                          placed: placed,
+                                        ),
                                       ),
                                     );
                                   },
@@ -1067,150 +2226,314 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final viewport = Size(
-                        constraints.maxWidth, constraints.maxHeight);
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    _currentViewport = viewport;
                     final canvasSize = Size(
                       max(viewport.width, 2000),
                       max(viewport.height, 2000),
                     );
 
-                    return DragTarget<int>(
-                      onAcceptWithDetails: (details) {
-                        final renderBox = context.findRenderObject()
-                            as RenderBox;
-                        final localPos =
-                            renderBox.globalToLocal(details.offset);
-                        _dropCharacter(details.data, localPos);
-                      },
-                      builder: (context, candidateData, rejectedData) {
-                        return InteractiveViewer(
-                          transformationController: _transformController,
-                          boundaryMargin: const EdgeInsets.all(500),
-                          minScale: 0.1,
-                          maxScale: 3.0,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onTapUp: (details) {
-                              _handleCanvasTap(
-                                details.localPosition,
-                                relations,
-                                characters,
-                              );
-                            },
-                            child: Container(
-                              width: canvasSize.width,
-                              height: canvasSize.height,
-                              color: theme
-                                  .colorScheme.surfaceContainerLowest,
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: CustomPaint(
-                                      painter: _GridPainter(
-                                        color: theme
-                                            .colorScheme.outlineVariant
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                    ),
-                                  ),
-                                  CustomPaint(
-                                    size: canvasSize,
-                                    painter: _RelationPainter(
-                                      relations: relations,
-                                      positions: _positions,
-                                      characters: characters,
-                                      revision: _graphRevision,
-                                      selectedRelationId: _selectedRelationId,
-                                      isDark:
-                                          theme.brightness == Brightness.dark,
-                                    ),
-                                  ),
-                                // 拖拽创建关系时的实时连线预览
-                                if (_connectingFromId != null &&
-                                    _connectingCurrentPos != null &&
-                                    _positions.containsKey(_connectingFromId))
-                                  CustomPaint(
-                                    size: canvasSize,
-                                    painter: _ConnectingLinePainter(
-                                      from: _positions[_connectingFromId]!,
-                                      to: _connectingCurrentPos!,
-                                      color: AppColors.brand,
-                                    ),
-                                  ),
-                                for (var character in characters)
-                                  if (_positions.containsKey(character.id))
-                                    _DraggableNode(
-                                      character: character,
-                                      position:
-                                          _positions[character.id]!,
-                                      allCharacters: characters,
-                                      relations: relations,
-                                      onDragUpdate: (newPos) {
-                                        setState(() {
-                                          _positions[character.id] =
-                                              newPos;
-                                          _graphRevision++;
-                                        });
-                                      },
-                                      onDragEnd: (newPos) {
-                                        _savePosition(
-                                            character.id, newPos);
-                                      },
-                                      onConnectStart: (startPos) =>
-                                          _onStartConnecting(
-                                              character.id, startPos),
-                                      onConnectUpdate: _onUpdateConnecting,
-                                      onConnectEnd: () =>
-                                          _onEndConnecting(characters),
-                                      onRemove: () =>
-                                          _removeFromCanvas(character.id),
-                                      onManageRelations: () =>
-                                          _showRelationManager(
-                                              character,
-                                              characters,
-                                              relations),
-                                      onEdit: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => CharacterDialog(
-                                            worldId: widget.worldId,
-                                            character: character,
+                    return Stack(
+                      children: [
+                        DragTarget<int>(
+                          onAcceptWithDetails: (details) {
+                            final renderBox =
+                                context.findRenderObject() as RenderBox;
+                            final localPos = renderBox.globalToLocal(
+                              details.offset,
+                            );
+                            final charName =
+                                characters
+                                    .where((c) => c.id == details.data)
+                                    .map((c) => c.name)
+                                    .firstOrNull ??
+                                '';
+                            _dropCharacter(
+                              details.data,
+                              localPos,
+                              characterName: charName,
+                            );
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return InteractiveViewer(
+                              transformationController: _transformController,
+                              boundaryMargin: const EdgeInsets.all(500),
+                              minScale: 0.1,
+                              maxScale: 3.0,
+                              onInteractionEnd: (_) =>
+                                  _persistCurrentViewport(),
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTapUp: (details) {
+                                  _handleCanvasTap(
+                                    details.localPosition,
+                                    relations,
+                                    characters,
+                                  );
+                                },
+                                child: Container(
+                                  width: canvasSize.width,
+                                  height: canvasSize.height,
+                                  color:
+                                      theme.colorScheme.surfaceContainerLowest,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: CustomPaint(
+                                          painter: _GridPainter(
+                                            color: theme
+                                                .colorScheme
+                                                .outlineVariant
+                                                .withValues(alpha: 0.3),
                                           ),
-                                        ).then((_) {
-                                          ref.invalidate(
-                                              charactersByWorldProvider(
-                                                  widget.worldId));
-                                        });
-                                      },
-                                    ),
-                                if (candidateData.isNotEmpty)
-                                  Center(
-                                    child: Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 24,
-                                              vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '松开放置人物',
-                                        style: TextStyle(
-                                          color: theme
-                                              .colorScheme.primary,
-                                          fontSize: 16,
                                         ),
                                       ),
-                                    ),
+                                      CustomPaint(
+                                        size: canvasSize,
+                                        painter: _RelationPainter(
+                                          relations: relations,
+                                          positions: _positions,
+                                          characters: characters,
+                                          revision: _graphRevision,
+                                          selectedRelationId:
+                                              _selectedRelationId,
+                                          isDark:
+                                              theme.brightness ==
+                                              Brightness.dark,
+                                          filterState: _filterState,
+                                        ),
+                                      ),
+                                      // 拖拽创建关系时的实时连线预览
+                                      if (_connectingFromId != null &&
+                                          _connectingCurrentPos != null &&
+                                          _positions.containsKey(
+                                            _connectingFromId,
+                                          ))
+                                        CustomPaint(
+                                          size: canvasSize,
+                                          painter: _ConnectingLinePainter(
+                                            from:
+                                                _positions[_connectingFromId]!,
+                                            to: _connectingCurrentPos!,
+                                            color: AppColors.brand,
+                                          ),
+                                        ),
+                                      for (var character in characters)
+                                        if (_positions.containsKey(
+                                          character.id,
+                                        ))
+                                          _DraggableNode(
+                                            character: character,
+                                            position: _positions[character.id]!,
+                                            allCharacters: characters,
+                                            relations: relations,
+                                            isPathHighlighted:
+                                                _filterState
+                                                    .highlightedPath
+                                                    ?.nodePath
+                                                    .contains(character.id) ??
+                                                false,
+                                            isDimmed:
+                                                _filterState.highlightedPath !=
+                                                    null &&
+                                                !(_filterState
+                                                    .highlightedPath!
+                                                    .nodePath
+                                                    .contains(character.id)),
+                                            onDragStart: (startPos) {
+                                              _nodeDragStartPositions[character
+                                                      .id] =
+                                                  startPos;
+                                            },
+                                            onDragUpdate: (newPos) {
+                                              setState(() {
+                                                _positions[character.id] =
+                                                    newPos;
+                                                _graphRevision++;
+                                              });
+                                            },
+                                            onDragEnd: (newPos) {
+                                              final startPos =
+                                                  _nodeDragStartPositions
+                                                      .remove(character.id) ??
+                                                  _positions[character.id];
+                                              _savePosition(
+                                                character.id,
+                                                newPos,
+                                              );
+                                              if (startPos != null &&
+                                                  ((startPos.dx - newPos.dx)
+                                                              .abs() >
+                                                          0.5 ||
+                                                      (startPos.dy - newPos.dy)
+                                                              .abs() >
+                                                          0.5)) {
+                                                final targetCanvasId =
+                                                    _selectedCanvasId;
+                                                _historyManager.record(
+                                                  MoveNodeCommand(
+                                                    characterId: character.id,
+                                                    characterName:
+                                                        character.name,
+                                                    oldPos: startPos,
+                                                    newPos: newPos,
+                                                    onUpdateMemory: (id, pos) {
+                                                      if (!mounted) return;
+                                                      setState(() {
+                                                        _positions[id] = pos;
+                                                        _graphRevision++;
+                                                      });
+                                                    },
+                                                    onPersist: (id, pos) async {
+                                                      await ref
+                                                          .read(
+                                                            graphLayoutActionsProvider,
+                                                          )
+                                                          .savePosition(
+                                                            widget.worldId,
+                                                            id,
+                                                            pos.dx,
+                                                            pos.dy,
+                                                            canvasId:
+                                                                targetCanvasId,
+                                                          );
+                                                    },
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            onConnectStart: (startPos) =>
+                                                _onStartConnecting(
+                                                  character.id,
+                                                  startPos,
+                                                ),
+                                            onConnectUpdate:
+                                                _onUpdateConnecting,
+                                            onConnectEnd: () =>
+                                                _onEndConnecting(characters),
+                                            onRemove: () => _removeFromCanvas(
+                                              character.id,
+                                              characterName: character.name,
+                                            ),
+                                            onManageRelations: () =>
+                                                _showRelationManager(
+                                                  character,
+                                                  characters,
+                                                  relations,
+                                                ),
+                                            onEdit: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (_) => CharacterDialog(
+                                                  worldId: widget.worldId,
+                                                  character: character,
+                                                ),
+                                              ).then((_) {
+                                                ref.invalidate(
+                                                  charactersByWorldProvider(
+                                                    widget.worldId,
+                                                  ),
+                                                );
+                                              });
+                                            },
+                                          ),
+                                      if (candidateData.isNotEmpty)
+                                        Center(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '松开放置人物',
+                                              style: TextStyle(
+                                                color:
+                                                    theme.colorScheme.primary,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                              ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        if (_filterState.hasActiveFilter)
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(24),
+                              color: theme.colorScheme.surfaceContainerHigh,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.alt_route,
+                                      size: 18,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _filterState.highlightedPath != null
+                                          ? '最短路径: ${_filterState.highlightedPath!.hopCount} 步跃迁'
+                                          : '已应用过滤条件',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(Icons.close, size: 16),
+                                      tooltip: '清除高亮',
+                                      onPressed: () {
+                                        setState(() {
+                                          _filterState =
+                                              const RelationFilterState();
+                                        });
+                                        _persistCurrentFilterConfig();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
+                        // GRAPH-005: 悬浮全局导览小地图
+                        Positioned(
+                          bottom: 16,
+                          right: 16,
+                          child: GraphMinimap(
+                            positions: _positions,
+                            characters: characters,
+                            relations: relations,
+                            transformController: _transformController,
+                            viewportSize: viewport,
+                            isDark: theme.brightness == Brightness.dark,
+                            onNavigate: _navigateToPosition,
+                          ),
                         ),
-                      );
-                      },
+                      ],
                     );
                   },
                 ),
@@ -1221,6 +2544,45 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('错误: $error')),
       ),
+    );
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () {
+          if (!_isEditingText() && _historyManager.canUndo) {
+            _historyManager.undo();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true): () {
+          if (!_isEditingText() && _historyManager.canUndo) {
+            _historyManager.undo();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): () {
+          if (!_isEditingText() && _historyManager.canRedo) {
+            _historyManager.redo();
+          }
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): () {
+          if (!_isEditingText() && _historyManager.canRedo) {
+            _historyManager.redo();
+          }
+        },
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          meta: true,
+          shift: true,
+        ): () {
+          if (!_isEditingText() && _historyManager.canRedo) {
+            _historyManager.redo();
+          }
+        },
+      },
+      child: Focus(autofocus: true, child: scaffold),
     );
   }
 }
@@ -1241,22 +2603,28 @@ Widget _buildShape(String gender, double size, Color color, String label) {
         borderRadius: BorderRadius.circular(4),
       ),
       alignment: Alignment.center,
-      child: Text(text,
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: half * 0.75,
-              fontWeight: FontWeight.bold)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: half * 0.75,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   } else if (gender == '女') {
     // 圆形
     return CircleAvatar(
       radius: half,
       backgroundColor: color,
-      child: Text(text,
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: half * 0.75,
-              fontWeight: FontWeight.bold)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: half * 0.75,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   } else {
     // 菱形
@@ -1272,11 +2640,14 @@ Widget _buildShape(String gender, double size, Color color, String label) {
         alignment: Alignment.center,
         child: Transform.rotate(
           angle: -pi / 4,
-          child: Text(text,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: half * 0.65,
-                  fontWeight: FontWeight.bold)),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: half * 0.65,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
     );
@@ -1309,9 +2680,7 @@ class _SidebarItem extends StatelessWidget {
             character.name,
             style: TextStyle(
               fontSize: 11,
-              color: placed
-                  ? theme.colorScheme.onSurfaceVariant
-                  : null,
+              color: placed ? theme.colorScheme.onSurfaceVariant : null,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1329,6 +2698,7 @@ class _DraggableNode extends StatefulWidget {
   final Offset position;
   final List<Character> allCharacters;
   final List<Relation> relations;
+  final ValueChanged<Offset>? onDragStart;
   final ValueChanged<Offset> onDragUpdate;
   final ValueChanged<Offset> onDragEnd;
   final ValueChanged<Offset>? onConnectStart;
@@ -1337,12 +2707,15 @@ class _DraggableNode extends StatefulWidget {
   final VoidCallback onRemove;
   final VoidCallback onManageRelations;
   final VoidCallback onEdit;
+  final bool isPathHighlighted;
+  final bool isDimmed;
 
   const _DraggableNode({
     required this.character,
     required this.position,
     required this.allCharacters,
     required this.relations,
+    this.onDragStart,
     required this.onDragUpdate,
     required this.onDragEnd,
     this.onConnectStart,
@@ -1351,6 +2724,8 @@ class _DraggableNode extends StatefulWidget {
     required this.onRemove,
     required this.onManageRelations,
     required this.onEdit,
+    this.isPathHighlighted = false,
+    this.isDimmed = false,
   });
 
   @override
@@ -1412,9 +2787,11 @@ class _DraggableNodeState extends State<_DraggableNode> {
           onTap: widget.onRemove,
           child: Row(
             children: [
-              Icon(Icons.remove_circle_outline,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.error),
+              Icon(
+                Icons.remove_circle_outline,
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              ),
               const SizedBox(width: 8),
               const Text('移回侧栏'),
             ],
@@ -1448,6 +2825,7 @@ class _DraggableNodeState extends State<_DraggableNode> {
                   localPosition: details.localPosition,
                 ),
               ),
+              onPanStart: (_) => widget.onDragStart?.call(_pos),
               onPanUpdate: (details) {
                 setState(() {
                   _pos += details.delta;
@@ -1457,22 +2835,53 @@ class _DraggableNodeState extends State<_DraggableNode> {
               onPanEnd: (_) {
                 widget.onDragEnd(_pos);
               },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildShape(widget.character.gender, 24, color, name),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: 64,
-                    child: Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              child: Opacity(
+                opacity: widget.isDimmed ? 0.25 : 1.0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (widget.isPathHighlighted)
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.brand.withValues(alpha: 0.7),
+                                  blurRadius: 18,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        _buildShape(widget.character.gender, 24, color, name),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: widget.isPathHighlighted
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: widget.isPathHighlighted
+                              ? AppColors.brand
+                              : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             // 节点连接手柄：鼠标悬停在节点上时浮现
@@ -1599,6 +3008,7 @@ class _RelationPainter extends CustomPainter {
   final int revision;
   final int? selectedRelationId;
   final bool isDark;
+  final RelationFilterState? filterState;
 
   _RelationPainter({
     required this.relations,
@@ -1607,7 +3017,37 @@ class _RelationPainter extends CustomPainter {
     required this.revision,
     this.selectedRelationId,
     this.isDark = false,
+    this.filterState,
   });
+
+  bool _isRelInPath(Relation rel) {
+    final path = filterState?.highlightedPath;
+    if (path == null) return false;
+    return path.edgePath.any(
+      (e) =>
+          (e.fromCharacterId == rel.fromCharacterId &&
+              e.toCharacterId == rel.toCharacterId) ||
+          (rel.isBidirectional &&
+              e.fromCharacterId == rel.toCharacterId &&
+              e.toCharacterId == rel.fromCharacterId),
+    );
+  }
+
+  bool _isRelDimmed(Relation rel) {
+    if (filterState == null || !filterState!.hasActiveFilter) return false;
+    if (filterState!.highlightedPath != null) {
+      return !_isRelInPath(rel);
+    }
+    if (filterState!.selectedRelationType != null &&
+        rel.relationType != filterState!.selectedRelationType) {
+      return true;
+    }
+    if (filterState!.selectedGroupId != null &&
+        rel.relationGroupId != filterState!.selectedGroupId.toString()) {
+      return true;
+    }
+    return false;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1634,9 +3074,7 @@ class _RelationPainter extends CustomPainter {
       final key = _pairKey(rel.fromCharacterId, rel.toCharacterId);
       if (rel.relationGroupId != null &&
           _familyTypes.contains(rel.relationType)) {
-        familyGroups
-            .putIfAbsent(rel.relationGroupId!, () => [])
-            .add(rel);
+        familyGroups.putIfAbsent(rel.relationGroupId!, () => []).add(rel);
       } else {
         normalGroups.putIfAbsent(key, () => []).add(rel);
       }
@@ -1644,12 +3082,24 @@ class _RelationPainter extends CustomPainter {
 
     // 绘制家谱
     for (final entry in familyGroups.entries) {
-      _drawFamilyGroup(canvas, textPainter, linePaint, entry.value, characterMap);
+      _drawFamilyGroup(
+        canvas,
+        textPainter,
+        linePaint,
+        entry.value,
+        characterMap,
+      );
     }
 
     // 绘制普通关系
     for (final entry in normalGroups.entries) {
-      _drawNormalGroup(canvas, textPainter, linePaint, entry.value, characterMap);
+      _drawNormalGroup(
+        canvas,
+        textPainter,
+        linePaint,
+        entry.value,
+        characterMap,
+      );
     }
   }
 
@@ -1674,16 +3124,27 @@ class _RelationPainter extends CustomPainter {
       }
     }
 
-    final parents =
-        parentIds.map((id) => positions[id]).whereType<Offset>().toList();
-    final children =
-        childIds.map((id) => positions[id]).whereType<Offset>().toList();
+    final parents = parentIds
+        .map((id) => positions[id])
+        .whereType<Offset>()
+        .toList();
+    final children = childIds
+        .map((id) => positions[id])
+        .whereType<Offset>()
+        .toList();
 
     if (parents.isEmpty || children.isEmpty) return;
 
-    final color = Colors.blue.shade300;
+    final isPathHit = group.any(_isRelInPath);
+    final isDimmed = group.every(_isRelDimmed);
+    Color color = Colors.blue.shade300;
+    if (isPathHit) {
+      color = AppColors.brand;
+    } else if (isDimmed) {
+      color = color.withValues(alpha: 0.15);
+    }
     paint.color = color;
-    paint.strokeWidth = 2.0;
+    paint.strokeWidth = isPathHit ? 3.5 : (isDimmed ? 1.0 : 2.0);
 
     final childYs = children.map((c) => c.dy).toList();
     final minChildY = childYs.reduce(min);
@@ -1793,8 +3254,9 @@ class _RelationPainter extends CustomPainter {
       tp,
       relType,
       Offset(parentMid.dx, parentMid.dy + 16),
-      isSelected: isSelected,
+      isSelected: isSelected || isPathHit,
       isDark: isDark,
+      isDimmed: isDimmed && !isPathHit && !isSelected,
     );
   }
 
@@ -1818,13 +3280,23 @@ class _RelationPainter extends CustomPainter {
     for (var i = 0; i < count; i++) {
       final rel = group[i];
       final isSelected = (rel.id == selectedRelationId);
-      final color = isSelected
+      final isPathHit = _isRelInPath(rel);
+      final isDimmed = _isRelDimmed(rel);
+
+      Color color = isSelected || isPathHit
           ? AppColors.brand
           : (rel.isBidirectional
-              ? Colors.blue.shade300
-              : Colors.orange.shade300);
+                ? Colors.blue.shade300
+                : Colors.orange.shade300);
+
+      if (isDimmed && !isPathHit && !isSelected) {
+        color = color.withValues(alpha: 0.15);
+      }
+
       paint.color = color;
-      paint.strokeWidth = isSelected ? 3.0 : 2.0;
+      paint.strokeWidth = isSelected || isPathHit
+          ? 3.5
+          : (isDimmed ? 1.0 : 2.0);
 
       final isReversed = (rel.fromCharacterId != baseFromId);
 
@@ -1847,7 +3319,7 @@ class _RelationPainter extends CustomPainter {
           toGender: toGender,
         );
 
-        if (isSelected) {
+        if (isSelected || isPathHit) {
           final haloPaint = Paint()
             ..color = AppColors.brand.withValues(alpha: 0.35)
             ..strokeWidth = 7.0
@@ -1874,8 +3346,9 @@ class _RelationPainter extends CustomPainter {
           tp,
           rel.relationType,
           mid,
-          isSelected: isSelected,
+          isSelected: isSelected || isPathHit,
           isDark: isDark,
+          isDimmed: isDimmed && !isPathHit && !isSelected,
         );
       } else {
         final cp = Offset(
@@ -1906,7 +3379,7 @@ class _RelationPainter extends CustomPainter {
           ..moveTo(p1.dx, p1.dy)
           ..quadraticBezierTo(adjCp.dx, adjCp.dy, p2.dx, p2.dy);
 
-        if (isSelected) {
+        if (isSelected || isPathHit) {
           final haloPaint = Paint()
             ..color = AppColors.brand.withValues(alpha: 0.35)
             ..strokeWidth = 7.0
@@ -1928,10 +3401,12 @@ class _RelationPainter extends CustomPainter {
         }
 
         const t = 0.5;
-        final labelX = (1 - t) * (1 - t) * p1.dx +
+        final labelX =
+            (1 - t) * (1 - t) * p1.dx +
             2 * (1 - t) * t * adjCp.dx +
             t * t * p2.dx;
-        final labelY = (1 - t) * (1 - t) * p1.dy +
+        final labelY =
+            (1 - t) * (1 - t) * p1.dy +
             2 * (1 - t) * t * adjCp.dy +
             t * t * p2.dy;
         _drawLabel(
@@ -1939,8 +3414,9 @@ class _RelationPainter extends CustomPainter {
           tp,
           rel.relationType,
           Offset(labelX, labelY),
-          isSelected: isSelected,
+          isSelected: isSelected || isPathHit,
           isDark: isDark,
+          isDimmed: isDimmed && !isPathHit && !isSelected,
         );
       }
     }
@@ -1959,16 +3435,26 @@ class _RelationPainter extends CustomPainter {
     Offset center, {
     bool isSelected = false,
     bool isDark = false,
+    bool isDimmed = false,
   }) {
-    final textColor = isSelected
-        ? AppColors.brand
-        : (isDark ? Colors.white70 : Colors.grey.shade800);
-    final bgColor = isSelected
-        ? (isDark ? AppColors.brand.withValues(alpha: 0.25) : AppColors.brandLight)
-        : (isDark ? const Color(0xFF2C2C2E) : Colors.white);
-    final borderColor = isSelected
-        ? AppColors.brand
-        : (isDark ? const Color(0xFF3A3A3C) : Colors.grey.shade300);
+    final alphaMultiplier = isDimmed ? 0.25 : 1.0;
+    final textColor =
+        (isSelected
+                ? AppColors.brand
+                : (isDark ? Colors.white70 : Colors.grey.shade800))
+            .withValues(alpha: alphaMultiplier);
+    final bgColor =
+        (isSelected
+                ? (isDark
+                      ? AppColors.brand.withValues(alpha: 0.25)
+                      : AppColors.brandLight)
+                : (isDark ? const Color(0xFF2C2C2E) : Colors.white))
+            .withValues(alpha: alphaMultiplier);
+    final borderColor =
+        (isSelected
+                ? AppColors.brand
+                : (isDark ? const Color(0xFF3A3A3C) : Colors.grey.shade300))
+            .withValues(alpha: alphaMultiplier);
 
     tp.text = TextSpan(
       text: text,
@@ -2022,8 +3508,7 @@ class _RelationPainter extends CustomPainter {
     _drawArrowDir(canvas, to, (to - from).direction, color);
   }
 
-  void _drawArrowDir(
-      Canvas canvas, Offset pos, double direction, Color color) {
+  void _drawArrowDir(Canvas canvas, Offset pos, double direction, Color color) {
     const arrowSize = 10.0;
     const arrowAngle = 0.5;
 
@@ -2054,6 +3539,7 @@ class _RelationPainter extends CustomPainter {
       old.relations != relations ||
       old.positions != positions ||
       old.selectedRelationId != selectedRelationId ||
+      old.filterState != filterState ||
       old.isDark != isDark;
 }
 
@@ -2075,7 +3561,8 @@ Map<int, Offset> calculateRelationLabelCenters({
     final maxId = max(rel.fromCharacterId, rel.toCharacterId);
     final key = '$minId-$maxId';
 
-    if (rel.relationGroupId != null && _familyTypes.contains(rel.relationType)) {
+    if (rel.relationGroupId != null &&
+        _familyTypes.contains(rel.relationType)) {
       familyGroups.putIfAbsent(rel.relationGroupId!, () => []).add(rel);
     } else {
       normalGroups.putIfAbsent(key, () => []).add(rel);
@@ -2090,11 +3577,17 @@ Map<int, Offset> calculateRelationLabelCenters({
         parentIds.add(rel.fromCharacterId);
       }
     }
-    final parents = parentIds.map((id) => positions[id]).whereType<Offset>().toList();
+    final parents = parentIds
+        .map((id) => positions[id])
+        .whereType<Offset>()
+        .toList();
     if (parents.isEmpty) continue;
 
     final parentMid = parents.length >= 2
-        ? Offset((parents[0].dx + parents[1].dx) / 2, (parents[0].dy + parents[1].dy) / 2)
+        ? Offset(
+            (parents[0].dx + parents[1].dx) / 2,
+            (parents[0].dy + parents[1].dy) / 2,
+          )
         : parents[0];
     final labelOffset = Offset(parentMid.dx, parentMid.dy + 16);
     for (final rel in group) {
@@ -2127,8 +3620,14 @@ Map<int, Offset> calculateRelationLabelCenters({
           (from.dy + to.dy) / 2 + ny * offset,
         );
         const t = 0.5;
-        final labelX = (1 - t) * (1 - t) * from.dx + 2 * (1 - t) * t * cp.dx + t * t * to.dx;
-        final labelY = (1 - t) * (1 - t) * from.dy + 2 * (1 - t) * t * cp.dy + t * t * to.dy;
+        final labelX =
+            (1 - t) * (1 - t) * from.dx +
+            2 * (1 - t) * t * cp.dx +
+            t * t * to.dx;
+        final labelY =
+            (1 - t) * (1 - t) * from.dy +
+            2 * (1 - t) * t * cp.dy +
+            t * t * to.dy;
         centers[rel.id] = Offset(labelX, labelY);
       }
     }
@@ -2139,13 +3638,4 @@ Map<int, Offset> calculateRelationLabelCenters({
 
 const _familyTypes = ['亲子', '父母', '父女', '父子', '母子', '母女', '家人'];
 
-const _relationTypes = [
-  '亲属',
-  '朋友',
-  '恋人',
-  '师徒',
-  '敌对',
-  '宿敌',
-  '同事',
-  '其他',
-];
+const _relationTypes = ['亲属', '朋友', '恋人', '师徒', '敌对', '宿敌', '同事', '其他'];

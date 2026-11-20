@@ -50,11 +50,7 @@ class EmptyStateView extends StatelessWidget {
                       : AppColors.brand.withValues(alpha: 0.15),
                 ),
               ),
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: AppColors.brand,
-              ),
+              child: Icon(icon, size: iconSize, color: AppColors.brand),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(

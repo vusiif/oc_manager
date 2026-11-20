@@ -15,12 +15,9 @@ import 'views/world_table_view.dart';
 import 'world_analytics_dialog.dart';
 import 'booklet_export_dialog.dart';
 import 'oc_package_dialogs.dart';
+import 'consistency_checker_dialog.dart';
 
-enum WorldViewMode {
-  cards,
-  kanban,
-  table,
-}
+enum WorldViewMode { cards, kanban, table }
 
 class WorldDetailPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -44,8 +41,9 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
   @override
   Widget build(BuildContext context) {
     final worldAsync = ref.watch(worldByIdProvider(widget.worldId));
-    final charactersAsync =
-        ref.watch(charactersByWorldProvider(widget.worldId));
+    final charactersAsync = ref.watch(
+      charactersByWorldProvider(widget.worldId),
+    );
     final groupsAsync = ref.watch(groupsByWorldProvider(widget.worldId));
 
     // 根据选中的分组过滤人物
@@ -112,8 +110,35 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
           IconButton(
             icon: const Icon(Icons.history_edu_rounded),
             tooltip: '编年史大事件',
+            onPressed: () => context.push('/world/${widget.worldId}/chronicle'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.movie_creation_outlined),
+            tooltip: '故事创作与场景分镜 (Story & Scenes)',
+            onPressed: () => context.push('/world/${widget.worldId}/story'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_stories_rounded),
+            tooltip: '世界百科 (Lore)',
+            onPressed: () => context.push('/world/${widget.worldId}/lore'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.hub_outlined),
+            tooltip: '知识网络视图 (Knowledge Network)',
             onPressed: () =>
-                context.push('/world/${widget.worldId}/chronicle'),
+                context.push('/world/${widget.worldId}/knowledge-network'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.fact_check_outlined),
+            tooltip: '设定一致性检查器',
+            onPressed: () {
+              final world = worldAsync.valueOrNull;
+              ConsistencyCheckerDialog.show(
+                context,
+                worldId: widget.worldId,
+                worldName: world?.name ?? '世界观',
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.menu_book_rounded),
@@ -224,14 +249,15 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
   }
 
   // 经典卡片流视图
-  Widget _buildClassicCards(
-      BuildContext context, List<Character> characters) {
+  Widget _buildClassicCards(BuildContext context, List<Character> characters) {
     final pinned = characters.where((c) => c.isPinned).toList();
-    final normal =
-        characters.where((c) => !c.isPinned && c.status == 0).toList();
+    final normal = characters
+        .where((c) => !c.isPinned && c.status == 0)
+        .toList();
     final drafts = characters.where((c) => c.status == 1).toList();
-    final others =
-        characters.where((c) => !c.isPinned && c.status > 1).toList();
+    final others = characters
+        .where((c) => !c.isPinned && c.status > 1)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -239,8 +265,11 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
         if (pinned.isNotEmpty) ...[
           Row(
             children: [
-              const Icon(Icons.push_pin_rounded,
-                  size: 16, color: AppColors.brand),
+              const Icon(
+                Icons.push_pin_rounded,
+                size: 16,
+                color: AppColors.brand,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 '置顶 (${pinned.length})',
@@ -253,16 +282,18 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ...pinned.map((c) => OcCard(
-                character: c,
-                onTap: () => widget.onCharacterSelected?.call(c.id),
-                onFavoriteToggle: () {
-                  ref.read(characterActionsProvider).toggleFavorite(c);
-                },
-                onPinToggle: () {
-                  ref.read(characterActionsProvider).togglePin(c);
-                },
-              )),
+          ...pinned.map(
+            (c) => OcCard(
+              character: c,
+              onTap: () => widget.onCharacterSelected?.call(c.id),
+              onFavoriteToggle: () {
+                ref.read(characterActionsProvider).toggleFavorite(c);
+              },
+              onPinToggle: () {
+                ref.read(characterActionsProvider).togglePin(c);
+              },
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
         ],
         if (normal.isNotEmpty) ...[
@@ -278,23 +309,28 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
                 ),
               ),
             ),
-          ...normal.map((c) => OcCard(
-                character: c,
-                onTap: () => widget.onCharacterSelected?.call(c.id),
-                onFavoriteToggle: () {
-                  ref.read(characterActionsProvider).toggleFavorite(c);
-                },
-                onPinToggle: () {
-                  ref.read(characterActionsProvider).togglePin(c);
-                },
-              )),
+          ...normal.map(
+            (c) => OcCard(
+              character: c,
+              onTap: () => widget.onCharacterSelected?.call(c.id),
+              onFavoriteToggle: () {
+                ref.read(characterActionsProvider).toggleFavorite(c);
+              },
+              onPinToggle: () {
+                ref.read(characterActionsProvider).togglePin(c);
+              },
+            ),
+          ),
         ],
         if (drafts.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              const Icon(Icons.lightbulb_outline_rounded,
-                  size: 16, color: Colors.grey),
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 16,
+                color: Colors.grey,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 '构思草稿 (${drafts.length})',
@@ -307,23 +343,28 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ...drafts.map((c) => OcCard(
-                character: c,
-                onTap: () => widget.onCharacterSelected?.call(c.id),
-                onFavoriteToggle: () {
-                  ref.read(characterActionsProvider).toggleFavorite(c);
-                },
-                onPinToggle: () {
-                  ref.read(characterActionsProvider).togglePin(c);
-                },
-              )),
+          ...drafts.map(
+            (c) => OcCard(
+              character: c,
+              onTap: () => widget.onCharacterSelected?.call(c.id),
+              onFavoriteToggle: () {
+                ref.read(characterActionsProvider).toggleFavorite(c);
+              },
+              onPinToggle: () {
+                ref.read(characterActionsProvider).togglePin(c);
+              },
+            ),
+          ),
         ],
         if (others.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              const Icon(Icons.inventory_2_outlined,
-                  size: 16, color: Colors.grey),
+              const Icon(
+                Icons.inventory_2_outlined,
+                size: 16,
+                color: Colors.grey,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 '定稿与归档 (${others.length})',
@@ -336,24 +377,28 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ...others.map((c) => OcCard(
-                character: c,
-                onTap: () => widget.onCharacterSelected?.call(c.id),
-                onFavoriteToggle: () {
-                  ref.read(characterActionsProvider).toggleFavorite(c);
-                },
-                onPinToggle: () {
-                  ref.read(characterActionsProvider).togglePin(c);
-                },
-              )),
+          ...others.map(
+            (c) => OcCard(
+              character: c,
+              onTap: () => widget.onCharacterSelected?.call(c.id),
+              onFavoriteToggle: () {
+                ref.read(characterActionsProvider).toggleFavorite(c);
+              },
+              onPinToggle: () {
+                ref.read(characterActionsProvider).togglePin(c);
+              },
+            ),
+          ),
         ],
       ],
     );
   }
 
   // 显示分组下的人物
-  Widget _buildGroupCharacters(BuildContext context,
-      AsyncValue<List<Character>>? charactersAsync) {
+  Widget _buildGroupCharacters(
+    BuildContext context,
+    AsyncValue<List<Character>>? charactersAsync,
+  ) {
     if (charactersAsync == null) return const SizedBox.shrink();
 
     return charactersAsync.when(
@@ -371,16 +416,18 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: characters
-              .map((c) => OcCard(
-                    character: c,
-                    onTap: () => widget.onCharacterSelected?.call(c.id),
-                    onFavoriteToggle: () {
-                      ref.read(characterActionsProvider).toggleFavorite(c);
-                    },
-                    onPinToggle: () {
-                      ref.read(characterActionsProvider).togglePin(c);
-                    },
-                  ))
+              .map(
+                (c) => OcCard(
+                  character: c,
+                  onTap: () => widget.onCharacterSelected?.call(c.id),
+                  onFavoriteToggle: () {
+                    ref.read(characterActionsProvider).toggleFavorite(c);
+                  },
+                  onPinToggle: () {
+                    ref.read(characterActionsProvider).togglePin(c);
+                  },
+                ),
+              )
               .toList(),
         );
       },

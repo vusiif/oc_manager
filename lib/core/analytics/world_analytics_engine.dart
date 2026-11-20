@@ -97,12 +97,14 @@ class WorldAnalyticsEngine {
     for (final s in CharacterCreationStatus.all) {
       final cnt = statusCounts[s.code] ?? 0;
       if (cnt > 0) {
-        statusSlices.add(CategorySlice(
-          label: s.label,
-          count: cnt,
-          ratio: cnt / totalChars,
-          color: s.color,
-        ));
+        statusSlices.add(
+          CategorySlice(
+            label: s.label,
+            count: cnt,
+            ratio: cnt / totalChars,
+            color: s.color,
+          ),
+        );
       }
     }
     final finalizedCount = statusCounts[2] ?? 0;
@@ -148,12 +150,14 @@ class WorldAnalyticsEngine {
         sliceColor = genderColorPalette[colorIdx % genderColorPalette.length];
         colorIdx++;
       }
-      genderSlices.add(CategorySlice(
-        label: k,
-        count: cnt,
-        ratio: cnt / totalChars,
-        color: sliceColor,
-      ));
+      genderSlices.add(
+        CategorySlice(
+          label: k,
+          count: cnt,
+          ratio: cnt / totalChars,
+          color: sliceColor,
+        ),
+      );
     }
 
     // 3. 组织阵营分布
@@ -188,22 +192,26 @@ class WorldAnalyticsEngine {
       final group = groupMap[entry.key];
       final label = group?.name ?? '未知组织';
       final cnt = entry.value;
-      groupSlices.add(CategorySlice(
-        label: label,
-        count: cnt,
-        ratio: cnt / totalChars,
-        color: groupColors[gColorIdx % groupColors.length],
-      ));
+      groupSlices.add(
+        CategorySlice(
+          label: label,
+          count: cnt,
+          ratio: cnt / totalChars,
+          color: groupColors[gColorIdx % groupColors.length],
+        ),
+      );
       gColorIdx++;
     }
 
     if (unassignedCount > 0) {
-      groupSlices.add(CategorySlice(
-        label: '未归属阵营',
-        count: unassignedCount,
-        ratio: unassignedCount / totalChars,
-        color: const Color(0xFF9CA3AF),
-      ));
+      groupSlices.add(
+        CategorySlice(
+          label: '未归属阵营',
+          count: unassignedCount,
+          ratio: unassignedCount / totalChars,
+          color: const Color(0xFF9CA3AF),
+        ),
+      );
     }
     // 按人数由多到少排序
     groupSlices.sort((a, b) => b.count.compareTo(a.count));
@@ -222,8 +230,7 @@ class WorldAnalyticsEngine {
     for (final r in relations) {
       outDegreeMap[r.fromCharacterId] =
           (outDegreeMap[r.fromCharacterId] ?? 0) + 1;
-      inDegreeMap[r.toCharacterId] =
-          (inDegreeMap[r.toCharacterId] ?? 0) + 1;
+      inDegreeMap[r.toCharacterId] = (inDegreeMap[r.toCharacterId] ?? 0) + 1;
 
       neighborsMap[r.fromCharacterId]?.add(r.toCharacterId);
       if (r.isBidirectional) {
@@ -247,13 +254,15 @@ class WorldAnalyticsEngine {
       if (distinctNeighbors > maxDegree) {
         maxDegree = distinctNeighbors;
       }
-      centralities.add(CharacterCentrality(
-        character: c,
-        inDegree: inD,
-        outDegree: outD,
-        totalDegree: distinctNeighbors,
-        centralityScore: 0.0, // 稍后归一化
-      ));
+      centralities.add(
+        CharacterCentrality(
+          character: c,
+          inDegree: inD,
+          outDegree: outD,
+          totalDegree: distinctNeighbors,
+          centralityScore: 0.0, // 稍后归一化
+        ),
+      );
     }
 
     // 归一化评分并降序排序
@@ -266,8 +275,7 @@ class WorldAnalyticsEngine {
         totalDegree: item.totalDegree,
         centralityScore: score,
       );
-    }).toList()
-      ..sort((a, b) => b.totalDegree.compareTo(a.totalDegree));
+    }).toList()..sort((a, b) => b.totalDegree.compareTo(a.totalDegree));
 
     // 计算网络密度：D = 2E / (N * (N - 1)) （针对 N >= 2 的无向化网络参考值）
     double density = 0.0;

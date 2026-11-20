@@ -15,8 +15,7 @@ class WorldDao extends DatabaseAccessor<AppDatabase> with _$WorldDaoMixin {
   Future<World> getWorldById(int id) =>
       (select(worlds)..where((t) => t.id.equals(id))).getSingle();
 
-  Future<int> createWorld(WorldsCompanion entry) =>
-      into(worlds).insert(entry);
+  Future<int> createWorld(WorldsCompanion entry) => into(worlds).insert(entry);
 
   Future<bool> updateWorld(WorldsCompanion entry) =>
       update(worlds).replace(entry);

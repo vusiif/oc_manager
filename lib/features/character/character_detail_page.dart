@@ -6,17 +6,20 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
 import '../../providers/group_provider.dart';
+import '../../providers/lore_provider.dart';
 import '../../data/database/app_database.dart';
 import '../../core/storage/image_storage_service.dart';
 import '../../core/constants/character_status.dart';
 import '../../core/design/components/oc_avatar.dart';
 import '../../core/design/components/radar_chart.dart';
+import '../world/lore_entity_detail_dialog.dart';
 import 'character_gallery_section.dart';
 import 'character_timeline_section.dart';
 import 'character_description_section.dart';
 import 'character_poster_dialog.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
+import '../world/revision_history_dialog.dart';
 
 class CharacterDetailPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -45,27 +48,25 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
           sourcePath: picked.path,
           characterId: character.id,
         );
-        await ref.read(characterActionsProvider).update(
-              character.copyWith(avatarPath: Value(relPath)),
-            );
+        await ref
+            .read(characterActionsProvider)
+            .update(character.copyWith(avatarPath: Value(relPath)));
         ref.invalidate(characterByIdProvider(widget.characterId));
         ref.invalidate(charactersByWorldProvider(widget.worldId));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('更换立绘失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('更换立绘失败: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final characterAsync =
-        ref.watch(characterByIdProvider(widget.characterId));
-    final fieldsAsync =
-        ref.watch(characterFieldsProvider(widget.characterId));
+    final characterAsync = ref.watch(characterByIdProvider(widget.characterId));
+    final fieldsAsync = ref.watch(characterFieldsProvider(widget.characterId));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -104,16 +105,24 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                     character: character,
                   ),
                 ).then((_) {
-                  ref.invalidate(
-                      characterByIdProvider(widget.characterId));
-                  ref.invalidate(
-                      charactersByWorldProvider(widget.worldId));
+                  ref.invalidate(characterByIdProvider(widget.characterId));
+                  ref.invalidate(charactersByWorldProvider(widget.worldId));
                 });
               }
             },
           ),
           PopupMenuButton(
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'history',
+                child: Row(
+                  children: [
+                    Icon(Icons.history_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Text('设定版本历史'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'export_poster',
                 child: Row(
@@ -124,18 +133,27 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'add_field',
-                child: Text('添加字段'),
-              ),
+              const PopupMenuItem(value: 'add_field', child: Text('添加字段')),
               const PopupMenuItem(
                 value: 'delete',
-                child:
-                    Text('删除人物', style: TextStyle(color: Colors.red)),
+                child: Text('删除人物', style: TextStyle(color: Colors.red)),
               ),
             ],
             onSelected: (value) {
-              if (value == 'export_poster') {
+              if (value == 'history') {
+                final character = characterAsync.valueOrNull;
+                if (character != null) {
+                  RevisionHistoryDialog.show(
+                    context,
+                    worldId: widget.worldId,
+                    entityType: 'character',
+                    entityId: character.id,
+                    entityName: character.name,
+                    currentContent: character.description,
+                    character: character,
+                  );
+                }
+              } else if (value == 'export_poster') {
                 final character = characterAsync.valueOrNull;
                 if (character != null) {
                   showDialog(
@@ -170,9 +188,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 基本信息
-                      const Text('基本信息',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text(
+                        '基本信息',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const Divider(),
                       Center(
                         child: Stack(
@@ -202,7 +224,9 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                                       color: theme.colorScheme.primary,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                          color: Colors.white, width: 2),
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
                                     ),
                                     child: const Icon(
                                       Icons.camera_alt,
@@ -222,7 +246,9 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                         _InfoRow(label: '性别', value: character.gender),
                       _InfoRow(
                         label: '状态',
-                        value: CharacterCreationStatus.find(character.status).label,
+                        value: CharacterCreationStatus.find(
+                          character.status,
+                        ).label,
                       ),
                       _InfoRow(
                         label: '创建时间',
@@ -233,19 +259,20 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                       if (fields.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('附加信息',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme
-                                        .colorScheme.onSurfaceVariant)),
+                            Text(
+                              '附加信息',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                             IconButton(
                               icon: const Icon(Icons.add, size: 20),
-                              onPressed: () => _showAddFieldDialog(
-                                  context, ref),
+                              onPressed: () =>
+                                  _showAddFieldDialog(context, ref),
                             ),
                           ],
                         ),
@@ -262,8 +289,7 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('添加附加字段'),
-                            onPressed: () =>
-                                _showAddFieldDialog(context, ref),
+                            onPressed: () => _showAddFieldDialog(context, ref),
                           ),
                         ),
                       ],
@@ -314,6 +340,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                 worldId: widget.worldId,
                 characterId: widget.characterId,
               ),
+              const SizedBox(height: 16),
+
+              // === 所属势力与地点归属 (LORE-002 & LORE-003) ===
+              _CharacterLoreSection(
+                worldId: widget.worldId,
+                characterId: widget.characterId,
+              ),
             ],
           );
         },
@@ -345,16 +378,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: fieldType,
-                decoration:
-                    const InputDecoration(labelText: '字段类型'),
+                decoration: const InputDecoration(labelText: '字段类型'),
                 items: const [
                   DropdownMenuItem(value: 'text', child: Text('文本')),
                   DropdownMenuItem(value: 'number', child: Text('数字')),
-                  DropdownMenuItem(
-                      value: 'long_text', child: Text('长文本')),
+                  DropdownMenuItem(value: 'long_text', child: Text('长文本')),
                   DropdownMenuItem(value: 'select', child: Text('单选')),
-                  DropdownMenuItem(
-                      value: 'multi_select', child: Text('多选')),
+                  DropdownMenuItem(value: 'multi_select', child: Text('多选')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -373,12 +403,9 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  ref.read(characterActionsProvider).updateField(
-                        widget.characterId,
-                        name,
-                        fieldType,
-                        null,
-                      );
+                  ref
+                      .read(characterActionsProvider)
+                      .updateField(widget.characterId, name, fieldType, null);
                   Navigator.pop(context);
                 }
               },
@@ -402,19 +429,20 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              ref
+            onPressed: () async {
+              await ref
                   .read(characterActionsProvider)
                   .delete(widget.characterId);
-              Navigator.pop(context);
-              if (widget.onDeleted != null) {
-                widget.onDeleted!();
-              } else if (Navigator.canPop(context)) {
+              if (context.mounted) {
                 Navigator.pop(context);
+                if (widget.onDeleted != null) {
+                  widget.onDeleted!();
+                } else if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
               }
             },
-            child:
-                const Text('删除', style: TextStyle(color: Colors.red)),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -440,8 +468,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 80,
-            child:
-                Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
           ),
           Expanded(child: Text(value)),
         ],
@@ -518,7 +545,9 @@ class _FieldRowState extends ConsumerState<_FieldRow> {
   }
 
   void _save(String value) {
-    ref.read(characterActionsProvider).updateField(
+    ref
+        .read(characterActionsProvider)
+        .updateField(
           widget.characterId,
           widget.field.fieldName,
           widget.field.fieldType,
@@ -531,15 +560,12 @@ class _RelationSection extends ConsumerWidget {
   final int worldId;
   final int characterId;
 
-  const _RelationSection(
-      {required this.worldId, required this.characterId});
+  const _RelationSection({required this.worldId, required this.characterId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final relationsAsync =
-        ref.watch(relationsByCharacterProvider(characterId));
-    final charactersAsync =
-        ref.watch(charactersByWorldProvider(worldId));
+    final relationsAsync = ref.watch(relationsByCharacterProvider(characterId));
+    final charactersAsync = ref.watch(charactersByWorldProvider(worldId));
 
     return Card(
       child: Padding(
@@ -550,13 +576,17 @@ class _RelationSection extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('关系',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  '关系',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () => _showAddRelationDialog(
-                      context, ref, charactersAsync.valueOrNull ?? []),
+                    context,
+                    ref,
+                    charactersAsync.valueOrNull ?? [],
+                  ),
                 ),
               ],
             ),
@@ -566,8 +596,7 @@ class _RelationSection extends ConsumerWidget {
                 if (relations.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('暂无关系',
-                        style: TextStyle(color: Colors.grey)),
+                    child: Text('暂无关系', style: TextStyle(color: Colors.grey)),
                   );
                 }
 
@@ -575,10 +604,9 @@ class _RelationSection extends ConsumerWidget {
 
                 return Column(
                   children: relations.map((rel) {
-                    final otherId =
-                        rel.fromCharacterId == characterId
-                            ? rel.toCharacterId
-                            : rel.fromCharacterId;
+                    final otherId = rel.fromCharacterId == characterId
+                        ? rel.toCharacterId
+                        : rel.fromCharacterId;
                     final other = allChars
                         .where((c) => c.id == otherId)
                         .firstOrNull;
@@ -586,35 +614,39 @@ class _RelationSection extends ConsumerWidget {
                     final directionIcon = rel.isBidirectional
                         ? Icons.swap_horiz
                         : (rel.fromCharacterId == characterId
-                            ? Icons.arrow_forward
-                            : Icons.arrow_back);
+                              ? Icons.arrow_forward
+                              : Icons.arrow_back);
 
                     return ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         radius: 16,
-                        child: Text(
-                          otherName.isNotEmpty ? otherName[0] : '?',
-                        ),
+                        child: Text(otherName.isNotEmpty ? otherName[0] : '?'),
                       ),
                       title: Text(otherName),
                       subtitle: Text(rel.relationType),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(directionIcon,
-                              size: 18, color: Colors.grey),
+                          Icon(directionIcon, size: 18, color: Colors.grey),
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () => _showEditRelationDialog(
-                                context, ref, rel, allChars),
+                              context,
+                              ref,
+                              rel,
+                              allChars,
+                            ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete,
-                                size: 18, color: Colors.red),
-                            onPressed: () => _confirmDeleteRelation(
-                                context, ref, rel),
+                            icon: const Icon(
+                              Icons.delete,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                            onPressed: () =>
+                                _confirmDeleteRelation(context, ref, rel),
                           ),
                         ],
                       ),
@@ -622,8 +654,7 @@ class _RelationSection extends ConsumerWidget {
                   }).toList(),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text('错误: $error'),
             ),
           ],
@@ -633,13 +664,15 @@ class _RelationSection extends ConsumerWidget {
   }
 
   void _showAddRelationDialog(
-      BuildContext context, WidgetRef ref, List<Character> allChars) {
-    final others =
-        allChars.where((c) => c.id != characterId).toList();
+    BuildContext context,
+    WidgetRef ref,
+    List<Character> allChars,
+  ) {
+    final others = allChars.where((c) => c.id != characterId).toList();
     if (others.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('该世界观下暂无其他人物')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('该世界观下暂无其他人物')));
       return;
     }
 
@@ -658,25 +691,20 @@ class _RelationSection extends ConsumerWidget {
             children: [
               DropdownButtonFormField<int>(
                 initialValue: selectedCharId,
-                decoration:
-                    const InputDecoration(labelText: '目标人物'),
+                decoration: const InputDecoration(labelText: '目标人物'),
                 items: others
-                    .map((c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.name),
-                        ))
+                    .map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    )
                     .toList(),
-                onChanged: (v) =>
-                    setState(() => selectedCharId = v),
+                onChanged: (v) => setState(() => selectedCharId = v),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedType,
-                decoration:
-                    const InputDecoration(labelText: '关系类型'),
+                decoration: const InputDecoration(labelText: '关系类型'),
                 items: _relationTypes
-                    .map((t) =>
-                        DropdownMenuItem(value: t, child: Text(t)))
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => selectedType = v);
@@ -687,14 +715,11 @@ class _RelationSection extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('双向关系'),
                 value: isBidirectional,
-                onChanged: (v) =>
-                    setState(() => isBidirectional = v),
+                onChanged: (v) => setState(() => isBidirectional = v),
               ),
               TextField(
                 controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: '备注（可选）',
-                ),
+                decoration: const InputDecoration(labelText: '备注（可选）'),
               ),
             ],
           ),
@@ -706,7 +731,9 @@ class _RelationSection extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 if (selectedCharId != null) {
-                  await ref.read(relationActionsProvider).create(
+                  await ref
+                      .read(relationActionsProvider)
+                      .create(
                         fromCharacterId: characterId,
                         toCharacterId: selectedCharId!,
                         relationType: selectedType,
@@ -715,10 +742,8 @@ class _RelationSection extends ConsumerWidget {
                             ? null
                             : noteController.text.trim(),
                       );
-                  ref.invalidate(
-                      relationsByCharacterProvider(characterId));
-                  ref.invalidate(
-                      relationsByWorldProvider(worldId));
+                  ref.invalidate(relationsByCharacterProvider(characterId));
+                  ref.invalidate(relationsByWorldProvider(worldId));
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -730,12 +755,15 @@ class _RelationSection extends ConsumerWidget {
     );
   }
 
-  void _showEditRelationDialog(BuildContext context, WidgetRef ref,
-      Relation rel, List<Character> allChars) {
+  void _showEditRelationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Relation rel,
+    List<Character> allChars,
+  ) {
     String selectedType = rel.relationType;
     bool isBidirectional = rel.isBidirectional;
-    final noteController =
-        TextEditingController(text: rel.note ?? '');
+    final noteController = TextEditingController(text: rel.note ?? '');
 
     showDialog(
       context: context,
@@ -747,11 +775,9 @@ class _RelationSection extends ConsumerWidget {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: selectedType,
-                decoration:
-                    const InputDecoration(labelText: '关系类型'),
+                decoration: const InputDecoration(labelText: '关系类型'),
                 items: _relationTypes
-                    .map((t) =>
-                        DropdownMenuItem(value: t, child: Text(t)))
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => selectedType = v);
@@ -762,13 +788,11 @@ class _RelationSection extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('双向关系'),
                 value: isBidirectional,
-                onChanged: (v) =>
-                    setState(() => isBidirectional = v),
+                onChanged: (v) => setState(() => isBidirectional = v),
               ),
               TextField(
                 controller: noteController,
-                decoration:
-                    const InputDecoration(labelText: '备注（可选）'),
+                decoration: const InputDecoration(labelText: '备注（可选）'),
               ),
             ],
           ),
@@ -779,20 +803,21 @@ class _RelationSection extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                await ref.read(relationActionsProvider).update(
+                await ref
+                    .read(relationActionsProvider)
+                    .update(
                       rel.copyWith(
                         relationType: selectedType,
                         isBidirectional: isBidirectional,
                         note: Value(
-                            noteController.text.trim().isEmpty
-                                ? null
-                                : noteController.text.trim()),
+                          noteController.text.trim().isEmpty
+                              ? null
+                              : noteController.text.trim(),
+                        ),
                       ),
                     );
-                ref.invalidate(
-                    relationsByCharacterProvider(characterId));
-                ref.invalidate(
-                    relationsByWorldProvider(worldId));
+                ref.invalidate(relationsByCharacterProvider(characterId));
+                ref.invalidate(relationsByWorldProvider(worldId));
                 if (context.mounted) Navigator.pop(context);
               },
               child: const Text('保存'),
@@ -804,7 +829,10 @@ class _RelationSection extends ConsumerWidget {
   }
 
   void _confirmDeleteRelation(
-      BuildContext context, WidgetRef ref, Relation rel) {
+    BuildContext context,
+    WidgetRef ref,
+    Relation rel,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -817,17 +845,12 @@ class _RelationSection extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref
-                  .read(relationActionsProvider)
-                  .delete(rel.id);
-              ref.invalidate(
-                  relationsByCharacterProvider(characterId));
-              ref.invalidate(
-                  relationsByWorldProvider(worldId));
+              await ref.read(relationActionsProvider).delete(rel.id);
+              ref.invalidate(relationsByCharacterProvider(characterId));
+              ref.invalidate(relationsByWorldProvider(worldId));
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('删除',
-                style: TextStyle(color: Colors.red)),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -835,16 +858,7 @@ class _RelationSection extends ConsumerWidget {
   }
 }
 
-const _relationTypes = [
-  '亲属',
-  '朋友',
-  '恋人',
-  '师徒',
-  '敌对',
-  '宿敌',
-  '同事',
-  '其他',
-];
+const _relationTypes = ['亲属', '朋友', '恋人', '师徒', '敌对', '宿敌', '同事', '其他'];
 
 class _GroupSelector extends ConsumerStatefulWidget {
   final int worldId;
@@ -860,7 +874,9 @@ class _GroupSelectorState extends ConsumerState<_GroupSelector> {
   @override
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(groupsByWorldProvider(widget.worldId));
-    final characterGroupIdsAsync = ref.watch(characterGroupIdsProvider(widget.characterId));
+    final characterGroupIdsAsync = ref.watch(
+      characterGroupIdsProvider(widget.characterId),
+    );
 
     return Card(
       child: Padding(
@@ -868,7 +884,10 @@ class _GroupSelectorState extends ConsumerState<_GroupSelector> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('分组', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              '分组',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const Divider(),
             groupsAsync.when(
               data: (groups) {
@@ -891,15 +910,19 @@ class _GroupSelectorState extends ConsumerState<_GroupSelector> {
                           selected: isSelected,
                           onSelected: (selected) async {
                             if (selected) {
-                              await ref.read(groupActionsProvider).addCharacterToGroup(
-                                widget.characterId,
-                                group.id,
-                              );
+                              await ref
+                                  .read(groupActionsProvider)
+                                  .addCharacterToGroup(
+                                    widget.characterId,
+                                    group.id,
+                                  );
                             } else {
-                              await ref.read(groupActionsProvider).removeCharacterFromGroup(
-                                widget.characterId,
-                                group.id,
-                              );
+                              await ref
+                                  .read(groupActionsProvider)
+                                  .removeCharacterFromGroup(
+                                    widget.characterId,
+                                    group.id,
+                                  );
                             }
                             ref.invalidate(characterGroupIdsProvider);
                             ref.invalidate(charactersByGroupProvider);
@@ -933,10 +956,8 @@ class _CharacterStatsSection extends ConsumerWidget {
     final statsAsync = ref.watch(characterStatsProvider(characterId));
 
     return statsAsync.when(
-      data: (stats) => _CharacterStatsCard(
-        characterId: characterId,
-        stats: stats,
-      ),
+      data: (stats) =>
+          _CharacterStatsCard(characterId: characterId, stats: stats),
       loading: () => const Card(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -964,10 +985,7 @@ class _CharacterStatsCard extends ConsumerStatefulWidget {
   final int characterId;
   final List<CharacterStat> stats;
 
-  const _CharacterStatsCard({
-    required this.characterId,
-    required this.stats,
-  });
+  const _CharacterStatsCard({required this.characterId, required this.stats});
 
   @override
   ConsumerState<_CharacterStatsCard> createState() =>
@@ -1008,13 +1026,17 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
         CharacterStatsCompanion.insert(
           characterId: widget.characterId,
           label: preset.dimensions[i],
-          value: Value(preset.defaultValues?[preset.dimensions[i]] ??
-              (preset.maxValue * 0.6)),
+          value: Value(
+            preset.defaultValues?[preset.dimensions[i]] ??
+                (preset.maxValue * 0.6),
+          ),
           maxValue: Value(preset.maxValue),
           sortOrder: Value(i),
         ),
     ];
-    await ref.read(characterActionsProvider).setStats(widget.characterId, companions);
+    await ref
+        .read(characterActionsProvider)
+        .setStats(widget.characterId, companions);
   }
 
   void _showPresetPicker(BuildContext context) {
@@ -1111,9 +1133,7 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                   child: TextField(
                     controller: valueCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '初始数值',
-                    ),
+                    decoration: const InputDecoration(labelText: '初始数值'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1121,9 +1141,7 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                   child: TextField(
                     controller: maxCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '满值上限',
-                    ),
+                    decoration: const InputDecoration(labelText: '满值上限'),
                   ),
                 ),
               ],
@@ -1142,7 +1160,9 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
               final val = double.tryParse(valueCtrl.text) ?? 60.0;
               final max = double.tryParse(maxCtrl.text) ?? 100.0;
 
-              await ref.read(characterActionsProvider).addStat(
+              await ref
+                  .read(characterActionsProvider)
+                  .addStat(
                     CharacterStatsCompanion.insert(
                       characterId: widget.characterId,
                       label: label,
@@ -1162,7 +1182,9 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
 
   void _showEditStatDialog(BuildContext context, CharacterStat stat) {
     final labelCtrl = TextEditingController(text: stat.label);
-    final maxCtrl = TextEditingController(text: stat.maxValue.toInt().toString());
+    final maxCtrl = TextEditingController(
+      text: stat.maxValue.toInt().toString(),
+    );
 
     showDialog(
       context: context,
@@ -1195,7 +1217,9 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
               if (label.isEmpty) return;
               final max = double.tryParse(maxCtrl.text) ?? stat.maxValue;
 
-              await ref.read(characterActionsProvider).updateStat(
+              await ref
+                  .read(characterActionsProvider)
+                  .updateStat(
                     CharacterStatsCompanion(
                       id: Value(stat.id),
                       characterId: Value(stat.characterId),
@@ -1228,17 +1252,11 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.radar_rounded,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(Icons.radar_rounded, color: theme.colorScheme.primary),
                   const SizedBox(width: 8),
                   const Text(
                     '战力与属性 (六维雷达图)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1302,8 +1320,10 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(10),
@@ -1386,10 +1406,7 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                   width: isWide ? 260 : double.infinity,
                   height: 250,
                   child: Center(
-                    child: RadarChart(
-                      items: radarItems,
-                      size: 240,
-                    ),
+                    child: RadarChart(items: radarItems, size: 240),
                   ),
                 );
 
@@ -1431,7 +1448,10 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
     CharacterStat stat,
     ThemeData theme,
   ) {
-    final curVal = (_localValues[stat.id] ?? stat.value).clamp(0.0, stat.maxValue);
+    final curVal = (_localValues[stat.id] ?? stat.value).clamp(
+      0.0,
+      stat.maxValue,
+    );
     final formattedVal = curVal.truncateToDouble() == curVal
         ? curVal.toInt().toString()
         : curVal.toStringAsFixed(1);
@@ -1461,7 +1481,9 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                   Icon(
                     Icons.edit_outlined,
                     size: 13,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ],
               ),
@@ -1474,10 +1496,12 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 3.5,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 14.0),
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 6.0,
+                ),
+                overlayShape: const RoundSliderOverlayShape(
+                  overlayRadius: 14.0,
+                ),
               ),
               child: Slider(
                 value: curVal,
@@ -1489,7 +1513,9 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
                   });
                 },
                 onChangeEnd: (v) async {
-                  await ref.read(characterActionsProvider).updateStat(
+                  await ref
+                      .read(characterActionsProvider)
+                      .updateStat(
                         CharacterStatsCompanion(
                           id: Value(stat.id),
                           characterId: Value(stat.characterId),
@@ -1524,9 +1550,7 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
             visualDensity: VisualDensity.compact,
             tooltip: '删除此维度',
             onPressed: () async {
-              await ref
-                  .read(characterActionsProvider)
-                  .deleteStat(stat.id);
+              await ref.read(characterActionsProvider).deleteStat(stat.id);
             },
           ),
         ],
@@ -1535,3 +1559,322 @@ class _CharacterStatsCardState extends ConsumerState<_CharacterStatsCard> {
   }
 }
 
+/// 角色所属势力与常驻地点展示区块 (LORE-002 & LORE-003)
+class _CharacterLoreSection extends ConsumerWidget {
+  final int worldId;
+  final int characterId;
+
+  const _CharacterLoreSection({
+    required this.worldId,
+    required this.characterId,
+  });
+
+  void _showLinkLoreDialog(
+    BuildContext context,
+    WidgetRef ref,
+    List<LoreEntity> allLores,
+    Set<int> alreadyLinkedLoreIds,
+  ) {
+    final available = allLores
+        .where((l) => !alreadyLinkedLoreIds.contains(l.id))
+        .toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('当前世界观暂无未关联的百科条目或势力。')));
+      return;
+    }
+
+    int selectedLoreId = available.first.id;
+    final roleController = TextEditingController(text: '成员');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final selectedLore = available.firstWhere(
+            (l) => l.id == selectedLoreId,
+          );
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                const Text('关联百科设定 (势力 / 地点 / 装备 / 种族 / 能力)'),
+              ],
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedLoreId,
+                      decoration: const InputDecoration(
+                        labelText: '选择百科实体 / 组织 / 装备 / 种族 / 能力 *',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: available.map((l) {
+                        final typeConfig = LoreEntityType.fromKey(l.entityType);
+                        return DropdownMenuItem<int>(
+                          value: l.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                typeConfig.icon,
+                                size: 16,
+                                color: typeConfig.color,
+                              ),
+                              const SizedBox(width: 6),
+                              Text('${l.name} (${typeConfig.label})'),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            selectedLoreId = val;
+                            final newLore = available.firstWhere(
+                              (l) => l.id == val,
+                            );
+                            if (newLore.entityType == 'faction' &&
+                                (roleController.text == '常驻' ||
+                                    roleController.text == '持有者' ||
+                                    roleController.text == '纯血统' ||
+                                    roleController.text == '精通修习')) {
+                              roleController.text = '成员';
+                            } else if (newLore.entityType == 'location' &&
+                                (roleController.text == '成员' ||
+                                    roleController.text == '持有者' ||
+                                    roleController.text == '纯血统' ||
+                                    roleController.text == '精通修习')) {
+                              roleController.text = '常驻';
+                            } else if (newLore.entityType == 'item' &&
+                                (roleController.text == '成员' ||
+                                    roleController.text == '常驻' ||
+                                    roleController.text == '纯血统' ||
+                                    roleController.text == '精通修习')) {
+                              roleController.text = '持有者';
+                            } else if (newLore.entityType == 'race' &&
+                                (roleController.text == '成员' ||
+                                    roleController.text == '常驻' ||
+                                    roleController.text == '持有者' ||
+                                    roleController.text == '精通修习')) {
+                              roleController.text = '纯血统';
+                            } else if (newLore.entityType == 'ability' &&
+                                (roleController.text == '成员' ||
+                                    roleController.text == '常驻' ||
+                                    roleController.text == '持有者' ||
+                                    roleController.text == '纯血统')) {
+                              roleController.text = '精通修习';
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: roleController,
+                      decoration: InputDecoration(
+                        labelText: selectedLore.entityType == 'faction'
+                            ? '组织身份 / 职务'
+                            : selectedLore.entityType == 'item'
+                            ? '佩戴角色 / 身份'
+                            : selectedLore.entityType == 'race'
+                            ? '种族血脉 / 身份'
+                            : selectedLore.entityType == 'ability'
+                            ? '能力掌握 / 境界'
+                            : '地理关联 / 身份',
+                        hintText: selectedLore.entityType == 'faction'
+                            ? '如：领袖、副会长、军团长、成员'
+                            : selectedLore.entityType == 'item'
+                            ? '如：持有者、锻造工匠、守护使者'
+                            : selectedLore.entityType == 'race'
+                            ? '如：纯血统、混血后裔、始祖、王室血脉'
+                            : selectedLore.entityType == 'ability'
+                            ? '如：创造宗师、大成境界、精通修习、血脉传承'
+                            : '如：出生地、常驻、领主、隐士',
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final role = roleController.text.trim().isEmpty
+                      ? (selectedLore.entityType == 'faction'
+                            ? '成员'
+                            : selectedLore.entityType == 'item'
+                            ? '持有者'
+                            : selectedLore.entityType == 'race'
+                            ? '纯血统'
+                            : selectedLore.entityType == 'ability'
+                            ? '精通修习'
+                            : '常驻')
+                      : roleController.text.trim();
+                  await ref
+                      .read(loreActionsProvider)
+                      .linkCharacter(
+                        worldId: worldId,
+                        loreId: selectedLoreId,
+                        characterId: characterId,
+                        role: role,
+                      );
+                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                },
+                child: const Text('关联'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final affiliationsAsync = ref.watch(characterLoresProvider(characterId));
+    final affiliations = affiliationsAsync.valueOrNull ?? [];
+
+    final allLoresAsync = ref.watch(loreEntitiesByWorldProvider(worldId));
+    final allLores = allLoresAsync.valueOrNull ?? [];
+    final alreadyLinkedIds = affiliations.map((a) => a.lore.id).toSet();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_outlined,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '所属势力与地点归属 / 随身装备 / 种族与能力 (${affiliations.length})',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () => _showLinkLoreDialog(
+                    context,
+                    ref,
+                    allLores,
+                    alreadyLinkedIds,
+                  ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('关联'),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(),
+            if (affiliations.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: Text(
+                    '尚未归属任何势力、种族、地点、装备或能力，点击右上角快速关联。',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: affiliations.map((aff) {
+                  final lore = aff.lore;
+                  final rel = aff.relation;
+                  final typeConfig = LoreEntityType.fromKey(lore.entityType);
+
+                  return InputChip(
+                    avatar: Icon(
+                      typeConfig.icon,
+                      size: 16,
+                      color: typeConfig.color,
+                    ),
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(lore.name),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: typeConfig.color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            rel.role,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: typeConfig.color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    onPressed: () {
+                      LoreEntityDetailDialog.show(context, entity: lore);
+                    },
+                    onDeleted: () async {
+                      await ref
+                          .read(loreActionsProvider)
+                          .unlinkCharacter(
+                            loreId: lore.id,
+                            characterId: characterId,
+                          );
+                    },
+                    deleteIconColor: theme.colorScheme.outline,
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -14,7 +14,8 @@ class RadarStatItem {
     this.maxValue = 100.0,
   });
 
-  double get ratio => (value / (maxValue <= 0 ? 1.0 : maxValue)).clamp(0.0, 1.0);
+  double get ratio =>
+      (value / (maxValue <= 0 ? 1.0 : maxValue)).clamp(0.0, 1.0);
 }
 
 /// 常用属性预设模型
@@ -61,7 +62,14 @@ class StatPreset {
       description: '龙与地下城 TRPG 标准属性，满值 20 分（6 维）',
       icon: Icons.casino_rounded,
       maxValue: 20.0,
-      dimensions: ['力量 (STR)', '敏捷 (DEX)', '体质 (CON)', '智力 (INT)', '感知 (WIS)', '魅力 (CHA)'],
+      dimensions: [
+        '力量 (STR)',
+        '敏捷 (DEX)',
+        '体质 (CON)',
+        '智力 (INT)',
+        '感知 (WIS)',
+        '魅力 (CHA)',
+      ],
       defaultValues: {
         '力量 (STR)': 14,
         '敏捷 (DEX)': 16,
@@ -138,7 +146,8 @@ class RadarChart extends StatelessWidget {
 
     final primary = strokeColor ?? theme.colorScheme.primary;
     final fill = fillColor ?? primary.withValues(alpha: isDark ? 0.28 : 0.20);
-    final grid = gridColor ??
+    final grid =
+        gridColor ??
         (isDark
             ? Colors.white.withValues(alpha: 0.12)
             : Colors.black.withValues(alpha: 0.08));
@@ -173,11 +182,7 @@ class RadarChart extends StatelessWidget {
     );
 
     if (size != null) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: chartWidget,
-      );
+      return SizedBox(width: size, height: size, child: chartWidget);
     }
 
     return LayoutBuilder(
@@ -186,11 +191,7 @@ class RadarChart extends StatelessWidget {
           constraints.maxWidth.isFinite ? constraints.maxWidth : 260.0,
           constraints.maxHeight.isFinite ? constraints.maxHeight : 260.0,
         );
-        return SizedBox(
-          width: dim,
-          height: dim,
-          child: chartWidget,
-        );
+        return SizedBox(width: dim, height: dim, child: chartWidget);
       },
     );
   }
@@ -227,7 +228,10 @@ class _RadarChartPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     // 留出标签与数值所占外边距
     final margin = (showLabels || showValues) ? 38.0 : 12.0;
-    final radius = math.max(10.0, math.min(size.width, size.height) / 2 - margin);
+    final radius = math.max(
+      10.0,
+      math.min(size.width, size.height) / 2 - margin,
+    );
 
     final angleStep = (2 * math.pi) / count;
     // 起始角置于正上方 12 点钟位置 (-pi/2)
@@ -347,10 +351,7 @@ class _RadarChartPainter extends CustomPainter {
                 ),
               ),
             if (showLabels && showValues)
-              TextSpan(
-                text: ' ',
-                style: AppFonts.textStyle(fontSize: 8),
-              ),
+              TextSpan(text: ' ', style: AppFonts.textStyle(fontSize: 8)),
             if (showValues)
               TextSpan(
                 text: formattedVal,

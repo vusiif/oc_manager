@@ -26,7 +26,9 @@ class TemplateDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> deleteTemplate(int id) {
     return transaction(() async {
-      await (delete(templateFields)..where((t) => t.templateId.equals(id))).go();
+      await (delete(
+        templateFields,
+      )..where((t) => t.templateId.equals(id))).go();
       return (delete(templates)..where((t) => t.id.equals(id))).go();
     });
   }
@@ -46,8 +48,7 @@ class TemplateDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteTemplateField(int id) =>
       (delete(templateFields)..where((t) => t.id.equals(id))).go();
 
-  Future<void> deleteAllTemplateFields(int templateId) =>
-      (delete(templateFields)
-            ..where((t) => t.templateId.equals(templateId)))
-          .go();
+  Future<void> deleteAllTemplateFields(int templateId) => (delete(
+    templateFields,
+  )..where((t) => t.templateId.equals(templateId))).go();
 }

@@ -5,8 +5,7 @@ import '../tables/groups.dart';
 part 'group_dao.g.dart';
 
 @DriftAccessor(tables: [Groups, CharacterGroups])
-class GroupDao extends DatabaseAccessor<AppDatabase>
-    with _$GroupDaoMixin {
+class GroupDao extends DatabaseAccessor<AppDatabase> with _$GroupDaoMixin {
   GroupDao(super.db);
 
   // 获取世界观下的所有分组
@@ -39,33 +38,37 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
 
   // 获取分组下的人物 ID 列表
   Future<List<int>> getCharacterIdsByGroup(int groupId) async {
-    final rows = await (select(characterGroups)
-          ..where((cg) => cg.groupId.equals(groupId)))
-        .get();
+    final rows = await (select(
+      characterGroups,
+    )..where((cg) => cg.groupId.equals(groupId))).get();
     return rows.map((r) => r.characterId).toList();
   }
 
   // 获取人物所属的分组 ID 列表
   Future<List<int>> getGroupIdsByCharacter(int characterId) async {
-    final rows = await (select(characterGroups)
-          ..where((cg) => cg.characterId.equals(characterId)))
-        .get();
+    final rows = await (select(
+      characterGroups,
+    )..where((cg) => cg.characterId.equals(characterId))).get();
     return rows.map((r) => r.groupId).toList();
   }
 
   // 添加人物到分组（包含世界观隔离校验与去重）
   Future<void> addCharacterToGroup(int characterId, int groupId) async {
-    final existing = await (select(characterGroups)
-          ..where((cg) =>
-              cg.characterId.equals(characterId) & cg.groupId.equals(groupId)))
-        .get();
+    final existing =
+        await (select(characterGroups)..where(
+              (cg) =>
+                  cg.characterId.equals(characterId) &
+                  cg.groupId.equals(groupId),
+            ))
+            .get();
     if (existing.isNotEmpty) return;
 
     final char = await db.characterDao.getCharacterById(characterId);
     final group = await getGroupById(groupId);
     if (char.worldId != group.worldId) {
       throw ArgumentError(
-          '跨世界观隔离保护：角色 (worldId: ${char.worldId}) 与分组 (worldId: ${group.worldId}) 不属于同一世界观');
+        '跨世界观隔离保护：角色 (worldId: ${char.worldId}) 与分组 (worldId: ${group.worldId}) 不属于同一世界观',
+      );
     }
 
     await into(characterGroups).insert(
@@ -78,19 +81,19 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
 
   // 从分组移除人物
   Future<void> removeCharacterFromGroup(int characterId, int groupId) {
-    return (delete(characterGroups)
-          ..where((cg) =>
-              cg.characterId.equals(characterId) &
-              cg.groupId.equals(groupId)))
+    return (delete(characterGroups)..where(
+          (cg) =>
+              cg.characterId.equals(characterId) & cg.groupId.equals(groupId),
+        ))
         .go();
   }
 
   // 设置人物的分组（带事务保证）
   Future<void> setCharacterGroups(int characterId, List<int> groupIds) {
     return transaction(() async {
-      await (delete(characterGroups)
-            ..where((cg) => cg.characterId.equals(characterId)))
-          .go();
+      await (delete(
+        characterGroups,
+      )..where((cg) => cg.characterId.equals(characterId))).go();
       for (final groupId in groupIds) {
         await addCharacterToGroup(characterId, groupId);
       }
@@ -99,9 +102,9 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
 
   // 获取世界观下未分组的人物 ID 列表
   Future<List<int>> getUngroupedCharacterIds(int worldId) async {
-    final allCharacters = await (select(characters)
-          ..where((c) => c.worldId.equals(worldId)))
-        .get();
+    final allCharacters = await (select(
+      characters,
+    )..where((c) => c.worldId.equals(worldId))).get();
     final groupedRows = await (select(characterGroups)).get();
     final groupedIds = groupedRows.map((r) => r.characterId).toSet();
     return allCharacters
@@ -112,13 +115,13 @@ class GroupDao extends DatabaseAccessor<AppDatabase>
 
   // 删除世界观下的所有分组
   Future<void> deleteGroupsByWorld(int worldId) async {
-    final worldGroupIds = await (select(groups)
-          ..where((g) => g.worldId.equals(worldId)))
-        .get();
+    final worldGroupIds = await (select(
+      groups,
+    )..where((g) => g.worldId.equals(worldId))).get();
     for (final group in worldGroupIds) {
-      await (delete(characterGroups)
-            ..where((cg) => cg.groupId.equals(group.id)))
-          .go();
+      await (delete(
+        characterGroups,
+      )..where((cg) => cg.groupId.equals(group.id))).go();
     }
     await (delete(groups)..where((g) => g.worldId.equals(worldId))).go();
   }

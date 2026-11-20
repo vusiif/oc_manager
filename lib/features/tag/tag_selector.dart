@@ -22,9 +22,10 @@ class TagSelector extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('标签',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  '标签',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () =>
@@ -72,7 +73,10 @@ class TagSelector extends ConsumerWidget {
   }
 
   void _showTagPicker(
-      BuildContext context, WidgetRef ref, AsyncValue<List<Tag>> characterTagsAsync) {
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Tag>> characterTagsAsync,
+  ) {
     final parentRef = ref;
 
     showDialog(
@@ -80,7 +84,11 @@ class TagSelector extends ConsumerWidget {
       builder: (dialogContext) => Consumer(
         builder: (context, consumerRef, _) {
           final allTags = consumerRef.watch(tagsProvider).valueOrNull ?? [];
-          final myTags = consumerRef.watch(characterTagsProvider(characterId)).valueOrNull ?? [];
+          final myTags =
+              consumerRef
+                  .watch(characterTagsProvider(characterId))
+                  .valueOrNull ??
+              [];
           final currentTagIds = myTags.map((t) => t.id).toSet();
 
           return AlertDialog(
@@ -90,7 +98,10 @@ class TagSelector extends ConsumerWidget {
               child: allTags.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('暂无标签，请先创建', style: TextStyle(color: Colors.grey)),
+                      child: Text(
+                        '暂无标签，请先创建',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     )
                   : ListView.builder(
                       shrinkWrap: true,
@@ -119,7 +130,9 @@ class TagSelector extends ConsumerWidget {
                                   .read(tagActionsProvider)
                                   .addToCharacter(characterId, tag.id);
                             }
-                            consumerRef.invalidate(characterTagsProvider(characterId));
+                            consumerRef.invalidate(
+                              characterTagsProvider(characterId),
+                            );
                           },
                         );
                       },
@@ -201,7 +214,9 @@ class TagSelector extends ConsumerWidget {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  await ref.read(tagActionsProvider).create(name, selectedColor);
+                  await ref
+                      .read(tagActionsProvider)
+                      .create(name, selectedColor);
                   if (context.mounted) Navigator.pop(context);
                 }
               },

@@ -8,6 +8,9 @@ final worldsProvider = StreamProvider<List<World>>((ref) {
   return ref.watch(worldDaoProvider).watchAllWorlds();
 });
 
+/// Global provider tracking the currently selected or active world ID across the application.
+final activeWorldIdProvider = StateProvider<int?>((ref) => null);
+
 final worldByIdProvider = FutureProvider.family<World, int>((ref, id) {
   return ref.watch(worldDaoProvider).getWorldById(id);
 });
@@ -20,17 +23,18 @@ class WorldActions {
   WorldActions(this._ref);
 
   Future<int> create(String name, {String? description}) async {
-    return _ref.read(worldDaoProvider).createWorld(
-          WorldsCompanion(
-            name: Value(name),
-            description: Value(description),
-          ),
+    return _ref
+        .read(worldDaoProvider)
+        .createWorld(
+          WorldsCompanion(name: Value(name), description: Value(description)),
         );
   }
 
   Future<bool> update(int id, String name, {String? description}) async {
     final world = await _ref.read(worldDaoProvider).getWorldById(id);
-    return _ref.read(worldDaoProvider).updateWorld(
+    return _ref
+        .read(worldDaoProvider)
+        .updateWorld(
           WorldsCompanion(
             id: Value(id),
             name: Value(name),
