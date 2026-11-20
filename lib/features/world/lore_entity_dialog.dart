@@ -260,16 +260,19 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
         );
         if (mounted) Navigator.pop(context, id);
       } else {
-        if (widget.entity!.content.trim().isNotEmpty &&
-            widget.entity!.content != _contentController.text) {
+        final hasChanged =
+            widget.entity!.content != _contentController.text ||
+            widget.entity!.name != _nameController.text.trim() ||
+            widget.entity!.summary != _summaryController.text.trim() ||
+            widget.entity!.tags != _tagsController.text.trim() ||
+            widget.entity!.customFields != customFieldsJson ||
+            widget.entity!.parentId != _selectedParentId ||
+            widget.entity!.coverImagePath != _coverImagePath;
+
+        if (hasChanged) {
           await ref
               .read(revisionActionsProvider)
-              .recordRevision(
-                worldId: widget.worldId,
-                entityType: 'lore',
-                entityId: widget.entity!.id,
-                content: widget.entity!.content,
-              );
+              .recordLoreSnapshot(lore: widget.entity!, source: 'auto');
         }
         await actions.updateEntity(
           id: widget.entity!.id,

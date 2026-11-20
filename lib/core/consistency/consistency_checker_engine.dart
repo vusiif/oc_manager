@@ -25,6 +25,7 @@ class ConsistencyCheckerEngine {
       WikiLinkIntegrityRule(),
       MediaFileIntegrityRule(),
       CompletenessRule(),
+      StoryTimelineConsistencyRule(),
     ]);
     return reg;
   }
@@ -112,6 +113,13 @@ class ConsistencyCheckerEngine {
         (row.read(db.loreEntities.name) ?? '').trim(),
     }..remove('');
 
+    // 5. 加载故事作品、章节与分镜场景 (STORY-004)
+    final works = await db.storyDao.getWorksByWorld(worldId);
+    final workIds = works.map((w) => w.id).toList();
+    final chapters = await db.storyDao.getChaptersByWorks(workIds);
+    final chapterIds = chapters.map((c) => c.id).toList();
+    final scenes = await db.storyDao.getScenesByChapters(chapterIds);
+
     return ConsistencyContext(
       worldId: worldId,
       targetCharacterId: targetCharacterId,
@@ -120,6 +128,9 @@ class ConsistencyCheckerEngine {
       events: events,
       lores: lores,
       galleries: galleries,
+      works: works,
+      chapters: chapters,
+      scenes: scenes,
       otherWorldEntityNames: otherEntityNames,
     );
   }

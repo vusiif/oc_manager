@@ -6,7 +6,9 @@ import '../../data/database/app_database.dart';
 import '../../providers/timeline_provider.dart';
 import '../../providers/world_provider.dart';
 import '../../providers/character_provider.dart';
+import '../../providers/revision_provider.dart';
 import '../../core/design/components/oc_avatar.dart';
+import 'revision_history_dialog.dart';
 
 /// 世界编年史全景页面
 class ChroniclePage extends ConsumerStatefulWidget {
@@ -605,6 +607,23 @@ class _ChronicleEventCard extends StatelessWidget {
 
               const SizedBox(width: 6),
               IconButton(
+                icon: const Icon(Icons.history_rounded, size: 17),
+                tooltip: '版本历史与差异恢复',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: () {
+                  RevisionHistoryDialog.show(
+                    context,
+                    worldId: worldId,
+                    entityType: 'event',
+                    entityId: event.id,
+                    entityName: event.title,
+                    currentContent: event.description,
+                    event: event,
+                  );
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.edit_outlined, size: 17),
                 tooltip: '编辑',
                 padding: EdgeInsets.zero,
@@ -724,6 +743,21 @@ class _ChronicleEventEditDialogState
         importance: _importance,
       );
     } else {
+      final ev = widget.event!;
+      final hasChanged =
+          ev.title != title ||
+          ev.year != year ||
+          ev.description != desc ||
+          ev.category != _category ||
+          ev.importance != _importance ||
+          ev.characterId != _characterId ||
+          ev.sortOrder != sort;
+
+      if (hasChanged) {
+        await ref
+            .read(revisionActionsProvider)
+            .recordEventSnapshot(event: ev, source: 'auto');
+      }
       await actions.updateEvent(
         id: widget.event!.id,
         worldId: widget.worldId,

@@ -9,7 +9,7 @@ void main() {
     test('ConsistencyRuleRegistry manages rules and filtering correctly', () {
       final registry = ConsistencyCheckerEngine.createDefaultRegistry();
 
-      expect(registry.allRules.length, equals(5));
+      expect(registry.allRules.length, equals(6));
       expect(
         registry.allRules.map((r) => r.ruleId).toSet(),
         containsAll([
@@ -18,6 +18,7 @@ void main() {
           'RULE_WIKI_LINK_INTEGRITY',
           'RULE_MEDIA_FILE_INTEGRITY',
           'RULE_COMPLETENESS',
+          'RULE_STORY_TIMELINE',
         ]),
       );
 
@@ -28,7 +29,7 @@ void main() {
 
       // Unregister
       registry.unregister('RULE_COMPLETENESS');
-      expect(registry.allRules.length, equals(4));
+      expect(registry.allRules.length, equals(5));
       expect(registry.getRule('RULE_COMPLETENESS'), isNull);
     });
 

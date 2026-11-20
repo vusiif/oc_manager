@@ -10,6 +10,7 @@ import '../../providers/world_provider.dart';
 import 'story_chapter_dialog.dart';
 import 'story_scene_dialog.dart';
 import 'story_work_dialog.dart';
+import 'story_cast_dialog.dart';
 
 class StoryWorkbenchPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -259,6 +260,20 @@ class _StoryWorkbenchPageState extends ConsumerState<StoryWorkbenchPage> {
             ),
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
+          ),
+
+          // Cast & Character Appearances (STORY-003)
+          IconButton(
+            icon: const Icon(Icons.groups_outlined, size: 20),
+            tooltip: '作品登场角色表 (Cast Index)',
+            onPressed: () {
+              StoryCastDialog.show(
+                context,
+                workId: currentWork.id,
+                workTitle: currentWork.title,
+                worldId: widget.worldId,
+              );
+            },
           ),
 
           // Edit Work

@@ -962,6 +962,7 @@ class LoreEntityDetailDialog extends ConsumerWidget {
                         entityId: entity.id,
                         entityName: entity.name,
                         currentContent: entity.content,
+                        lore: entity,
                         onRestore: (rev) async {
                           await ref
                               .read(revisionActionsProvider)

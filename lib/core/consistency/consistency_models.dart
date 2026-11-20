@@ -20,7 +20,8 @@ enum IssueCategory {
   relation('人物关系网', Icons.alt_route_rounded),
   link('双向链接', Icons.link_off_rounded),
   media('多媒体资源', Icons.broken_image_rounded),
-  completeness('设定完善度', Icons.fact_check_outlined);
+  completeness('设定完善度', Icons.fact_check_outlined),
+  story('故事分镜时序', Icons.movie_creation_outlined);
 
   final String label;
   final IconData icon;
@@ -91,6 +92,11 @@ class ConsistencyContext {
   final List<LoreEntity> lores;
   final List<CharacterGallery> galleries;
 
+  /// 故事线与分镜场景 (STORY-004)
+  final List<StoryWork> works;
+  final List<StoryChapter> chapters;
+  final List<StoryScene> scenes;
+
   /// 其他世界观中存在的实体名称集合 (用于识别跨世界观双链越界引用 · CONSIST-003)
   final Set<String> otherWorldEntityNames;
 
@@ -102,6 +108,9 @@ class ConsistencyContext {
     required this.events,
     required this.lores,
     required this.galleries,
+    this.works = const [],
+    this.chapters = const [],
+    this.scenes = const [],
     this.otherWorldEntityNames = const {},
   });
 

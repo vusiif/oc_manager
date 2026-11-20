@@ -52,6 +52,9 @@ class TimelineDao extends DatabaseAccessor<AppDatabase>
   Future<int> createEvent(TimelineEventsCompanion entry) =>
       into(timelineEvents).insert(entry);
 
+  Future<TimelineEvent?> getEventById(int id) =>
+      (select(timelineEvents)..where((t) => t.id.equals(id))).getSingleOrNull();
+
   Future<void> updateEvent(TimelineEventsCompanion entry) =>
       update(timelineEvents).replace(entry);
 

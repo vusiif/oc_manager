@@ -1,11 +1,16 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import '../data/database/app_database.dart';
 import '../core/history/models/character_snapshot.dart';
 import '../core/history/diff/character_revision_diff.dart';
+import '../core/history/models/lore_snapshot.dart';
+import '../core/history/diff/lore_revision_diff.dart';
+import '../core/history/models/event_snapshot.dart';
 import 'database_provider.dart';
 import 'character_provider.dart';
 import 'lore_provider.dart';
+import 'timeline_provider.dart';
 
 final revisionsProvider =
     FutureProvider.family<
@@ -261,42 +266,234 @@ class RevisionActions {
     return true;
   }
 
-  /// 恢复世界观百科实体正文版本（恢复前自动安全归档当前正文）
-  Future<bool> restoreLoreContent({
-    required int revisionId,
+  /// 构建当前百科实体的完整设定快照 (HISTORY-004)
+  LoreSnapshot buildCurrentLoreSnapshot(
+    LoreEntity lore, {
+    String source = 'manual',
+    bool isMilestone = false,
+    String? note,
+  }) {
+    return LoreSnapshot.fromEntity(
+      lore,
+      source: source,
+      isMilestone: isMilestone,
+      note: note,
+    );
+  }
+
+  /// 记录一条百科实体全量结构化快照 (HISTORY-004)
+  Future<int?> recordLoreSnapshot({
     required LoreEntity lore,
+    String? title,
+    String source = 'manual',
+    bool isMilestone = false,
+    String? note,
+    int maxRetain = 30,
+  }) async {
+    final snapshot = buildCurrentLoreSnapshot(
+      lore,
+      source: source,
+      isMilestone: isMilestone,
+      note: note,
+    );
+    final content = snapshot.toJsonString();
+    return recordRevision(
+      worldId: lore.worldId,
+      entityType: 'lore',
+      entityId: lore.id,
+      content: content,
+      title: title,
+      maxRetain: maxRetain,
+    );
+  }
+
+  /// 选择性安全恢复百科实体设定 (HISTORY-004)
+  Future<bool> restoreLoreSelective({
+    required int revisionId,
+    required LoreEntity currentLore,
+    required LoreSelectiveRestoreOptions options,
   }) async {
     final dao = _ref.read(revisionDaoProvider);
     final targetRev = await dao.getRevisionById(revisionId);
     if (targetRev == null) return false;
 
-    // 1. 先备份当前现有版本
-    if (lore.content.trim().isNotEmpty) {
-      await recordRevision(
-        worldId: lore.worldId,
-        entityType: 'lore',
-        entityId: lore.id,
-        content: lore.content,
-        title: '回滚前自动归档',
-      );
+    final targetSnapshot = LoreSnapshot.parse(
+      targetRev.content,
+      defaultName: currentLore.name,
+      defaultType: currentLore.entityType,
+      defaultTimestamp: targetRev.createdAt,
+    );
+
+    // 1. 回滚前强制自动为当前完整状态创建安全备份快照
+    await recordLoreSnapshot(
+      lore: currentLore,
+      title: '回滚前自动归档',
+      source: 'restore_backup',
+      note: '在恢复至快照 “${targetRev.title}” 前自动保存',
+    );
+
+    // 2. 根据选项分步选择性还原
+    String restoredName = currentLore.name;
+    String restoredType = currentLore.entityType;
+    String? restoredCover = currentLore.coverImagePath;
+    int? restoredParentId = currentLore.parentId;
+    String restoredSummary = currentLore.summary;
+    String restoredContent = currentLore.content;
+    String restoredCustomFields = currentLore.customFields;
+    String restoredTags = currentLore.tags;
+
+    if (options.restoreBasicInfo && targetSnapshot.schemaVersion > 0) {
+      if (targetSnapshot.name.trim().isNotEmpty) {
+        restoredName = targetSnapshot.name.trim();
+      }
+      restoredType = targetSnapshot.entityType;
+      restoredCover = targetSnapshot.coverImagePath;
+      restoredParentId = targetSnapshot.parentId;
     }
 
-    // 2. 写入恢复目标版本
+    if (options.restoreSummary && targetSnapshot.schemaVersion > 0) {
+      restoredSummary = targetSnapshot.summary;
+    }
+
+    if (options.restoreContent) {
+      restoredContent = targetSnapshot.content;
+    }
+
+    if (options.restoreCustomFields && targetSnapshot.schemaVersion > 0) {
+      restoredCustomFields = jsonEncode(targetSnapshot.customFields);
+    }
+
+    if (options.restoreTags && targetSnapshot.schemaVersion > 0) {
+      restoredTags = jsonEncode(targetSnapshot.tags);
+    }
+
+    // 写入数据库更新
     await _ref
         .read(loreActionsProvider)
         .updateEntity(
-          id: lore.id,
-          worldId: lore.worldId,
-          entityType: lore.entityType,
-          name: lore.name,
-          summary: lore.summary,
-          content: targetRev.content,
-          coverImagePath: lore.coverImagePath,
-          tags: lore.tags,
-          customFields: lore.customFields,
+          id: currentLore.id,
+          worldId: currentLore.worldId,
+          parentId: restoredParentId,
+          entityType: restoredType,
+          name: restoredName,
+          summary: restoredSummary,
+          content: restoredContent,
+          coverImagePath: restoredCover,
+          tags: restoredTags,
+          customFields: restoredCustomFields,
         );
-    _ref.invalidate(loreEntitiesByWorldProvider(lore.worldId));
-    _ref.invalidate(revisionsProvider((entityType: 'lore', entityId: lore.id)));
+
+    _ref.invalidate(loreEntitiesByWorldProvider(currentLore.worldId));
+    _ref.invalidate(
+      revisionsProvider((entityType: 'lore', entityId: currentLore.id)),
+    );
+    return true;
+  }
+
+  /// 恢复世界观百科实体正文版本（恢复前自动安全归档当前正文）
+  Future<bool> restoreLoreContent({
+    required int revisionId,
+    required LoreEntity lore,
+  }) async {
+    return restoreLoreSelective(
+      revisionId: revisionId,
+      currentLore: lore,
+      options: const LoreSelectiveRestoreOptions(),
+    );
+  }
+
+  /// 构建当前编年事件的完整快照 (HISTORY-004)
+  EventSnapshot buildCurrentEventSnapshot(
+    TimelineEvent event, {
+    String source = 'manual',
+    bool isMilestone = false,
+    String? note,
+  }) {
+    return EventSnapshot.fromEntity(
+      event,
+      source: source,
+      isMilestone: isMilestone,
+      note: note,
+    );
+  }
+
+  /// 记录一条编年事件全量快照 (HISTORY-004)
+  Future<int?> recordEventSnapshot({
+    required TimelineEvent event,
+    String? title,
+    String source = 'manual',
+    bool isMilestone = false,
+    String? note,
+    int maxRetain = 30,
+  }) async {
+    final snapshot = buildCurrentEventSnapshot(
+      event,
+      source: source,
+      isMilestone: isMilestone,
+      note: note,
+    );
+    final content = snapshot.toJsonString();
+    return recordRevision(
+      worldId: event.worldId,
+      entityType: 'event',
+      entityId: event.id,
+      content: content,
+      title: title,
+      maxRetain: maxRetain,
+    );
+  }
+
+  /// 安全恢复编年史事件 (HISTORY-004)
+  Future<bool> restoreEvent({
+    required int revisionId,
+    required TimelineEvent currentEvent,
+  }) async {
+    final dao = _ref.read(revisionDaoProvider);
+    final targetRev = await dao.getRevisionById(revisionId);
+    if (targetRev == null) return false;
+
+    final targetSnapshot = EventSnapshot.parse(
+      targetRev.content,
+      defaultTitle: currentEvent.title,
+      defaultTimestamp: targetRev.createdAt,
+    );
+
+    // 1. 回滚前备份
+    await recordEventSnapshot(
+      event: currentEvent,
+      title: '回滚前自动归档',
+      source: 'restore_backup',
+      note: '在恢复至快照 “${targetRev.title}” 前自动保存',
+    );
+
+    // 2. 写入还原
+    await _ref
+        .read(timelineActionsProvider)
+        .updateEvent(
+          id: currentEvent.id,
+          worldId: currentEvent.worldId,
+          characterId: currentEvent.characterId,
+          year: targetSnapshot.year.isNotEmpty
+              ? targetSnapshot.year
+              : currentEvent.year,
+          sortOrder: currentEvent.sortOrder,
+          title: targetSnapshot.title.isNotEmpty
+              ? targetSnapshot.title
+              : currentEvent.title,
+          description: targetSnapshot.description,
+          category: targetSnapshot.category,
+          importance: targetSnapshot.importance,
+        );
+
+    _ref.invalidate(worldTimelineEventsProvider(currentEvent.worldId));
+    if (currentEvent.characterId != null) {
+      _ref.invalidate(
+        characterTimelineEventsProvider(currentEvent.characterId!),
+      );
+    }
+    _ref.invalidate(
+      revisionsProvider((entityType: 'event', entityId: currentEvent.id)),
+    );
     return true;
   }
 

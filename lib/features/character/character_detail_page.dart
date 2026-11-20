@@ -20,6 +20,7 @@ import 'character_poster_dialog.dart';
 import '../tag/tag_selector.dart';
 import 'character_dialog.dart';
 import '../world/revision_history_dialog.dart';
+import 'character_story_appearance_section.dart';
 
 class CharacterDetailPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -344,6 +345,13 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
 
               // === 所属势力与地点归属 (LORE-002 & LORE-003) ===
               _CharacterLoreSection(
+                worldId: widget.worldId,
+                characterId: widget.characterId,
+              ),
+              const SizedBox(height: 16),
+
+              // === 故事线出场记录 (STORY-003) ===
+              CharacterStoryAppearanceSection(
                 worldId: widget.worldId,
                 characterId: widget.characterId,
               ),

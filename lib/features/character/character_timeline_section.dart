@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/timeline_provider.dart';
+import '../../providers/revision_provider.dart';
+import '../world/revision_history_dialog.dart';
 
 /// 角色详情页中的个人生平时间线卡片
 class CharacterTimelineSection extends ConsumerWidget {
@@ -375,6 +377,23 @@ class _EventCard extends StatelessWidget {
               const Spacer(),
               // 操作按钮
               IconButton(
+                icon: const Icon(Icons.history_rounded, size: 16),
+                tooltip: '版本历史与差异恢复',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: () {
+                  RevisionHistoryDialog.show(
+                    context,
+                    worldId: event.worldId,
+                    entityType: 'event',
+                    entityId: event.id,
+                    entityName: event.title,
+                    currentContent: event.description,
+                    event: event,
+                  );
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.edit_outlined, size: 16),
                 tooltip: '编辑',
                 padding: EdgeInsets.zero,
@@ -488,6 +507,20 @@ class _TimelineEventEditDialogState
         importance: _importance,
       );
     } else {
+      final ev = widget.event!;
+      final hasChanged =
+          ev.title != title ||
+          ev.year != year ||
+          ev.description != desc ||
+          ev.category != _category ||
+          ev.importance != _importance ||
+          ev.sortOrder != sort;
+
+      if (hasChanged) {
+        await ref
+            .read(revisionActionsProvider)
+            .recordEventSnapshot(event: ev, source: 'auto');
+      }
       await actions.updateEvent(
         id: widget.event!.id,
         worldId: widget.worldId,

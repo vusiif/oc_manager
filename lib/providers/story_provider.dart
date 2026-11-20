@@ -45,6 +45,21 @@ final workStatsProvider =
       return ref.watch(storyDaoProvider).getWorkStats(workId);
     });
 
+final characterAppearanceSummaryProvider =
+    FutureProvider.family<
+      CharacterAppearanceSummary,
+      ({int characterId, int? worldId})
+    >((ref, arg) {
+      return ref
+          .watch(storyDaoProvider)
+          .getCharacterAppearanceSummary(arg.characterId, worldId: arg.worldId);
+    });
+
+final workCastStatsProvider =
+    FutureProvider.family<List<WorkCastMemberStats>, int>((ref, workId) {
+      return ref.watch(storyDaoProvider).getWorkCharacterCastStats(workId);
+    });
+
 final storyActionsProvider = Provider((ref) => StoryActions(ref));
 
 // ========================================================
@@ -205,6 +220,8 @@ class StoryActions {
     );
     _ref.invalidate(scenesByChapterProvider(chapterId));
     _ref.invalidate(sceneDetailsByChapterProvider(chapterId));
+    _ref.invalidate(workCastStatsProvider);
+    _ref.invalidate(characterAppearanceSummaryProvider);
     return id;
   }
 
@@ -241,11 +258,15 @@ class StoryActions {
     );
     _ref.invalidate(scenesByChapterProvider(chapterId));
     _ref.invalidate(sceneDetailsByChapterProvider(chapterId));
+    _ref.invalidate(workCastStatsProvider);
+    _ref.invalidate(characterAppearanceSummaryProvider);
   }
 
   Future<void> deleteScene(int id, int chapterId) async {
     await _dao.deleteScene(id);
     _ref.invalidate(scenesByChapterProvider(chapterId));
     _ref.invalidate(sceneDetailsByChapterProvider(chapterId));
+    _ref.invalidate(workCastStatsProvider);
+    _ref.invalidate(characterAppearanceSummaryProvider);
   }
 }

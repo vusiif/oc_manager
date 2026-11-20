@@ -52,6 +52,9 @@ class _ConsistencyCheckerDialogState
       case 'relation':
         context.push('/world/${widget.worldId}/graph');
         break;
+      case 'story':
+        context.push('/world/${widget.worldId}/story');
+        break;
     }
   }
 
