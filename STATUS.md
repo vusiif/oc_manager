@@ -19,6 +19,22 @@
 
 ## 🔄 2. 最近会话变更记录 (Session Changelog)
 
+### [2026-11-20] 阶段 AS：全库巨型单体源文件瘦身与高内聚组件化重构 (Codebase Slimming & Modularization)
+- **重构原则与架构安全**：
+  - 遵循“纯提取无损重构（Extract-Only Refactoring）”，不破坏任何已有逻辑、SQL 事务或界面行为；
+  - 运用 Barrel Export 与向后兼容别名，保持对外调用 100% 透明无感；
+- **核心文件瘦身数据与成果**：
+  1. **`consistency_rules.dart` (1,335 行 -> 12 行，瘦身 99%)**：抽离至 `lib/core/consistency/rules/`（6 个规则独立拆分：完整性、图文关联、人物关系、生卒年死后矛盾、故事出场矛盾、百科双链等）；
+  2. **`revision_history_dialog.dart` (2,429 行 -> 475 行，瘦身 80%)**：抽离至 `lib/features/world/revision/`（提取 5 个独立组件：人物预览工作区、词条预览工作区、事件预览工作区、选择性恢复弹窗、差异对比徽章）；
+  3. **`lore_entity_detail_dialog.dart` (1,865 行 -> 378 行，瘦身 80%)**：抽离至 `lib/features/world/lore_details/`（提取 6 个独立卡片组件：专有属性、下级空间、人物流、实体外交关系网、顶栏徽章与添加关系弹窗）；
+  4. **`character_detail_page.dart` (1,888 行 -> 563 行，瘦身 70%)**：抽离至 `lib/features/character/`（提取 3 个独立业务卡片：属性雷达图 `CharacterStatsSection`、百科归属 `CharacterLoreSection`、人物关系与分组选择器 `CharacterRelationSection` / `CharacterGroupSelector`）；
+  5. **`booklet_export_service.dart` (1,202 行 -> 145 行，瘦身 88%)**：抽离至 `lib/core/export/booklet/`（提取 CSS 模板、SVG 雷达图生成器、通用文件辅助函数、HTML 导出生成器、Markdown ZIP 打包器）；
+  6. **`story_workbench_page.dart` (1,174 行 -> 341 行，瘦身 71%)**：抽离出 `story_chapter_outline_panel.dart`（章节分卷大纲树与操作）与 `story_scene_flow_panel.dart`（分镜场景流时间线卡片）；
+  7. **`relation_graph_page.dart` (3,641 行 -> 2,591 行，瘦身 29%)**：抽离出 `relation_graph_painters.dart`（`RelationPainter` 关系连线、`GridPainter`、`ConnectingLinePainter`、`calculateRelationLabelCenters`）与 `relation_graph_node.dart`（`DraggableNode`、`RelationSidebarItem`、`buildGenderShape`）；
+- **全量回归验证**：
+  - `flutter analyze` 保持 **0 issues found**；
+  - `flutter test` **210 / 210 项 100% 全部通过 (Pass)**。
+
 ### [2026-11-20] 阶段 AR：HISTORY-004 其他实体历史（百科词条与编年史大事件）全字段快照与选择性恢复闭环
 - **实体快照模型扩展与历史表架构复用**：
   - 复用已有的 `EntityRevisions` 历史表与 `RevisionDao`，保持 **Schema v15**，无需升级数据库 Schema，100% 向前兼容；
