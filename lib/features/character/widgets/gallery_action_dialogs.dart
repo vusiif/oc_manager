@@ -35,7 +35,14 @@ Future<void> showGalleryUploadDialog(
                   child: SizedBox(
                     width: 140,
                     height: 180,
-                    child: Image.file(File(pickedPath), fit: BoxFit.cover),
+                    child: Image.file(
+                      File(pickedPath),
+                      fit: BoxFit.cover,
+                      cacheWidth: 350,
+                      cacheHeight: 450,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.broken_image_rounded, size: 40),
+                    ),
                   ),
                 ),
               ),

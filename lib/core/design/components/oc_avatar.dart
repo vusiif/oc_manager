@@ -75,11 +75,14 @@ class _OcAvatarState extends State<OcAvatar> {
     Widget child;
 
     if (_resolvedFile != null) {
+      final pixelSize = (widget.size * 2).toInt().clamp(48, 512);
       child = Image.file(
         _resolvedFile!,
         width: widget.size,
         height: widget.size,
         fit: BoxFit.cover,
+        cacheWidth: pixelSize,
+        cacheHeight: pixelSize,
         errorBuilder: (context, error, stackTrace) =>
             _buildFallback(genderColor, initial),
       );

@@ -123,10 +123,12 @@ class RelationCanvasView extends StatelessWidget {
                       child: Stack(
                         children: [
                           Positioned.fill(
-                            child: CustomPaint(
-                              painter: GridPainter(
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.3),
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: GridPainter(
+                                  color: theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.3),
+                                ),
                               ),
                             ),
                           ),
@@ -163,34 +165,36 @@ class RelationCanvasView extends StatelessWidget {
                                   visibleRect,
                                   radius: 40.0,
                                 ))
-                              DraggableNode(
-                                character: character,
-                                position: positions[character.id]!,
-                                lodLevel: currentLod,
-                                allCharacters: characters,
-                                relations: relations,
-                                isPathHighlighted:
-                                    filterState.highlightedPath?.nodePath
-                                        .contains(character.id) ??
-                                    false,
-                                isDimmed:
-                                    filterState.highlightedPath != null &&
-                                    !(filterState.highlightedPath!.nodePath
-                                        .contains(character.id)),
-                                onDragStart: (startPos) =>
-                                    onNodeDragStart(character.id, startPos),
-                                onDragUpdate: (newPos) =>
-                                    onNodeDragUpdate(character.id, newPos),
-                                onDragEnd: (newPos) =>
-                                    onNodeDragEnd(character.id, newPos),
-                                onConnectStart: (startPos) =>
-                                    onConnectStart(character.id, startPos),
-                                onConnectUpdate: onConnectUpdate,
-                                onConnectEnd: onConnectEnd,
-                                onRemove: () => onRemoveCharacter(character),
-                                onManageRelations: () =>
-                                    onManageRelations(character),
-                                onEdit: () => onEditCharacter(character),
+                              RepaintBoundary(
+                                child: DraggableNode(
+                                  character: character,
+                                  position: positions[character.id]!,
+                                  lodLevel: currentLod,
+                                  allCharacters: characters,
+                                  relations: relations,
+                                  isPathHighlighted:
+                                      filterState.highlightedPath?.nodePath
+                                          .contains(character.id) ??
+                                      false,
+                                  isDimmed:
+                                      filterState.highlightedPath != null &&
+                                      !(filterState.highlightedPath!.nodePath
+                                          .contains(character.id)),
+                                  onDragStart: (startPos) =>
+                                      onNodeDragStart(character.id, startPos),
+                                  onDragUpdate: (newPos) =>
+                                      onNodeDragUpdate(character.id, newPos),
+                                  onDragEnd: (newPos) =>
+                                      onNodeDragEnd(character.id, newPos),
+                                  onConnectStart: (startPos) =>
+                                      onConnectStart(character.id, startPos),
+                                  onConnectUpdate: onConnectUpdate,
+                                  onConnectEnd: onConnectEnd,
+                                  onRemove: () => onRemoveCharacter(character),
+                                  onManageRelations: () =>
+                                      onManageRelations(character),
+                                  onEdit: () => onEditCharacter(character),
+                                ),
                               ),
                           if (candidateData.isNotEmpty)
                             Center(
@@ -225,42 +229,44 @@ class RelationCanvasView extends StatelessWidget {
               Positioned(
                 top: 16,
                 right: 16,
-                child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(24),
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.alt_route,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          filterState.highlightedPath != null
-                              ? '最短路径: ${filterState.highlightedPath!.hopCount} 步跃迁'
-                              : '已应用过滤条件',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurface,
+                child: RepaintBoundary(
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(24),
+                    color: theme.colorScheme.surfaceContainerHigh,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.alt_route,
+                            size: 18,
+                            color: theme.colorScheme.primary,
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.close, size: 16),
-                          tooltip: '清除高亮',
-                          onPressed: onClearFilter,
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            filterState.highlightedPath != null
+                                ? '最短路径: ${filterState.highlightedPath!.hopCount} 步跃迁'
+                                : '已应用过滤条件',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.close, size: 16),
+                            tooltip: '清除高亮',
+                            onPressed: onClearFilter,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -269,14 +275,16 @@ class RelationCanvasView extends StatelessWidget {
             Positioned(
               bottom: 16,
               right: 16,
-              child: GraphMinimap(
-                positions: positions,
-                characters: characters,
-                relations: relations,
-                transformController: transformController,
-                viewportSize: viewport,
-                isDark: isDark,
-                onNavigate: onNavigateToPosition,
+              child: RepaintBoundary(
+                child: GraphMinimap(
+                  positions: positions,
+                  characters: characters,
+                  relations: relations,
+                  transformController: transformController,
+                  viewportSize: viewport,
+                  isDark: isDark,
+                  onNavigate: onNavigateToPosition,
+                ),
               ),
             ),
           ],

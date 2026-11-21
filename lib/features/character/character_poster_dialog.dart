@@ -290,7 +290,16 @@ class _CharacterPosterDialogState extends ConsumerState<CharacterPosterDialog> {
                       builder: (context, snapshot) {
                         final file = snapshot.data;
                         if (file != null && file.existsSync()) {
-                          return Image.file(file, fit: BoxFit.cover);
+                          return Image.file(
+                            file,
+                            fit: BoxFit.cover,
+                            cacheWidth: 140,
+                            cacheHeight: 180,
+                            errorBuilder: (_, _, _) => Container(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.broken_image, size: 20),
+                            ),
+                          );
                         }
                         return Container(
                           color: theme.colorScheme.surfaceContainerHighest,

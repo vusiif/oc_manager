@@ -6,12 +6,16 @@ class LoreCoverImage extends StatefulWidget {
   final String? imagePath;
   final BoxFit fit;
   final Widget? fallback;
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   const LoreCoverImage({
     super.key,
     required this.imagePath,
     this.fit = BoxFit.cover,
     this.fallback,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
   @override
@@ -67,6 +71,8 @@ class _LoreCoverImageState extends State<LoreCoverImage> {
       return Image.file(
         _file!,
         fit: widget.fit,
+        cacheWidth: widget.cacheWidth ?? 512,
+        cacheHeight: widget.cacheHeight,
         errorBuilder: (context, error, stackTrace) =>
             widget.fallback ?? const SizedBox(),
       );

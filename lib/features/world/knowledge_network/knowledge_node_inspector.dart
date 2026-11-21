@@ -22,6 +22,8 @@ class KnowledgeNodeAvatar extends StatelessWidget {
       return Image.file(
         File(node.imagePath!),
         fit: BoxFit.cover,
+        cacheWidth: 120,
+        cacheHeight: 120,
         errorBuilder: (_, _, _) =>
             Icon(node.type.icon, color: typeColor, size: 28),
       );

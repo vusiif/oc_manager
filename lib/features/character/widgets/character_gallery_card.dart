@@ -61,7 +61,20 @@ class CharacterGalleryCard extends StatelessWidget {
                 }
                 final file = snapshot.data;
                 if (file != null && file.existsSync()) {
-                  return Image.file(file, fit: BoxFit.cover);
+                  final cacheW = (width * 2.5).toInt().clamp(200, 600);
+                  final cacheH = (height * 2.5).toInt().clamp(280, 800);
+                  return Image.file(
+                    file,
+                    fit: BoxFit.cover,
+                    cacheWidth: cacheW,
+                    cacheHeight: cacheH,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  );
                 }
                 return Center(
                   child: Icon(

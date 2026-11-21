@@ -50,6 +50,7 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
   int _selectedIndex = 0;
   bool _isLoading = true;
   Timer? _debounceTimer;
+  int _queryVersion = 0;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
   }
 
   Future<void> _loadInitialItems() async {
+    final currentVersion = ++_queryVersion;
     setState(() => _isLoading = true);
     final activeId = ref.read(activeWorldIdProvider);
     final items = await CommandPaletteService.searchItems(
@@ -65,7 +67,7 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
       '',
       activeWorldId: activeId,
     );
-    if (mounted) {
+    if (mounted && currentVersion == _queryVersion) {
       setState(() {
         _allItems = items;
         _isLoading = false;
@@ -85,20 +87,29 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
 
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
+    final currentVersion = ++_queryVersion;
     _debounceTimer = Timer(const Duration(milliseconds: 150), () async {
       final activeId = ref.read(activeWorldIdProvider);
-      setState(() => _isLoading = true);
-      final items = await CommandPaletteService.searchItems(
-        ref,
-        query,
-        activeWorldId: activeId,
-      );
-      if (mounted) {
-        setState(() {
-          _allItems = items;
-          _isLoading = false;
-        });
-        _applyFilter();
+      if (mounted && currentVersion == _queryVersion) {
+        setState(() => _isLoading = true);
+      }
+      try {
+        final items = await CommandPaletteService.searchItems(
+          ref,
+          query,
+          activeWorldId: activeId,
+        );
+        if (mounted && currentVersion == _queryVersion) {
+          setState(() {
+            _allItems = items;
+            _isLoading = false;
+          });
+          _applyFilter();
+        }
+      } catch (_) {
+        if (mounted && currentVersion == _queryVersion) {
+          setState(() => _isLoading = false);
+        }
       }
     });
   }

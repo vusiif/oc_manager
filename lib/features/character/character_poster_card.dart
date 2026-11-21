@@ -170,6 +170,9 @@ class CharacterPosterCard extends StatelessWidget {
                       file,
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      cacheWidth: 1024,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildAvatarFallback(style),
                     );
                   }
                   return _buildAvatarFallback(style);

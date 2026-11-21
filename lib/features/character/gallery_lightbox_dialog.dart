@@ -175,7 +175,19 @@ class _GalleryLightboxDialogState extends State<GalleryLightboxDialog> {
                     transformationController: _transformController,
                     minScale: 0.5,
                     maxScale: 5.0,
-                    child: Center(child: Image.file(file, fit: BoxFit.contain)),
+                    child: Center(
+                      child: Image.file(
+                        file,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                              child: Text(
+                                '立绘文件解析失败',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                      ),
+                    ),
                   );
                 },
               ),
