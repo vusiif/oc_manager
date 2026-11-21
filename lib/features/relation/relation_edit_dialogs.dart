@@ -1,11 +1,12 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' show Value;
 
-import '../../core/design/components/confirmation_dialog.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/relation_provider.dart';
 import 'graph_history_manager.dart';
+import 'widgets/family_relation_dialog.dart' as family_dlg;
+import 'widgets/relation_action_dialog.dart' as action_dlg;
 
 /// Predefined standard relation types.
 const List<String> defaultRelationTypes = [
@@ -112,7 +113,7 @@ class RelationEditDialogs {
                         }),
                       ),
                     ChoiceChip(
-                      label: const Text('自定义…', style: TextStyle(fontSize: 12)),
+                      label: const Text('自定义', style: TextStyle(fontSize: 12)),
                       selected: isCustomType,
                       onSelected: (_) => setState(() => isCustomType = true),
                     ),
@@ -123,22 +124,30 @@ class RelationEditDialogs {
                   TextField(
                     controller: customTypeController,
                     decoration: const InputDecoration(
-                      labelText: '自定义关系类型',
-                      hintText: '例如：宿敌、同事、师徒…',
+                      labelText: '自定义关系名称',
+                      hintText: '如：宿敌、前任、同门',
                     ),
-                    onChanged: (v) => selectedType = v.trim(),
                   ),
                 ],
                 const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('双向关系'),
-                  value: isBidirectional,
-                  onChanged: (v) => setState(() => isBidirectional = v),
-                ),
                 TextField(
                   controller: noteController,
-                  decoration: const InputDecoration(labelText: '备注（可选）'),
+                  decoration: const InputDecoration(
+                    labelText: '备注（可选）',
+                    hintText: '补充关系背景或细节说明',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text('双向关系'),
+                  subtitle: Text(
+                    isBidirectional ? '双方互为该关系' : '仅起始人物单向指向目标人物',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  value: isBidirectional,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (v) => setState(() => isBidirectional = v),
                 ),
               ],
             ),
@@ -150,72 +159,72 @@ class RelationEditDialogs {
             ),
             ElevatedButton(
               onPressed: () async {
-                final type = isCustomType
+                if (selectedFrom == null || selectedTo == null) return;
+                if (selectedFrom == selectedTo) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('不能和自己建立关系')));
+                  return;
+                }
+                final relType = isCustomType
                     ? customTypeController.text.trim()
                     : selectedType;
-                if (selectedFrom != null &&
-                    selectedTo != null &&
-                    selectedFrom != selectedTo &&
-                    type.isNotEmpty) {
-                  final note = noteController.text.trim().isEmpty
-                      ? null
-                      : noteController.text.trim();
-                  final id = await ref
-                      .read(relationActionsProvider)
-                      .create(
-                        fromCharacterId: selectedFrom!,
-                        toCharacterId: selectedTo!,
-                        relationType: type,
-                        isBidirectional: isBidirectional,
-                        note: note,
-                      );
-                  ref.invalidate(relationsByWorldProvider(worldId));
-
-                  final fromCharName =
-                      characters
-                          .where((c) => c.id == selectedFrom)
-                          .map((c) => c.name)
-                          .firstOrNull ??
-                      '?';
-                  final toCharName =
-                      characters
-                          .where((c) => c.id == selectedTo)
-                          .map((c) => c.name)
-                          .firstOrNull ??
-                      '?';
-
-                  historyManager.record(
-                    CreateRelationCommand(
-                      relation: Relation(
-                        id: id,
-                        fromCharacterId: selectedFrom!,
-                        toCharacterId: selectedTo!,
-                        relationType: type,
-                        isBidirectional: isBidirectional,
-                        note: note,
-                        relationGroupId: null,
-                      ),
-                      descriptionText: '$fromCharName 与 $toCharName 的【$type】',
-                      onDelete: (relId) async {
-                        await ref.read(relationActionsProvider).delete(relId);
-                        ref.invalidate(relationsByWorldProvider(worldId));
-                      },
-                      onRestore: (rel) async {
-                        await ref.read(relationActionsProvider).restore(rel);
-                        ref.invalidate(relationsByWorldProvider(worldId));
-                      },
-                    ),
-                  );
-
-                  if (ctx.mounted) Navigator.pop(ctx);
+                if (relType.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('请输入关系名称')));
+                  return;
                 }
+
+                final note = noteController.text.trim();
+                final id = await ref
+                    .read(relationActionsProvider)
+                    .create(
+                      fromCharacterId: selectedFrom!,
+                      toCharacterId: selectedTo!,
+                      relationType: relType,
+                      isBidirectional: isBidirectional,
+                      note: note.isEmpty ? null : note,
+                    );
+                ref.invalidate(relationsByWorldProvider(worldId));
+
+                // 录入撤销/重做命令栈
+                final fromName = characters
+                    .firstWhere((c) => c.id == selectedFrom)
+                    .name;
+                final toName = characters
+                    .firstWhere((c) => c.id == selectedTo)
+                    .name;
+                historyManager.record(
+                  CreateRelationCommand(
+                    relation: Relation(
+                      id: id,
+                      fromCharacterId: selectedFrom!,
+                      toCharacterId: selectedTo!,
+                      relationType: relType,
+                      isBidirectional: isBidirectional,
+                      note: note.isEmpty ? null : note,
+                    ),
+                    descriptionText: '$fromName 与 $toName 的【$relType】',
+                    onDelete: (id) async {
+                      await ref.read(relationActionsProvider).delete(id);
+                      ref.invalidate(relationsByWorldProvider(worldId));
+                    },
+                    onRestore: (r) async {
+                      await ref.read(relationActionsProvider).restore(r);
+                      ref.invalidate(relationsByWorldProvider(worldId));
+                    },
+                  ),
+                );
+
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('添加'),
             ),
           ],
         ),
       ),
-    ).whenComplete(() {
+    ).then((_) {
       customTypeController.dispose();
       noteController.dispose();
     });
@@ -231,123 +240,16 @@ class RelationEditDialogs {
     required List<Relation> relations,
     required GraphHistoryManager historyManager,
     required void Function(Relation rel, String desc) onRecordDelete,
-  }) {
-    String nameOf(int id) =>
-        allCharacters.where((c) => c.id == id).map((c) => c.name).firstOrNull ??
-        '?';
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        List<Relation> localRelations = List.of(relations);
-
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            final myRelations = localRelations
-                .where(
-                  (r) =>
-                      r.fromCharacterId == character.id ||
-                      r.toCharacterId == character.id,
-                )
-                .toList();
-
-            return AlertDialog(
-              title: Text('${character.name} 的关系'),
-              content: SizedBox(
-                width: 360,
-                child: myRelations.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: Text(
-                            '暂无关系',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: myRelations.length,
-                        itemBuilder: (ctx, index) {
-                          final rel = myRelations[index];
-                          final otherName = rel.fromCharacterId == character.id
-                              ? nameOf(rel.toCharacterId)
-                              : nameOf(rel.fromCharacterId);
-                          final arrow = rel.isBidirectional ? ' ↔ ' : ' → ';
-                          final direction = rel.fromCharacterId == character.id
-                              ? ''
-                              : '(反向)';
-                          final groupTag = rel.relationGroupId != null
-                              ? ' [组]'
-                              : '';
-
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              '$otherName$arrow${rel.relationType}$direction$groupTag',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            subtitle: rel.note != null && rel.note!.isNotEmpty
-                                ? Text(
-                                    rel.note!,
-                                    style: const TextStyle(fontSize: 12),
-                                  )
-                                : null,
-                            trailing: IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: Theme.of(ctx).colorScheme.error,
-                              ),
-                              onPressed: () async {
-                                await ref
-                                    .read(relationActionsProvider)
-                                    .delete(rel.id);
-                                setDialogState(() {
-                                  localRelations.removeWhere(
-                                    (r) => r.id == rel.id,
-                                  );
-                                });
-                                ref.invalidate(
-                                  relationsByWorldProvider(worldId),
-                                );
-                                onRecordDelete(
-                                  rel,
-                                  '${nameOf(rel.fromCharacterId)} 与 ${nameOf(rel.toCharacterId)} 的【${rel.relationType}】',
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('关闭'),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('添加关系'),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    showAddRelationDialog(
-                      context: context,
-                      ref: ref,
-                      worldId: worldId,
-                      characters: allCharacters,
-                      historyManager: historyManager,
-                      fromId: character.id,
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  }) => action_dlg.showRelationManagerDialog(
+    context: context,
+    ref: ref,
+    worldId: worldId,
+    character: character,
+    allCharacters: allCharacters,
+    relations: relations,
+    historyManager: historyManager,
+    onRecordDelete: onRecordDelete,
+  );
 
   /// Dialog to create parent-child family relations among multiple characters.
   static void showFamilyRelationDialog({
@@ -356,127 +258,13 @@ class RelationEditDialogs {
     required int worldId,
     required List<Character> characters,
     required GraphHistoryManager historyManager,
-  }) {
-    if (characters.length < 3) return;
-
-    List<int> parentIds = [];
-    List<int> childIds = [];
-    final noteController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          return AlertDialog(
-            title: const Text('添加家谱关系'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('父母（可多选）', style: Theme.of(ctx).textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final c in characters)
-                        FilterChip(
-                          avatar: relationGenderIcon(c.gender),
-                          label: Text(
-                            c.name,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          selected: parentIds.contains(c.id),
-                          onSelected: (selected) => setState(() {
-                            if (selected) {
-                              parentIds.add(c.id);
-                              childIds.remove(c.id);
-                            } else {
-                              parentIds.remove(c.id);
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text('子女（可多选）', style: Theme.of(ctx).textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final c in characters)
-                        FilterChip(
-                          avatar: relationGenderIcon(c.gender),
-                          label: Text(
-                            c.name,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          selected: childIds.contains(c.id),
-                          onSelected: (selected) => setState(() {
-                            if (selected) {
-                              childIds.add(c.id);
-                              parentIds.remove(c.id);
-                            } else {
-                              childIds.remove(c.id);
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(labelText: '备注（可选）'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (parentIds.length < 2 || childIds.isEmpty) return;
-                  final created = await ref
-                      .read(relationActionsProvider)
-                      .createFamilyRelation(
-                        parentIds: parentIds,
-                        childIds: childIds,
-                        note: noteController.text.trim().isEmpty
-                            ? null
-                            : noteController.text.trim(),
-                      );
-                  ref.invalidate(relationsByWorldProvider(worldId));
-
-                  historyManager.record(
-                    BatchCreateRelationsCommand(
-                      relations: created,
-                      descriptionText: '添加家谱亲子关系',
-                      onDelete: (relId) async {
-                        await ref.read(relationActionsProvider).delete(relId);
-                        ref.invalidate(relationsByWorldProvider(worldId));
-                      },
-                      onRestore: (rel) async {
-                        await ref.read(relationActionsProvider).restore(rel);
-                        ref.invalidate(relationsByWorldProvider(worldId));
-                      },
-                    ),
-                  );
-
-                  if (ctx.mounted) Navigator.pop(ctx);
-                },
-                child: const Text('添加'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+  }) => family_dlg.showFamilyRelationDialog(
+    context: context,
+    ref: ref,
+    worldId: worldId,
+    characters: characters,
+    historyManager: historyManager,
+  );
 
   /// Dialog triggered when clicking a relation line in the graph.
   static void showRelationActionDialog({
@@ -489,194 +277,16 @@ class RelationEditDialogs {
     onRecordUpdate,
     required void Function(Relation rel, String desc) onRecordDelete,
     required VoidCallback onRelationDeleted,
-  }) {
-    final charMap = {for (final c in characters) c.id: c};
-    final fromChar = charMap[rel.fromCharacterId];
-    final toChar = charMap[rel.toCharacterId];
-    final fromName = fromChar?.name ?? '未知人物';
-    final toName = toChar?.name ?? '未知人物';
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.hub_outlined, size: 20),
-              SizedBox(width: 8),
-              Text('人物关系', style: TextStyle(fontSize: 18)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.5,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      fromName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      rel.isBidirectional
-                          ? Icons.compare_arrows
-                          : Icons.arrow_forward,
-                      size: 20,
-                      color: rel.isBidirectional ? Colors.blue : Colors.orange,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      toName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Text(
-                    '类型: ',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  Chip(
-                    label: Text(
-                      rel.relationType,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const Spacer(),
-                  Text(
-                    rel.isBidirectional ? '双向互通' : '单向指向',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              if (rel.note != null && rel.note!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '备注: ${rel.note}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            // 切换双向/单向
-            TextButton.icon(
-              icon: Icon(
-                rel.isBidirectional ? Icons.arrow_forward : Icons.sync_alt,
-                size: 16,
-              ),
-              label: Text(rel.isBidirectional ? '设为单向' : '设为双向'),
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final oldRel = rel;
-                final newRel = rel.copyWith(
-                  isBidirectional: !rel.isBidirectional,
-                );
-                await ref.read(relationActionsProvider).update(newRel);
-                ref.invalidate(relationsByWorldProvider(worldId));
-                onRecordUpdate(oldRel, newRel, '$fromName 与 $toName 关系方向模式');
-              },
-            ),
-            // 反转方向 (仅单向有效)
-            if (!rel.isBidirectional)
-              TextButton.icon(
-                icon: const Icon(Icons.swap_horiz, size: 16),
-                label: const Text('反转'),
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  final oldRel = rel;
-                  final newRel = rel.copyWith(
-                    fromCharacterId: rel.toCharacterId,
-                    toCharacterId: rel.fromCharacterId,
-                  );
-                  await ref.read(relationActionsProvider).update(newRel);
-                  ref.invalidate(relationsByWorldProvider(worldId));
-                  onRecordUpdate(oldRel, newRel, '$fromName 与 $toName 关系方向反转');
-                },
-              ),
-            // 编辑类型与备注
-            TextButton.icon(
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('编辑'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                showEditRelationDialog(
-                  context: context,
-                  ref: ref,
-                  worldId: worldId,
-                  rel: rel,
-                  fromName: fromName,
-                  toName: toName,
-                  onRecordUpdate: onRecordUpdate,
-                );
-              },
-            ),
-            // 删除关系
-            TextButton.icon(
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 16,
-                color: Colors.red,
-              ),
-              label: const Text('删除', style: TextStyle(color: Colors.red)),
-              onPressed: () async {
-                final confirmed = await showConfirmDialog(
-                  context: context,
-                  title: '删除关系',
-                  content:
-                      '确定要删除【$fromName】与【$toName】之间的“${rel.relationType}”关系吗？',
-                  confirmLabel: '删除',
-                  isDestructive: true,
-                );
-                if (confirmed == true) {
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  await ref.read(relationActionsProvider).delete(rel.id);
-                  ref.invalidate(relationsByWorldProvider(worldId));
-                  onRelationDeleted();
-                  onRecordDelete(
-                    rel,
-                    '$fromName 与 $toName 的【${rel.relationType}】',
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  }) => action_dlg.showRelationActionDialog(
+    context: context,
+    ref: ref,
+    worldId: worldId,
+    rel: rel,
+    characters: characters,
+    onRecordUpdate: onRecordUpdate,
+    onRecordDelete: onRecordDelete,
+    onRelationDeleted: onRelationDeleted,
+  );
 
   /// Dialog to edit relation type and note.
   static void showEditRelationDialog({

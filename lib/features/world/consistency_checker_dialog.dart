@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/consistency/consistency_checker_engine.dart';
 import '../../providers/consistency_provider.dart';
+import 'widgets/consistency_health_dashboard.dart';
+import 'widgets/consistency_issue_tile.dart';
+import 'widgets/consistency_rule_config_dialog.dart';
 
 class ConsistencyCheckerDialog extends ConsumerStatefulWidget {
   final int worldId;
@@ -60,264 +63,7 @@ class _ConsistencyCheckerDialogState
 
   /// 打开规则启停与严重级别配置弹窗 (CONSIST-006)
   void _showRuleConfigDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => Consumer(
-        builder: (context, ref, _) {
-          final engine = ref.watch(consistencyEngineProvider);
-          final ruleConfigs = ref.watch(
-            worldRuleConfigsProvider(widget.worldId),
-          );
-          final notifier = ref.read(
-            worldRuleConfigsProvider(widget.worldId).notifier,
-          );
-          final allRules = engine.registry.allRules;
-          final theme = Theme.of(context);
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.tune_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                const Text('诊断规则启停配置'),
-              ],
-            ),
-            content: SizedBox(
-              width: 580,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '可根据世界观创作成熟度，自由启用/停用规则，或针对当前世界观自定义严重级别。停用的规则将不再扫描，亦不扣减自洽健康分。',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    ...allRules.map((rule) {
-                      final config =
-                          ruleConfigs[rule.ruleId] ??
-                          const RuleConfig(enabled: true);
-                      final isEnabled = config.enabled;
-                      final effectiveSeverity =
-                          config.customSeverity ?? rule.defaultSeverity;
-                      final isCustom = config.customSeverity != null;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isEnabled
-                                ? theme.colorScheme.surfaceContainerHighest
-                                      .withValues(alpha: 0.25)
-                                : theme.colorScheme.surfaceContainerHighest
-                                      .withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isEnabled
-                                  ? theme.colorScheme.outlineVariant.withValues(
-                                      alpha: 0.4,
-                                    )
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: isEnabled,
-                                onChanged: (_) {
-                                  notifier.toggleRule(rule.ruleId);
-                                },
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          rule.category.icon,
-                                          size: 15,
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: Text(
-                                            rule.name,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: isEnabled
-                                                  ? null
-                                                  : theme.colorScheme.outline,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${rule.category.label} · ${rule.description}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-
-                              // Severity Selector Popup Menu
-                              PopupMenuButton<IssueSeverity?>(
-                                tooltip: '调整该规则在当前世界观的严重度',
-                                enabled: isEnabled,
-                                onSelected: (newSeverity) {
-                                  notifier.setRuleSeverity(
-                                    rule.ruleId,
-                                    newSeverity,
-                                  );
-                                },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem<IssueSeverity?>(
-                                    value: null,
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          rule.defaultSeverity.icon,
-                                          color: rule.defaultSeverity.color,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '默认级别 (${rule.defaultSeverity.label})',
-                                        ),
-                                        if (!isCustom) ...[
-                                          const Spacer(),
-                                          const Icon(Icons.check, size: 16),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  ...IssueSeverity.values.map((s) {
-                                    final isSelected =
-                                        config.customSeverity == s;
-                                    return PopupMenuItem<IssueSeverity?>(
-                                      value: s,
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            s.icon,
-                                            color: s.color,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(s.label),
-                                          if (isSelected) ...[
-                                            const Spacer(),
-                                            const Icon(Icons.check, size: 16),
-                                          ],
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ],
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: effectiveSeverity.color.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: effectiveSeverity.color.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        effectiveSeverity.icon,
-                                        size: 14,
-                                        color: effectiveSeverity.color,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        effectiveSeverity.label,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: effectiveSeverity.color,
-                                        ),
-                                      ),
-                                      if (isCustom) ...[
-                                        const SizedBox(width: 2),
-                                        Text(
-                                          '*',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: effectiveSeverity.color,
-                                          ),
-                                        ),
-                                      ],
-                                      const SizedBox(width: 2),
-                                      Icon(
-                                        Icons.arrow_drop_down,
-                                        size: 14,
-                                        color: effectiveSeverity.color,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  notifier.resetDefaults();
-                },
-                child: const Text('重置全部启用与默认级别'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('完成'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    ConsistencyRuleConfigDialog.show(context, worldId: widget.worldId);
   }
 
   @override
@@ -455,8 +201,7 @@ class _ConsistencyCheckerDialogState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // 健康总览大盘卡片
-                        _buildHealthOverviewCard(
-                          context,
+                        ConsistencyHealthDashboard(
                           report: report,
                           activeScore: activeHealthScore,
                           activeCount: activeIssues.length,
@@ -593,10 +338,37 @@ class _ConsistencyCheckerDialogState
                                     final status =
                                         issueStatusMap[issue.id] ??
                                         IssueHandlingStatus.active;
-                                    return _buildIssueTile(
-                                      context,
-                                      issue,
+                                    return ConsistencyIssueTile(
+                                      issue: issue,
                                       status: status,
+                                      onNavigate: _handleNavigate,
+                                      onIgnore: (id) {
+                                        ref
+                                            .read(
+                                              worldIssueStatusProvider(
+                                                widget.worldId,
+                                              ).notifier,
+                                            )
+                                            .ignore(id);
+                                      },
+                                      onResolve: (id) {
+                                        ref
+                                            .read(
+                                              worldIssueStatusProvider(
+                                                widget.worldId,
+                                              ).notifier,
+                                            )
+                                            .resolve(id);
+                                      },
+                                      onReset: (id) {
+                                        ref
+                                            .read(
+                                              worldIssueStatusProvider(
+                                                widget.worldId,
+                                              ).notifier,
+                                            )
+                                            .reset(id);
+                                      },
                                     );
                                   },
                                 ),
@@ -609,106 +381,6 @@ class _ConsistencyCheckerDialogState
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHealthOverviewCard(
-    BuildContext context, {
-    required ConsistencyReport report,
-    required int activeScore,
-    required int activeCount,
-    required int processedCount,
-  }) {
-    final theme = Theme.of(context);
-
-    Color scoreColor;
-    String scoreStatus;
-    if (activeScore >= 90) {
-      scoreColor = const Color(0xFF10B981);
-      scoreStatus = '自洽优秀';
-    } else if (activeScore >= 65) {
-      scoreColor = const Color(0xFFF59E0B);
-      scoreStatus = '存在隐患';
-    } else {
-      scoreColor = const Color(0xFFEF4444);
-      scoreStatus = '矛盾较多';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scoreColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          // 分数徽标
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: scoreColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-              border: Border.all(color: scoreColor, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                '$activeScore',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: scoreColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '自洽健康指数：$scoreStatus',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '待办 $activeCount 项 · 已处理 $processedCount 项',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '覆盖时间生卒时序、人物社会关系闭环、维基双链断裂、沙盒资源完整性与设定完整度。',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -748,290 +420,6 @@ class _ConsistencyCheckerDialogState
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIssueTile(
-    BuildContext context,
-    ConsistencyIssue issue, {
-    required IssueHandlingStatus status,
-  }) {
-    final theme = Theme.of(context);
-    final isProcessed = status != IssueHandlingStatus.active;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: isProcessed
-              ? theme.colorScheme.outlineVariant
-              : issue.severity.color.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 2),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color:
-                    (isProcessed
-                            ? theme.colorScheme.outline
-                            : issue.severity.color)
-                        .withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isProcessed
-                    ? Icons.check_circle_outline_rounded
-                    : issue.severity.icon,
-                color: isProcessed
-                    ? theme.colorScheme.outline
-                    : issue.severity.color,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              (isProcessed
-                                      ? theme.colorScheme.outline
-                                      : issue.severity.color)
-                                  .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          isProcessed
-                              ? (status == IssueHandlingStatus.ignored
-                                    ? '已忽略'
-                                    : '已解决')
-                              : issue.severity.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isProcessed
-                                ? theme.colorScheme.outline
-                                : issue.severity.color,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          issue.category.label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          issue.title,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            decoration: isProcessed
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: isProcessed
-                                ? theme.colorScheme.outline
-                                : null,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    issue.description,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.4,
-                      color: isProcessed
-                          ? theme.colorScheme.outline
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (issue.evidence != null || issue.suggestion != null) ...[
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (issue.evidence != null)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '依据: ',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    issue.evidence!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (issue.evidence != null &&
-                              issue.suggestion != null)
-                            const SizedBox(height: 3),
-                          if (issue.suggestion != null)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '建议: ',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isProcessed
-                                        ? theme.colorScheme.outline
-                                        : theme.colorScheme.primary,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    issue.suggestion!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isProcessed
-                                          ? theme.colorScheme.outline
-                                          : theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // 操作按钮组
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _handleNavigate(issue),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                  label: const Text('定位'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                ),
-                if (!isProcessed)
-                  PopupMenuButton<String>(
-                    tooltip: '更多操作',
-                    icon: const Icon(Icons.more_horiz_rounded, size: 18),
-                    onSelected: (val) {
-                      if (val == 'ignore') {
-                        ref
-                            .read(
-                              worldIssueStatusProvider(widget.worldId).notifier,
-                            )
-                            .ignore(issue.id);
-                      } else if (val == 'resolve') {
-                        ref
-                            .read(
-                              worldIssueStatusProvider(widget.worldId).notifier,
-                            )
-                            .resolve(issue.id);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'ignore',
-                        child: Row(
-                          children: [
-                            Icon(Icons.visibility_off_outlined, size: 16),
-                            SizedBox(width: 8),
-                            Text('忽略此提示'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'resolve',
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 16),
-                            SizedBox(width: 8),
-                            Text('标记为已解决'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  TextButton.icon(
-                    onPressed: () {
-                      ref
-                          .read(
-                            worldIssueStatusProvider(widget.worldId).notifier,
-                          )
-                          .reset(issue.id);
-                    },
-                    icon: const Icon(Icons.undo_rounded, size: 14),
-                    label: const Text('恢复待办'),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                  ),
-              ],
             ),
           ],
         ),

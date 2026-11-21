@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/database/app_database.dart';
+
 import '../../core/history/diff/character_revision_diff.dart';
 import '../../core/history/diff/lore_revision_diff.dart';
 import '../../core/history/models/character_snapshot.dart';
 import '../../core/history/models/lore_snapshot.dart';
-import '../../providers/revision_provider.dart';
+import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
+import '../../providers/revision_provider.dart';
 import 'revision/character_revision_workspace.dart';
-import 'revision/lore_revision_workspace.dart';
 import 'revision/event_revision_workspace.dart';
+import 'revision/lore_revision_workspace.dart';
+import 'revision/revision_create_snapshot_dialog.dart';
+import 'revision/revision_list_sidebar.dart';
 import 'revision/revision_restore_dialogs.dart';
 
 /// 设定版本历史、差异对比与选择性恢复工作台 (HISTORY-001 ~ HISTORY-004)
@@ -96,133 +99,47 @@ class _RevisionHistoryDialogState extends ConsumerState<RevisionHistoryDialog>
   }
 
   Future<void> _createSnapshot() async {
-    final titleController = TextEditingController();
-    final noteController = TextEditingController();
-    bool isMilestone = false;
+    final result = await showCreateSnapshotDialog(context);
+    if (result == null || !mounted) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.bookmark_add_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                const Text('保存新设定快照'),
-              ],
-            ),
-            content: SizedBox(
-              width: 420,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: '快照说明 / 版本标签 *',
-                      hintText: '例如：初稿草案、大战后剧情大修',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: noteController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: '版本备注（可选）',
-                      hintText: '记录本次快照的核心变动原因...',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    value: isMilestone,
-                    onChanged: (val) {
-                      setDialogState(() => isMilestone = val ?? false);
-                    },
-                    title: const Text(
-                      '设为重要里程碑快照 (⭐)',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      '里程碑快照受到永久保护，历史版本超出上限时绝不会被自动修剪淘汰。',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('保存快照'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    final actions = ref.read(revisionActionsProvider);
+    final customTitle = result.title;
+    final customNote = result.note;
+    final isMilestone = result.isMilestone;
 
-    if (confirmed == true && mounted) {
-      final actions = ref.read(revisionActionsProvider);
-      final customTitle = titleController.text.trim();
-      final customNote = noteController.text.trim();
-
-      final character = _getEffectiveCharacter();
-      if (character != null) {
-        await actions.recordCharacterSnapshot(
-          character: character,
-          title: customTitle.isNotEmpty ? customTitle : null,
-          source: 'manual',
-          isMilestone: isMilestone,
-          note: customNote.isNotEmpty ? customNote : null,
-        );
-      } else if (widget.lore != null) {
-        await actions.recordLoreSnapshot(
-          lore: widget.lore!,
-          title: customTitle.isNotEmpty ? customTitle : null,
-          source: 'manual',
-          isMilestone: isMilestone,
-          note: customNote.isNotEmpty ? customNote : null,
-        );
-      } else if (widget.event != null) {
-        await actions.recordEventSnapshot(
-          event: widget.event!,
-          title: customTitle.isNotEmpty ? customTitle : null,
-          source: 'manual',
-          isMilestone: isMilestone,
-          note: customNote.isNotEmpty ? customNote : null,
-        );
-      } else {
-        await actions.recordRevision(
-          worldId: widget.worldId,
-          entityType: widget.entityType,
-          entityId: widget.entityId,
-          content: widget.currentContent,
-          title: customTitle.isNotEmpty ? customTitle : null,
-        );
-      }
+    final character = _getEffectiveCharacter();
+    if (character != null) {
+      await actions.recordCharacterSnapshot(
+        character: character,
+        title: customTitle.isNotEmpty ? customTitle : null,
+        source: 'manual',
+        isMilestone: isMilestone,
+        note: customNote.isNotEmpty ? customNote : null,
+      );
+    } else if (widget.lore != null) {
+      await actions.recordLoreSnapshot(
+        lore: widget.lore!,
+        title: customTitle.isNotEmpty ? customTitle : null,
+        source: 'manual',
+        isMilestone: isMilestone,
+        note: customNote.isNotEmpty ? customNote : null,
+      );
+    } else if (widget.event != null) {
+      await actions.recordEventSnapshot(
+        event: widget.event!,
+        title: customTitle.isNotEmpty ? customTitle : null,
+        source: 'manual',
+        isMilestone: isMilestone,
+        note: customNote.isNotEmpty ? customNote : null,
+      );
+    } else {
+      await actions.recordRevision(
+        worldId: widget.worldId,
+        entityType: widget.entityType,
+        entityId: widget.entityId,
+        content: widget.currentContent,
+        title: customTitle.isNotEmpty ? customTitle : null,
+      );
     }
   }
 
@@ -430,176 +347,12 @@ class _RevisionHistoryDialogState extends ConsumerState<RevisionHistoryDialog>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // 左侧版本列表栏 (290 宽)
-                        SizedBox(
-                          width: 290,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.all(8),
-                              itemCount: revisions.length,
-                              separatorBuilder: (context, index) =>
-                                  const SizedBox(height: 6),
-                              itemBuilder: (context, index) {
-                                final rev = revisions[index];
-                                final isSelected =
-                                    _selectedRevision?.id == rev.id;
-                                final dateStr = rev.createdAt
-                                    .toString()
-                                    .substring(5, 16);
-                                final isMilestone = rev.content.contains(
-                                  '"isMilestone":true',
-                                );
-                                final isAutoBackup = rev.content.contains(
-                                  '"restore_backup"',
-                                );
-
-                                return InkWell(
-                                  onTap: () =>
-                                      setState(() => _selectedRevision = rev),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? theme.colorScheme.primary
-                                                .withValues(alpha: 0.15)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: isSelected
-                                          ? Border.all(
-                                              color: theme.colorScheme.primary
-                                                  .withValues(alpha: 0.4),
-                                            )
-                                          : null,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // 里程碑星标或类型指示
-                                        IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          icon: Icon(
-                                            isMilestone
-                                                ? Icons.star_rounded
-                                                : isAutoBackup
-                                                ? Icons.restore_page_outlined
-                                                : Icons.commit_rounded,
-                                            size: 18,
-                                            color: isMilestone
-                                                ? Colors.amber.shade700
-                                                : isSelected
-                                                ? theme.colorScheme.primary
-                                                : theme.colorScheme.outline,
-                                          ),
-                                          tooltip: isMilestone
-                                              ? '已设为重要里程碑（受保护）'
-                                              : '点击标记为重要里程碑',
-                                          onPressed: () =>
-                                              _toggleMilestone(rev),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      rev.title,
-                                                      style: TextStyle(
-                                                        fontSize: 12.5,
-                                                        fontWeight: isSelected
-                                                            ? FontWeight.bold
-                                                            : FontWeight.normal,
-                                                        color: isSelected
-                                                            ? theme
-                                                                  .colorScheme
-                                                                  .primary
-                                                            : theme
-                                                                  .colorScheme
-                                                                  .onSurface,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  if (isMilestone)
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 4,
-                                                            vertical: 1,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.amber
-                                                            .withValues(
-                                                              alpha: 0.15,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              4,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        '里程碑',
-                                                        style: TextStyle(
-                                                          fontSize: 9.5,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Colors.amber,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    dateStr,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .outline,
-                                                    ),
-                                                  ),
-                                                  const Spacer(),
-                                                  Text(
-                                                    '${rev.charCount} 字',
-                                                    style: TextStyle(
-                                                      fontSize: 10.5,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .onSurfaceVariant,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                        RevisionListSidebar(
+                          revisions: revisions,
+                          selectedRevision: _selectedRevision,
+                          onSelectRevision: (rev) =>
+                              setState(() => _selectedRevision = rev),
+                          onToggleMilestone: _toggleMilestone,
                         ),
                         const SizedBox(width: 16),
 

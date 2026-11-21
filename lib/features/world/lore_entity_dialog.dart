@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/storage/image_storage_service.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/lore_provider.dart';
 import '../../providers/revision_provider.dart';
-import '../../core/storage/image_storage_service.dart';
-import 'lore_cover_image.dart';
+import 'widgets/lore_cover_image_picker.dart';
+import 'widgets/lore_custom_fields_section.dart';
 
 class LoreEntityDialog extends ConsumerStatefulWidget {
   final int worldId;
@@ -121,90 +122,9 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
     });
   }
 
-  void _applyFactionTemplate() {
-    final defaultFactionFields = {
-      '组织类别': '军事军团/法师行会',
-      '核心宗旨': '坚守信条，维护秩序与正义',
-      '势力现状': '活跃兴盛',
-      '组织规模': '跨区域大型组织',
-    };
+  void _applyTemplate(Map<String, String> template) {
     setState(() {
-      for (final entry in defaultFactionFields.entries) {
-        if (!_customFieldControllers.any(
-          (p) => p.key.text.trim() == entry.key,
-        )) {
-          _customFieldControllers.add(
-            MapEntry(
-              TextEditingController(text: entry.key),
-              TextEditingController(text: entry.value),
-            ),
-          );
-        }
-      }
-    });
-  }
-
-  void _applyItemTemplate() {
-    final defaultItemFields = {
-      '物品类别': '神兵利刃/防具圣物',
-      '品阶稀有度': '传说 (Legendary)',
-      '持有状态': '现世活跃',
-      '来源出处': '远古巨匠铸造/遗迹出土',
-      '特殊效果': '注入元素威能，附带破甲冲击',
-      '使用代价': '需契约者灵魂同调',
-    };
-    setState(() {
-      for (final entry in defaultItemFields.entries) {
-        if (!_customFieldControllers.any(
-          (p) => p.key.text.trim() == entry.key,
-        )) {
-          _customFieldControllers.add(
-            MapEntry(
-              TextEditingController(text: entry.key),
-              TextEditingController(text: entry.value),
-            ),
-          );
-        }
-      }
-    });
-  }
-
-  void _applyRaceTemplate() {
-    final defaultRaceFields = {
-      '种族分类': '类人种族/妖精幻兽/异界生灵',
-      '平均寿命': '~350岁 (长生种)',
-      '生理特征': '尖耳长眸，敏捷感知出众',
-      '生活习性': '聚居于林海圣所，崇尚自然与星辰',
-      '社会文化': '长老议会制，通用古精灵语与符文',
-      '信仰崇拜': '月神艾露恩 / 自然母神',
-    };
-    setState(() {
-      for (final entry in defaultRaceFields.entries) {
-        if (!_customFieldControllers.any(
-          (p) => p.key.text.trim() == entry.key,
-        )) {
-          _customFieldControllers.add(
-            MapEntry(
-              TextEditingController(text: entry.key),
-              TextEditingController(text: entry.value),
-            ),
-          );
-        }
-      }
-    });
-  }
-
-  void _applyAbilityTemplate() {
-    final defaultAbilityFields = {
-      '能力分类': '元素魔法/超能觉醒/秘术法则',
-      '威能阶位': '超阶禁咒 (Rank S)',
-      '生效方式': '瞬发吟唱/大范围法阵侵蚀',
-      '前置条件': '需掌握高阶冰霜与奥术亲和',
-      '限制条件': '施法时不可移动，需媒介法杖引导',
-      '反噬代价': '过量汲取将灼伤经络神识',
-    };
-    setState(() {
-      for (final entry in defaultAbilityFields.entries) {
+      for (final entry in template.entries) {
         if (!_customFieldControllers.any(
           (p) => p.key.text.trim() == entry.key,
         )) {
@@ -469,93 +389,12 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            InkWell(
-                              onTap: _pickImage,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 110,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  color: theme
-                                      .colorScheme
-                                      .surfaceContainerHighest
-                                      .withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outlineVariant,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: _coverImagePath != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(11),
-                                        child: Stack(
-                                          fit: StackFit.expand,
-                                          children: [
-                                            LoreCoverImage(
-                                              imagePath: _coverImagePath,
-                                            ),
-                                            Positioned(
-                                              right: 4,
-                                              top: 4,
-                                              child: InkWell(
-                                                onTap: () => setState(
-                                                  () => _coverImagePath = null,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black54,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                  padding: const EdgeInsets.all(
-                                                    2,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.close,
-                                                    size: 14,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_photo_alternate_outlined,
-                                            color: theme.colorScheme.primary,
-                                            size: 28,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            _selectedType ==
-                                                    LoreEntityType.faction
-                                                ? '组织徽记'
-                                                : _selectedType ==
-                                                      LoreEntityType.item
-                                                ? '装备立绘'
-                                                : _selectedType ==
-                                                      LoreEntityType.race
-                                                ? '种族特征'
-                                                : _selectedType ==
-                                                      LoreEntityType.ability
-                                                ? '符文法阵'
-                                                : '上传图鉴',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                              ),
+                            LoreCoverImagePicker(
+                              coverImagePath: _coverImagePath,
+                              selectedType: _selectedType,
+                              onPick: _pickImage,
+                              onClear: () =>
+                                  setState(() => _coverImagePath = null),
                             ),
                           ],
                         ),
@@ -570,158 +409,13 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '专有属性 / 结构化设定',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                if (_selectedType ==
-                                    LoreEntityType.faction) ...[
-                                  TextButton.icon(
-                                    onPressed: _applyFactionTemplate,
-                                    icon: const Icon(
-                                      Icons.auto_awesome,
-                                      size: 15,
-                                    ),
-                                    label: const Text('填入组织预设'),
-                                    style: TextButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ] else if (_selectedType ==
-                                    LoreEntityType.item) ...[
-                                  TextButton.icon(
-                                    onPressed: _applyItemTemplate,
-                                    icon: const Icon(
-                                      Icons.auto_awesome,
-                                      size: 15,
-                                    ),
-                                    label: const Text('填入装备预设'),
-                                    style: TextButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ] else if (_selectedType ==
-                                    LoreEntityType.race) ...[
-                                  TextButton.icon(
-                                    onPressed: _applyRaceTemplate,
-                                    icon: const Icon(
-                                      Icons.auto_awesome,
-                                      size: 15,
-                                    ),
-                                    label: const Text('填入种族预设'),
-                                    style: TextButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ] else if (_selectedType ==
-                                    LoreEntityType.ability) ...[
-                                  TextButton.icon(
-                                    onPressed: _applyAbilityTemplate,
-                                    icon: const Icon(
-                                      Icons.auto_awesome,
-                                      size: 15,
-                                    ),
-                                    label: const Text('填入能力预设'),
-                                    style: TextButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ],
-                                TextButton.icon(
-                                  onPressed: _addCustomField,
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: const Text('添加属性'),
-                                  style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        LoreCustomFieldsSection(
+                          selectedType: _selectedType,
+                          controllers: _customFieldControllers,
+                          onAddField: _addCustomField,
+                          onRemoveField: _removeCustomField,
+                          onApplyTemplate: _applyTemplate,
                         ),
-                        if (_customFieldControllers.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Text(
-                              '暂无专有属性。可点击上方按钮添加（如：领袖、坐标、危险等级、法力消耗等）。',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.outline,
-                              ),
-                            ),
-                          )
-                        else
-                          ...List.generate(_customFieldControllers.length, (
-                            index,
-                          ) {
-                            final pair = _customFieldControllers[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 130,
-                                    child: TextField(
-                                      controller: pair.key,
-                                      decoration: InputDecoration(
-                                        hintText: '属性名 (如坐标)',
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 10,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: pair.value,
-                                      decoration: InputDecoration(
-                                        hintText: '属性值 (如北境深渊)',
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 10,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.remove_circle_outline,
-                                      color: Colors.redAccent,
-                                      size: 18,
-                                    ),
-                                    onPressed: () => _removeCustomField(index),
-                                    tooltip: '移除',
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _contentController,
@@ -747,11 +441,11 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton(
-                      onPressed: _save,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: theme.colorScheme.onPrimary,
                       ),
+                      onPressed: _save,
                       child: Text(isEditing ? '保存修改' : '创建词条'),
                     ),
                   ],

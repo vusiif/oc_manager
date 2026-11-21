@@ -1,27 +1,23 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
-import '../../core/design/design_tokens.dart';
-import '../../core/util/graph_viewport_culling.dart';
-import 'package:flutter/services.dart';
-
 import '../character/character_dialog.dart';
 import 'graph_history_manager.dart';
 import 'relation_advanced_analysis.dart';
-import 'relation_graph_painters.dart';
-import 'relation_graph_node.dart';
-import 'widgets/graph_minimap.dart';
-
 import 'relation_canvas_dialogs.dart';
 import 'relation_canvas_selector.dart';
 import 'relation_edit_dialogs.dart';
 import 'relation_graph_exporter.dart';
+import 'relation_graph_painters.dart';
 import 'relation_sidebar.dart';
 import 'relation_toolbar.dart';
+import 'relation_viewport_helper.dart';
+import 'widgets/relation_canvas_view.dart';
+import 'widgets/relation_graph_shortcuts.dart';
 
 class RelationGraphPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -93,16 +89,11 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
   void _navigateToPosition(Offset targetWorldPos) {
     if (!mounted) return;
-    final currentScale = _transformController.value.getMaxScaleOnAxis();
-    final clampedScale = currentScale.clamp(0.1, 3.0);
-    final tx = _currentViewport.width / 2 - targetWorldPos.dx * clampedScale;
-    final ty = _currentViewport.height / 2 - targetWorldPos.dy * clampedScale;
-
-    _transformController.value = Matrix4.identity()
-      ..storage[0] = clampedScale
-      ..storage[5] = clampedScale
-      ..storage[12] = tx
-      ..storage[13] = ty;
+    _transformController.value = RelationViewportHelper.computeNavigateMatrix(
+      targetWorldPos: targetWorldPos,
+      viewportSize: _currentViewport,
+      currentScale: _transformController.value.getMaxScaleOnAxis(),
+    );
     _persistCurrentViewport();
   }
 
@@ -124,11 +115,6 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     _historyManager.dispose();
     _transformController.dispose();
     super.dispose();
-  }
-
-  bool _isEditingText() {
-    final focusedWidget = FocusManager.instance.primaryFocus?.context?.widget;
-    return focusedWidget is EditableText;
   }
 
   void _persistCurrentViewport() {
@@ -415,38 +401,12 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
   /// 适应画布：将所有节点自动居中并自适应缩放到视野中
   void _fitCanvasToNodes(Size viewportSize) {
-    if (_positions.isEmpty) {
-      _transformController.value = Matrix4.identity();
-      return;
-    }
-
-    double minX = double.infinity;
-    double maxX = -double.infinity;
-    double minY = double.infinity;
-    double maxY = -double.infinity;
-
-    for (final pos in _positions.values) {
-      minX = min(minX, pos.dx);
-      maxX = max(maxX, pos.dx);
-      minY = min(minY, pos.dy);
-      maxY = max(maxY, pos.dy);
-    }
-
-    const padding = 140.0;
-    final contentWidth = (maxX - minX) + padding * 2;
-    final contentHeight = (maxY - minY) + padding * 2;
-    final contentCenterX = (minX + maxX) / 2;
-    final contentCenterY = (minY + maxY) / 2;
-
-    final scaleX = viewportSize.width / max(contentWidth, 1.0);
-    final scaleY = viewportSize.height / max(contentHeight, 1.0);
-    final scale = min(scaleX, scaleY).clamp(0.2, 1.5);
-
-    final tx = viewportSize.width / 2 - contentCenterX * scale;
-    final ty = viewportSize.height / 2 - contentCenterY * scale;
-
     setState(() {
-      _transformController.value = _matrixFromViewport(tx, ty, scale);
+      _transformController.value =
+          RelationViewportHelper.computeFitCanvasMatrix(
+            viewportSize: viewportSize,
+            positions: _positions,
+          );
     });
     _persistCurrentViewport();
   }
@@ -494,6 +454,53 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
     if (targetId != null && sourceId != null) {
       _showAddRelationDialog(characters, fromId: sourceId, toId: targetId);
+    }
+  }
+
+  void _onNodeDragEnd(
+    int characterId,
+    Offset newPos,
+    List<Character> characters,
+  ) {
+    final startPos =
+        _nodeDragStartPositions.remove(characterId) ?? _positions[characterId];
+    _savePosition(characterId, newPos);
+    if (startPos != null &&
+        ((startPos.dx - newPos.dx).abs() > 0.5 ||
+            (startPos.dy - newPos.dy).abs() > 0.5)) {
+      final targetCanvasId = _selectedCanvasId;
+      final charName =
+          characters
+              .where((c) => c.id == characterId)
+              .map((c) => c.name)
+              .firstOrNull ??
+          'ID:$characterId';
+      _historyManager.record(
+        MoveNodeCommand(
+          characterId: characterId,
+          characterName: charName,
+          oldPos: startPos,
+          newPos: newPos,
+          onUpdateMemory: (id, pos) {
+            if (!mounted) return;
+            setState(() {
+              _positions[id] = pos;
+              _graphRevision++;
+            });
+          },
+          onPersist: (id, pos) async {
+            await ref
+                .read(graphLayoutActionsProvider)
+                .savePosition(
+                  widget.worldId,
+                  id,
+                  pos.dx,
+                  pos.dy,
+                  canvasId: targetCanvasId,
+                );
+          },
+        ),
+      );
     }
   }
 
@@ -618,15 +625,6 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     );
   }
 
-  Matrix4 _matrixFromViewport(double tx, double ty, double scale) {
-    final s = scale > 0 ? scale : 1.0;
-    return Matrix4.identity()
-      ..storage[0] = s
-      ..storage[5] = s
-      ..storage[12] = tx
-      ..storage[13] = ty;
-  }
-
   Future<void> _switchToCanvas(GraphCanvas targetCanvas) async {
     if (_selectedCanvasId == targetCanvas.id) return;
 
@@ -652,7 +650,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     });
 
     // 3. Restore target viewport
-    _transformController.value = _matrixFromViewport(
+    _transformController.value = RelationViewportHelper.matrixFromViewport(
       targetCanvas.viewportX,
       targetCanvas.viewportY,
       targetCanvas.zoomScale,
@@ -777,7 +775,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         orElse: () => canvases.first,
       );
       _selectedCanvasId = defaultCanvas.id;
-      _transformController.value = _matrixFromViewport(
+      _transformController.value = RelationViewportHelper.matrixFromViewport(
         defaultCanvas.viewportX,
         defaultCanvas.viewportY,
         defaultCanvas.zoomScale,
@@ -887,336 +885,58 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                 positions: _positions,
               ),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final viewport = Size(
-                      constraints.maxWidth,
-                      constraints.maxHeight,
-                    );
-                    _currentViewport = viewport;
-                    final visibleRect =
-                        _visibleWorldRect ??
-                        GraphViewportCulling.computeVisibleWorldRect(
-                          transform: _transformController.value,
-                          viewportSize: viewport,
-                          bufferMargin: 160.0,
-                        );
-                    final currentLod = GraphViewportCulling.getLodLevel(
-                      _currentScale,
-                    );
-                    final canvasSize = Size(
-                      max(viewport.width, 2000),
-                      max(viewport.height, 2000),
-                    );
-
-                    return Stack(
-                      children: [
-                        DragTarget<int>(
-                          onAcceptWithDetails: (details) {
-                            final renderBox =
-                                context.findRenderObject() as RenderBox;
-                            final localPos = renderBox.globalToLocal(
-                              details.offset,
-                            );
-                            final charName =
-                                characters
-                                    .where((c) => c.id == details.data)
-                                    .map((c) => c.name)
-                                    .firstOrNull ??
-                                '';
-                            _dropCharacter(
-                              details.data,
-                              localPos,
-                              characterName: charName,
-                            );
-                          },
-                          builder: (context, candidateData, rejectedData) {
-                            return InteractiveViewer(
-                              transformationController: _transformController,
-                              boundaryMargin: const EdgeInsets.all(500),
-                              minScale: 0.1,
-                              maxScale: 3.0,
-                              onInteractionEnd: (_) =>
-                                  _persistCurrentViewport(),
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTapUp: (details) {
-                                  _handleCanvasTap(
-                                    details.localPosition,
-                                    relations,
-                                    characters,
-                                  );
-                                },
-                                child: Container(
-                                  width: canvasSize.width,
-                                  height: canvasSize.height,
-                                  color:
-                                      theme.colorScheme.surfaceContainerLowest,
-                                  child: Stack(
-                                    children: [
-                                      Positioned.fill(
-                                        child: CustomPaint(
-                                          painter: GridPainter(
-                                            color: theme
-                                                .colorScheme
-                                                .outlineVariant
-                                                .withValues(alpha: 0.3),
-                                          ),
-                                        ),
-                                      ),
-                                      CustomPaint(
-                                        size: canvasSize,
-                                        painter: RelationPainter(
-                                          relations: relations,
-                                          positions: _positions,
-                                          characters: characters,
-                                          revision: _graphRevision,
-                                          selectedRelationId:
-                                              _selectedRelationId,
-                                          isDark:
-                                              theme.brightness ==
-                                              Brightness.dark,
-                                          filterState: _filterState,
-                                          visibleRect: visibleRect,
-                                          scale: _currentScale,
-                                        ),
-                                      ),
-                                      // 拖拽创建关系时的实时连线预览
-                                      if (_connectingFromId != null &&
-                                          _connectingCurrentPos != null &&
-                                          _positions.containsKey(
-                                            _connectingFromId,
-                                          ))
-                                        CustomPaint(
-                                          size: canvasSize,
-                                          painter: ConnectingLinePainter(
-                                            from:
-                                                _positions[_connectingFromId]!,
-                                            to: _connectingCurrentPos!,
-                                            color: AppColors.brand,
-                                          ),
-                                        ),
-                                      for (var character in characters)
-                                        if (_positions.containsKey(
-                                              character.id,
-                                            ) &&
-                                            GraphViewportCulling.isNodeVisible(
-                                              _positions[character.id]!,
-                                              visibleRect,
-                                              radius: 40.0,
-                                            ))
-                                          DraggableNode(
-                                            character: character,
-                                            position: _positions[character.id]!,
-                                            lodLevel: currentLod,
-                                            allCharacters: characters,
-                                            relations: relations,
-                                            isPathHighlighted:
-                                                _filterState
-                                                    .highlightedPath
-                                                    ?.nodePath
-                                                    .contains(character.id) ??
-                                                false,
-                                            isDimmed:
-                                                _filterState.highlightedPath !=
-                                                    null &&
-                                                !(_filterState
-                                                    .highlightedPath!
-                                                    .nodePath
-                                                    .contains(character.id)),
-                                            onDragStart: (startPos) {
-                                              _nodeDragStartPositions[character
-                                                      .id] =
-                                                  startPos;
-                                            },
-                                            onDragUpdate: (newPos) {
-                                              setState(() {
-                                                _positions[character.id] =
-                                                    newPos;
-                                                _graphRevision++;
-                                              });
-                                            },
-                                            onDragEnd: (newPos) {
-                                              final startPos =
-                                                  _nodeDragStartPositions
-                                                      .remove(character.id) ??
-                                                  _positions[character.id];
-                                              _savePosition(
-                                                character.id,
-                                                newPos,
-                                              );
-                                              if (startPos != null &&
-                                                  ((startPos.dx - newPos.dx)
-                                                              .abs() >
-                                                          0.5 ||
-                                                      (startPos.dy - newPos.dy)
-                                                              .abs() >
-                                                          0.5)) {
-                                                final targetCanvasId =
-                                                    _selectedCanvasId;
-                                                _historyManager.record(
-                                                  MoveNodeCommand(
-                                                    characterId: character.id,
-                                                    characterName:
-                                                        character.name,
-                                                    oldPos: startPos,
-                                                    newPos: newPos,
-                                                    onUpdateMemory: (id, pos) {
-                                                      if (!mounted) return;
-                                                      setState(() {
-                                                        _positions[id] = pos;
-                                                        _graphRevision++;
-                                                      });
-                                                    },
-                                                    onPersist: (id, pos) async {
-                                                      await ref
-                                                          .read(
-                                                            graphLayoutActionsProvider,
-                                                          )
-                                                          .savePosition(
-                                                            widget.worldId,
-                                                            id,
-                                                            pos.dx,
-                                                            pos.dy,
-                                                            canvasId:
-                                                                targetCanvasId,
-                                                          );
-                                                    },
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            onConnectStart: (startPos) =>
-                                                _onStartConnecting(
-                                                  character.id,
-                                                  startPos,
-                                                ),
-                                            onConnectUpdate:
-                                                _onUpdateConnecting,
-                                            onConnectEnd: () =>
-                                                _onEndConnecting(characters),
-                                            onRemove: () => _removeFromCanvas(
-                                              character.id,
-                                              characterName: character.name,
-                                            ),
-                                            onManageRelations: () =>
-                                                _showRelationManager(
-                                                  character,
-                                                  characters,
-                                                  relations,
-                                                ),
-                                            onEdit: () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (_) => CharacterDialog(
-                                                  worldId: widget.worldId,
-                                                  character: character,
-                                                ),
-                                              ).then((_) {
-                                                ref.invalidate(
-                                                  charactersByWorldProvider(
-                                                    widget.worldId,
-                                                  ),
-                                                );
-                                              });
-                                            },
-                                          ),
-                                      if (candidateData.isNotEmpty)
-                                        Center(
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 24,
-                                              vertical: 12,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary
-                                                  .withValues(alpha: 0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              '松开放置人物',
-                                              style: TextStyle(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        if (_filterState.hasActiveFilter)
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(24),
-                              color: theme.colorScheme.surfaceContainerHigh,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.alt_route,
-                                      size: 18,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _filterState.highlightedPath != null
-                                          ? '最短路径: ${_filterState.highlightedPath!.hopCount} 步跃迁'
-                                          : '已应用过滤条件',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: const Icon(Icons.close, size: 16),
-                                      tooltip: '清除高亮',
-                                      onPressed: () {
-                                        setState(() {
-                                          _filterState =
-                                              const RelationFilterState();
-                                        });
-                                        _persistCurrentFilterConfig();
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        // GRAPH-005: 悬浮全局导览小地图
-                        Positioned(
-                          bottom: 16,
-                          right: 16,
-                          child: GraphMinimap(
-                            positions: _positions,
-                            characters: characters,
-                            relations: relations,
-                            transformController: _transformController,
-                            viewportSize: viewport,
-                            isDark: theme.brightness == Brightness.dark,
-                            onNavigate: _navigateToPosition,
-                          ),
-                        ),
-                      ],
-                    );
+                child: RelationCanvasView(
+                  transformController: _transformController,
+                  characters: characters,
+                  relations: relations,
+                  positions: _positions,
+                  graphRevision: _graphRevision,
+                  selectedRelationId: _selectedRelationId,
+                  connectingFromId: _connectingFromId,
+                  connectingCurrentPos: _connectingCurrentPos,
+                  filterState: _filterState,
+                  visibleWorldRect: _visibleWorldRect,
+                  currentScale: _currentScale,
+                  onViewportChanged: (vp) => _currentViewport = vp,
+                  onDropCharacter: (charId, localPos, charName) =>
+                      _dropCharacter(charId, localPos, characterName: charName),
+                  onCanvasTap: (localPos) =>
+                      _handleCanvasTap(localPos, relations, characters),
+                  onPersistViewport: _persistCurrentViewport,
+                  onNodeDragStart: (charId, startPos) =>
+                      _nodeDragStartPositions[charId] = startPos,
+                  onNodeDragUpdate: (charId, newPos) {
+                    setState(() {
+                      _positions[charId] = newPos;
+                      _graphRevision++;
+                    });
+                  },
+                  onNodeDragEnd: (charId, newPos) =>
+                      _onNodeDragEnd(charId, newPos, characters),
+                  onConnectStart: _onStartConnecting,
+                  onConnectUpdate: _onUpdateConnecting,
+                  onConnectEnd: () => _onEndConnecting(characters),
+                  onRemoveCharacter: (char) =>
+                      _removeFromCanvas(char.id, characterName: char.name),
+                  onManageRelations: (char) =>
+                      _showRelationManager(char, characters, relations),
+                  onEditCharacter: (char) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => CharacterDialog(
+                        worldId: widget.worldId,
+                        character: char,
+                      ),
+                    ).then((_) {
+                      ref.invalidate(charactersByWorldProvider(widget.worldId));
+                    });
+                  },
+                  onNavigateToPosition: _navigateToPosition,
+                  onClearFilter: () {
+                    setState(() {
+                      _filterState = const RelationFilterState();
+                    });
+                    _persistCurrentFilterConfig();
                   },
                 ),
               ),
@@ -1228,43 +948,9 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       ),
     );
 
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () {
-          if (!_isEditingText() && _historyManager.canUndo) {
-            _historyManager.undo();
-          }
-        },
-        const SingleActivator(LogicalKeyboardKey.keyZ, meta: true): () {
-          if (!_isEditingText() && _historyManager.canUndo) {
-            _historyManager.undo();
-          }
-        },
-        const SingleActivator(LogicalKeyboardKey.keyY, control: true): () {
-          if (!_isEditingText() && _historyManager.canRedo) {
-            _historyManager.redo();
-          }
-        },
-        const SingleActivator(
-          LogicalKeyboardKey.keyZ,
-          control: true,
-          shift: true,
-        ): () {
-          if (!_isEditingText() && _historyManager.canRedo) {
-            _historyManager.redo();
-          }
-        },
-        const SingleActivator(
-          LogicalKeyboardKey.keyZ,
-          meta: true,
-          shift: true,
-        ): () {
-          if (!_isEditingText() && _historyManager.canRedo) {
-            _historyManager.redo();
-          }
-        },
-      },
-      child: Focus(autofocus: true, child: scaffold),
+    return RelationGraphShortcuts(
+      historyManager: _historyManager,
+      child: scaffold,
     );
   }
 }
