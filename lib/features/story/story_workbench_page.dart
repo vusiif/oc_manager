@@ -9,6 +9,7 @@ import 'story_chapter_outline_panel.dart';
 import 'story_scene_flow_panel.dart';
 import 'story_work_dialog.dart';
 import 'story_cast_dialog.dart';
+import 'story_export_dialog.dart';
 
 class StoryWorkbenchPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -290,6 +291,15 @@ class _StoryWorkbenchPageState extends ConsumerState<StoryWorkbenchPage> {
                 workTitle: currentWork.title,
                 worldId: widget.worldId,
               );
+            },
+          ),
+
+          // Export Script & Outline (EXPORT-002)
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined, size: 20),
+            tooltip: '导出剧本与大纲',
+            onPressed: () {
+              StoryExportDialog.show(context, currentWork);
             },
           ),
 

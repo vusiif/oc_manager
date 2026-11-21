@@ -193,6 +193,12 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 -   [x] **STORY-004：故事线时间检查**（已完成，位于 `lib/core/consistency/consistency_rules.dart` 的 `StoryTimelineConsistencyRule`、`lib/core/consistency/consistency_checker_engine.dart`、`lib/core/consistency/consistency_models.dart` 与 `lib/features/world/consistency_checker_dialog.dart`；稳定规则 ID 为 `RULE_STORY_TIMELINE`，归类于 `IssueCategory.story`，支持按大纲时序智能比对场景先后与发生时间倒错、自动豁免“回忆/倒叙/插叙/闪回”片段；结合编年史生卒年诊断角色逝世后或出生前出镜登场，自动豁免“亡魂/托梦/前世”设定；诊断分镜时间与引用的世界编年史大事件记录年份冲突；排查已定稿章节中的空白分镜场景；支持一键直达故事工作台进行定位修正，通过 `test/story_timeline_consistency_test.dart` 验证）
     -   对比场景顺序、故事内时间和世界编年史。
     -   统一交由一致性检查器呈现。
+-   [x] **STORY-005 / EXPORT-002：创作成品化与剧本分镜大纲导出**（已完成，位于 `lib/core/export/story/`、`lib/features/story/story_export_dialog.dart` 与 `story_workbench_page.dart`；支持三大导出格式：高颜值标准排版手册 HTML（内置自适应双栏、章节分镜导航与 `@media print` 打印/PDF 分页排版）、单一整合 Markdown 大纲剧本文档、以及按分卷分章归档的 Markdown ZIP 工程包；支持自主勾选导出模块（梗概、演职人员表、分镜卡片、正文、字数统计）与章节范围选择；通过 `test/story_script_export_test.dart` 6/6 全绿验证）
+    -   导出为单文件高颜值排版 HTML，支持现代排版与打印 PDF。
+    -   导出为单一整合 Markdown 大纲剧本文档。
+    -   导出为分卷分章 Markdown ZIP 工程包。
+    -   支持自由选择导出章节与包含的内容模块。
+    -   在故事创作工作台顶栏提供一键导出入口。
 
 ------------------------------------------------------------------------
 
@@ -304,6 +310,7 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 -   [x] STORY-002：章节与场景（已完成）
 -   [x] STORY-003：人物出场记录（已完成）
 -   [x] STORY-004：故事线时间检查（已完成）
+-   [x] STORY-005 / EXPORT-002：创作成品化与剧本分镜大纲导出（已完成）
 
 ## Research only：先调研，不承诺开发
 
