@@ -3,6 +3,7 @@ import 'consistency_models.dart';
 import 'consistency_rule.dart';
 import 'consistency_rules.dart';
 
+export 'consistency_config_service.dart';
 export 'consistency_models.dart';
 export 'consistency_rule.dart';
 export 'consistency_rules.dart';
@@ -34,14 +35,28 @@ class ConsistencyCheckerEngine {
   Future<ConsistencyReport> checkWorld(
     int worldId, {
     Set<String>? enabledRuleIds,
+    Map<String, RuleConfig>? ruleConfigs,
   }) async {
     final context = await _buildContext(worldId: worldId);
-    final activeRules = registry.getActiveRules(enabledRuleIds);
+    final effectiveEnabled =
+        enabledRuleIds ??
+        ruleConfigs?.entries
+            .where((e) => e.value.enabled)
+            .map((e) => e.key)
+            .toSet();
+    final activeRules = registry.getActiveRules(effectiveEnabled);
 
     final allIssues = <ConsistencyIssue>[];
     for (final rule in activeRules) {
       final issues = await rule.evaluate(context);
-      allIssues.addAll(issues);
+      final customSeverity = ruleConfigs?[rule.ruleId]?.customSeverity;
+      if (customSeverity != null) {
+        allIssues.addAll(
+          issues.map((i) => i.copyWith(severity: customSeverity)),
+        );
+      } else {
+        allIssues.addAll(issues);
+      }
     }
 
     return ConsistencyReport(
@@ -56,17 +71,31 @@ class ConsistencyCheckerEngine {
     int worldId,
     int characterId, {
     Set<String>? enabledRuleIds,
+    Map<String, RuleConfig>? ruleConfigs,
   }) async {
     final context = await _buildContext(
       worldId: worldId,
       targetCharacterId: characterId,
     );
-    final activeRules = registry.getActiveRules(enabledRuleIds);
+    final effectiveEnabled =
+        enabledRuleIds ??
+        ruleConfigs?.entries
+            .where((e) => e.value.enabled)
+            .map((e) => e.key)
+            .toSet();
+    final activeRules = registry.getActiveRules(effectiveEnabled);
 
     final issues = <ConsistencyIssue>[];
     for (final rule in activeRules) {
       final ruleIssues = await rule.evaluate(context);
-      issues.addAll(ruleIssues);
+      final customSeverity = ruleConfigs?[rule.ruleId]?.customSeverity;
+      if (customSeverity != null) {
+        issues.addAll(
+          ruleIssues.map((i) => i.copyWith(severity: customSeverity)),
+        );
+      } else {
+        issues.addAll(ruleIssues);
+      }
     }
     return issues;
   }

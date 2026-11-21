@@ -58,15 +58,18 @@ class _ConsistencyCheckerDialogState
     }
   }
 
-  /// 打开规则启停配置弹窗 (CONSIST-006)
+  /// 打开规则启停与严重级别配置弹窗 (CONSIST-006)
   void _showRuleConfigDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogCtx) => Consumer(
         builder: (context, ref, _) {
           final engine = ref.watch(consistencyEngineProvider);
-          final enabledRules = ref.watch(
-            worldEnabledRulesProvider(widget.worldId),
+          final ruleConfigs = ref.watch(
+            worldRuleConfigsProvider(widget.worldId),
+          );
+          final notifier = ref.read(
+            worldRuleConfigsProvider(widget.worldId).notifier,
           );
           final allRules = engine.registry.allRules;
           final theme = Theme.of(context);
@@ -87,14 +90,14 @@ class _ConsistencyCheckerDialogState
               ],
             ),
             content: SizedBox(
-              width: 520,
+              width: 580,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '可根据世界观创作成熟度，自由启用或停用指定规则。停用的规则将不再扫描，亦不扣减自洽健康分。',
+                      '可根据世界观创作成熟度，自由启用/停用规则，或针对当前世界观自定义严重级别。停用的规则将不再扫描，亦不扣减自洽健康分。',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.outline,
                       ),
@@ -102,33 +105,197 @@ class _ConsistencyCheckerDialogState
                     const SizedBox(height: 12),
                     const Divider(),
                     ...allRules.map((rule) {
-                      final isEnabled = enabledRules.contains(rule.ruleId);
-                      return CheckboxListTile(
-                        value: isEnabled,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          rule.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      final config =
+                          ruleConfigs[rule.ruleId] ??
+                          const RuleConfig(enabled: true);
+                      final isEnabled = config.enabled;
+                      final effectiveSeverity =
+                          config.customSeverity ?? rule.defaultSeverity;
+                      final isCustom = config.customSeverity != null;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isEnabled
+                                ? theme.colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.25)
+                                : theme.colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isEnabled
+                                  ? theme.colorScheme.outlineVariant.withValues(
+                                      alpha: 0.4,
+                                    )
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: isEnabled,
+                                onChanged: (_) {
+                                  notifier.toggleRule(rule.ruleId);
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          rule.category.icon,
+                                          size: 15,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            rule.name,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: isEnabled
+                                                  ? null
+                                                  : theme.colorScheme.outline,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${rule.category.label} · ${rule.description}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Severity Selector Popup Menu
+                              PopupMenuButton<IssueSeverity?>(
+                                tooltip: '调整该规则在当前世界观的严重度',
+                                enabled: isEnabled,
+                                onSelected: (newSeverity) {
+                                  notifier.setRuleSeverity(
+                                    rule.ruleId,
+                                    newSeverity,
+                                  );
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem<IssueSeverity?>(
+                                    value: null,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          rule.defaultSeverity.icon,
+                                          color: rule.defaultSeverity.color,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '默认级别 (${rule.defaultSeverity.label})',
+                                        ),
+                                        if (!isCustom) ...[
+                                          const Spacer(),
+                                          const Icon(Icons.check, size: 16),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuDivider(),
+                                  ...IssueSeverity.values.map((s) {
+                                    final isSelected =
+                                        config.customSeverity == s;
+                                    return PopupMenuItem<IssueSeverity?>(
+                                      value: s,
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            s.icon,
+                                            color: s.color,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(s.label),
+                                          if (isSelected) ...[
+                                            const Spacer(),
+                                            const Icon(Icons.check, size: 16),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: effectiveSeverity.color.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: effectiveSeverity.color.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        effectiveSeverity.icon,
+                                        size: 14,
+                                        color: effectiveSeverity.color,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        effectiveSeverity.label,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: effectiveSeverity.color,
+                                        ),
+                                      ),
+                                      if (isCustom) ...[
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          '*',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: effectiveSeverity.color,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        size: 14,
+                                        color: effectiveSeverity.color,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        subtitle: Text(
-                          '${rule.category.label} · ${rule.description}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        onChanged: (val) {
-                          ref
-                              .read(
-                                worldEnabledRulesProvider(
-                                  widget.worldId,
-                                ).notifier,
-                              )
-                              .toggleRule(rule.ruleId);
-                        },
                       );
                     }),
                   ],
@@ -138,11 +305,9 @@ class _ConsistencyCheckerDialogState
             actions: [
               TextButton(
                 onPressed: () {
-                  ref
-                      .read(worldEnabledRulesProvider(widget.worldId).notifier)
-                      .resetDefaults();
+                  notifier.resetDefaults();
                 },
-                child: const Text('重置全部启用'),
+                child: const Text('重置全部启用与默认级别'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(dialogCtx),

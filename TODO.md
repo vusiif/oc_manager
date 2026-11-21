@@ -114,8 +114,9 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
     -   点击结果可跳转对应人物、事件、关系或条目。
     -   支持忽略、标记已解决、重新检查。
     -   结果记录规则版本和检查时间；不修改源数据。
--   [ ] **CONSIST-006：可配置规则**
+-   [x] **CONSIST-006：可配置规则与偏好持久化**（已完成，位于 `lib/core/consistency/consistency_config_service.dart`、`lib/core/consistency/consistency_models.dart`、`lib/providers/consistency_provider.dart` 与 `lib/features/world/consistency_checker_dialog.dart`；支持针对单世界观自由启停指定规则；支持独立定制规则严重级别【严重矛盾 Error / 逻辑警告 Warning / 设定建议 Info / 默认级别】；诊断引擎动态响应自定义严重级别并实时映射至健康指数扣分；支持已忽略 Ignored 与已标记解决 Resolved 问题状态持久化至 SQLite `Settings` 表；通过 `test/consistency_config_persistence_test.dart` 5/5 全绿验证）
     -   支持启用/停用规则和调整严重级别。
+    -   配置与忽略状态持久化存储至本地 SQLite，跨会话保留。
     -   暂不支持用户脚本执行，避免安全风险。
 
 ------------------------------------------------------------------------
@@ -290,7 +291,7 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 -   [x] CONSIST-003：关系与引用检查（已完成）
 -   [x] CONSIST-004：设定完整度检查（已完成）
 -   [x] CONSIST-005：检查结果工作台（已完成）
--   [ ] CONSIST-006：可配置规则（规则开关与严重级别配置持久化）
+-   [x] CONSIST-006：可配置规则（规则开关与严重级别配置持久化，已完成）
 
 ## Next Major：世界观百科
 -   [x] LORE-001：通用条目模型评审（已完成，Schema v13）

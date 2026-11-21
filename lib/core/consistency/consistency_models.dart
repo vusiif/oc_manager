@@ -77,6 +77,70 @@ class ConsistencyIssue {
     required this.targetId,
     required this.targetName,
   });
+
+  ConsistencyIssue copyWith({
+    String? id,
+    String? ruleId,
+    IssueCategory? category,
+    IssueSeverity? severity,
+    String? title,
+    String? description,
+    String? suggestion,
+    String? evidence,
+    String? targetType,
+    int? targetId,
+    String? targetName,
+  }) {
+    return ConsistencyIssue(
+      id: id ?? this.id,
+      ruleId: ruleId ?? this.ruleId,
+      category: category ?? this.category,
+      severity: severity ?? this.severity,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      suggestion: suggestion ?? this.suggestion,
+      evidence: evidence ?? this.evidence,
+      targetType: targetType ?? this.targetType,
+      targetId: targetId ?? this.targetId,
+      targetName: targetName ?? this.targetName,
+    );
+  }
+}
+
+/// 规则偏好配置 (CONSIST-006: 启用/停用与严重级别定制)
+class RuleConfig {
+  /// 是否启用该规则检查
+  final bool enabled;
+
+  /// 自定义严重级别；若为 null 则使用该规则的原生默认严重度
+  final IssueSeverity? customSeverity;
+
+  const RuleConfig({this.enabled = true, this.customSeverity});
+
+  RuleConfig copyWith({
+    bool? enabled,
+    IssueSeverity? customSeverity,
+    bool clearCustomSeverity = false,
+  }) {
+    return RuleConfig(
+      enabled: enabled ?? this.enabled,
+      customSeverity: clearCustomSeverity
+          ? null
+          : (customSeverity ?? this.customSeverity),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'enabled': enabled,
+    if (customSeverity != null) 'customSeverity': customSeverity!.name,
+  };
+
+  factory RuleConfig.fromJson(Map<String, dynamic> json) => RuleConfig(
+    enabled: json['enabled'] as bool? ?? true,
+    customSeverity: json['customSeverity'] != null
+        ? IssueSeverity.values.asNameMap()[json['customSeverity']]
+        : null,
+  );
 }
 
 /// 规则评估上下文 (提供只读实体与目标作用域)
