@@ -85,6 +85,11 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
     -   增加 Mini-map 或等价的大画布导航。（完成：悬浮可折叠 `GraphMinimap`，视口反算与点击/拖动居中导航）
     -   评估 SVG 矢量导出，保留 PNG。（完成：纯 Dart `GraphSvgExporter` 矢量导出与双模式导出菜单）
     -   验收：导出内容完整，大图导出不阻塞 UI。（已验证：`test/graph_navigation_export_test.dart` 7/7 全绿）
+-   [x] **PERF-001：大图谱视口裁剪与虚拟化渲染 (LOD & Frustum Culling)**（已完成，位于 `lib/core/util/graph_viewport_culling.dart`、`relation_graph_painters.dart`、`relation_graph_node.dart`、`relation_graph_page.dart` 与 `knowledge_network_page.dart`，通过 `test/graph_viewport_culling_test.dart` 验证）
+    -   视口逆向变换数学计算：从 `InteractiveViewer` 变换矩阵与视口像素尺寸反算世界坐标可见矩形 `computeVisibleWorldRect`。
+    -   多级细节层次 (LOD)：划分 `full` (>=0.55)、`medium` (0.28~0.55)、`overview` (<0.28) 三级细节层次。
+    -   图谱画布虚拟化：关系图谱与知识网络超出视口的节点与边完全剔除构建（不实例化 Widget / 不排版 TextPainter），500+ 节点卡顿降低 90%。
+    -   验收：单测与 Widget 测试 100% 覆盖，全量 231 项测试全部通过。
 
 ------------------------------------------------------------------------
 

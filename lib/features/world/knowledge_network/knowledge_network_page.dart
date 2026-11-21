@@ -1,18 +1,19 @@
-import 'knowledge_network_filter_dialog.dart';
-import 'knowledge_node_inspector.dart';
-import 'knowledge_network_toolbar.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/design/design_tokens.dart';
+import '../../../core/util/graph_viewport_culling.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/world_provider.dart';
 import '../lore_entity_detail_dialog.dart';
+import 'knowledge_network_filter_dialog.dart';
 import 'knowledge_network_layout_engine.dart';
 import 'knowledge_network_painter.dart';
 import 'knowledge_network_provider.dart';
+import 'knowledge_network_toolbar.dart';
+import 'knowledge_node_inspector.dart';
 
 /// 知识网络全域大视图页面 (LORE-007)
 class KnowledgeNetworkPage extends ConsumerStatefulWidget {
@@ -42,6 +43,8 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
   String? _selectedNodeId;
   bool _hasInitialLayout = false;
   double _currentScale = 1.0;
+  Rect? _visibleWorldRect;
+  Size _currentViewport = const Size(1200, 800);
 
   @override
   void initState() {
@@ -62,10 +65,22 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
   }
 
   void _onTransformChanged() {
-    final scale = _transformController.value.getMaxScaleOnAxis();
-    if ((scale - _currentScale).abs() > 0.05) {
+    if (!mounted) return;
+    final matrix = _transformController.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final rect = GraphViewportCulling.computeVisibleWorldRect(
+      transform: matrix,
+      viewportSize: _currentViewport,
+      bufferMargin: 160.0,
+    );
+    final scaleChanged = (_currentScale - scale).abs() > 0.03;
+    final rectMoved =
+        _visibleWorldRect == null ||
+        (_visibleWorldRect!.center - rect.center).distance > 50.0;
+    if (scaleChanged || rectMoved) {
       setState(() {
         _currentScale = scale;
+        _visibleWorldRect = rect;
       });
     }
   }
@@ -187,72 +202,102 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
                 });
               }
 
-              return InteractiveViewer(
-                transformationController: _transformController,
-                minScale: 0.15,
-                maxScale: 2.5,
-                boundaryMargin: const EdgeInsets.all(2400),
-                constrained: false,
-                child: SizedBox(
-                  width: canvasWidth,
-                  height: canvasHeight,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // 背景点击：点击画布空白处，清除聚焦与选中
-                      Positioned.fill(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _selectedNodeId = null;
-                              if (_filterState.focusedNodeId != null) {
-                                _filterState = _filterState.copyWith(
-                                  clearFocusedNode: true,
-                                );
-                              }
-                            });
-                          },
-                        ),
-                      ),
-                      // 背景连线与光晕绘制层
-                      Positioned.fill(
-                        child: RepaintBoundary(
-                          child: CustomPaint(
-                            painter: KnowledgeNetworkPainter(
-                              edges: visibleEdges,
-                              positions: _positions,
-                              nodes: visibleNodes,
-                              focusedNodeId: _filterState.focusedNodeId,
-                              neighborNodeIds: neighborNodeIds,
-                              isDark: isDark,
-                              scale: _currentScale,
-                              center: canvasCenter,
-                              showOrbitGuides:
-                                  _currentLayoutMode ==
-                                  NetworkLayoutMode.galaxy,
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final viewport = Size(
+                    constraints.maxWidth,
+                    constraints.maxHeight,
+                  );
+                  _currentViewport = viewport;
+                  final visibleRect =
+                      _visibleWorldRect ??
+                      GraphViewportCulling.computeVisibleWorldRect(
+                        transform: _transformController.value,
+                        viewportSize: viewport,
+                        bufferMargin: 160.0,
+                      );
+                  final lodLevel = GraphViewportCulling.getLodLevel(
+                    _currentScale,
+                  );
+
+                  return InteractiveViewer(
+                    transformationController: _transformController,
+                    minScale: 0.15,
+                    maxScale: 2.5,
+                    boundaryMargin: const EdgeInsets.all(2400),
+                    constrained: false,
+                    child: SizedBox(
+                      width: canvasWidth,
+                      height: canvasHeight,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // 背景点击：点击画布空白处，清除聚焦与选中
+                          Positioned.fill(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                setState(() {
+                                  _selectedNodeId = null;
+                                  if (_filterState.focusedNodeId != null) {
+                                    _filterState = _filterState.copyWith(
+                                      clearFocusedNode: true,
+                                    );
+                                  }
+                                });
+                              },
                             ),
                           ),
-                        ),
-                      ),
-
-                      // 实体节点 Widget 交互层
-                      for (final node in visibleNodes.values)
-                        if (_positions.containsKey(node.id))
-                          _buildNodeWidget(
-                            node: node,
-                            pos: _positions[node.id]!,
-                            isFocused: _filterState.focusedNodeId == node.id,
-                            isSelected: _selectedNodeId == node.id,
-                            isDimmed:
-                                _filterState.focusedNodeId != null &&
-                                !neighborNodeIds.contains(node.id),
-                            isDark: isDark,
-                            allEdges: visibleEdges,
+                          // 背景连线与光晕绘制层
+                          Positioned.fill(
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: KnowledgeNetworkPainter(
+                                  edges: visibleEdges,
+                                  positions: _positions,
+                                  nodes: visibleNodes,
+                                  focusedNodeId: _filterState.focusedNodeId,
+                                  neighborNodeIds: neighborNodeIds,
+                                  isDark: isDark,
+                                  scale: _currentScale,
+                                  visibleRect: visibleRect,
+                                  center: canvasCenter,
+                                  showOrbitGuides:
+                                      _currentLayoutMode ==
+                                      NetworkLayoutMode.galaxy,
+                                ),
+                              ),
+                            ),
                           ),
-                    ],
-                  ),
-                ),
+
+                          // 实体节点 Widget 交互层 (带视口裁剪与 LOD 过滤)
+                          for (final node in visibleNodes.values)
+                            if (_positions.containsKey(node.id) &&
+                                (node.id == _selectedNodeId ||
+                                    node.id == _filterState.focusedNodeId ||
+                                    GraphViewportCulling.isNodeVisible(
+                                      _positions[node.id]!,
+                                      visibleRect,
+                                      radius: 45.0,
+                                    )))
+                              _buildNodeWidget(
+                                node: node,
+                                pos: _positions[node.id]!,
+                                isFocused:
+                                    _filterState.focusedNodeId == node.id,
+                                isSelected: _selectedNodeId == node.id,
+                                isDimmed:
+                                    _filterState.focusedNodeId != null &&
+                                    !neighborNodeIds.contains(node.id),
+                                isDark: isDark,
+                                allEdges: visibleEdges,
+                                lodLevel: lodLevel,
+                              ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -339,7 +384,7 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
     );
   }
 
-  /// 构建节点 Widget
+  /// 构建节点 Widget (支持 LOD 分级渲染 - PERF-001)
   Widget _buildNodeWidget({
     required NetworkNode node,
     required Offset pos,
@@ -348,9 +393,117 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
     required bool isDimmed,
     required bool isDark,
     required List<NetworkEdge> allEdges,
+    GraphLodLevel lodLevel = GraphLodLevel.full,
   }) {
-    const nodeSize = 64.0;
     final typeColor = node.type.color;
+
+    // 1. Overview LOD: 轻量微点 (极简 22px，无文字/图片，大幅提升缩放帧率)
+    if (lodLevel == GraphLodLevel.overview) {
+      const dotSize = 22.0;
+      return Positioned(
+        left: pos.dx - dotSize / 2,
+        top: pos.dy - dotSize / 2,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            setState(() {
+              _selectedNodeId = node.id;
+            });
+          },
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: isDimmed ? 0.22 : 1.0,
+            child: Container(
+              width: dotSize,
+              height: dotSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: typeColor,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.brand
+                      : (isDark ? Colors.white70 : Colors.black45),
+                  width: isSelected || isFocused ? 2.5 : 1.2,
+                ),
+                boxShadow: isFocused || isSelected
+                    ? [
+                        BoxShadow(
+                          color: typeColor.withValues(alpha: 0.6),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. Medium LOD: 中等大小几何头像 (42px，省略度数徽章与文本胶囊)
+    if (lodLevel == GraphLodLevel.medium) {
+      const mediumSize = 42.0;
+      return Positioned(
+        left: pos.dx - mediumSize / 2,
+        top: pos.dy - mediumSize / 2,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanUpdate: (details) {
+            setState(() {
+              _positions[node.id] =
+                  (_positions[node.id] ?? pos) + details.delta / _currentScale;
+            });
+          },
+          onTap: () {
+            setState(() {
+              _selectedNodeId = node.id;
+            });
+          },
+          onDoubleTap: () {
+            setState(() {
+              if (_filterState.focusedNodeId == node.id) {
+                _filterState = _filterState.copyWith(clearFocusedNode: true);
+              } else {
+                _filterState = _filterState.copyWith(focusedNodeId: node.id);
+              }
+            });
+          },
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: isDimmed ? 0.22 : 1.0,
+            child: Container(
+              width: mediumSize,
+              height: mediumSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.brand
+                      : (isFocused
+                            ? typeColor
+                            : typeColor.withValues(alpha: 0.6)),
+                  width: isSelected || isFocused ? 3.0 : 2.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isFocused ? typeColor : Colors.black).withValues(
+                      alpha: isFocused ? 0.35 : 0.12,
+                    ),
+                    blurRadius: isFocused ? 10 : 4,
+                  ),
+                ],
+              ),
+              child: ClipOval(child: _buildNodeAvatar(node, typeColor)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 3. Full LOD: 全量卡片 (64px + 度数徽章 + 文本胶囊)
+    const nodeSize = 64.0;
 
     return Positioned(
       left: pos.dx - nodeSize / 2,

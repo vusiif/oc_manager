@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
 import 'graph_geometry.dart';
 import 'relation_advanced_analysis.dart';
@@ -85,6 +86,8 @@ class RelationPainter extends CustomPainter {
   final int? selectedRelationId;
   final bool isDark;
   final RelationFilterState? filterState;
+  final Rect? visibleRect;
+  final double scale;
 
   RelationPainter({
     required this.relations,
@@ -94,6 +97,8 @@ class RelationPainter extends CustomPainter {
     this.selectedRelationId,
     this.isDark = false,
     this.filterState,
+    this.visibleRect,
+    this.scale = 1.0,
   });
 
   bool _isRelInPath(Relation rel) {
@@ -147,6 +152,15 @@ class RelationPainter extends CustomPainter {
           !positions.containsKey(rel.toCharacterId)) {
         continue;
       }
+      final p1 = positions[rel.fromCharacterId]!;
+      final p2 = positions[rel.toCharacterId]!;
+
+      // Viewport Culling (PERF-001)
+      if (visibleRect != null &&
+          !GraphViewportCulling.isEdgeVisible(p1, p2, visibleRect!)) {
+        continue;
+      }
+
       final key = _pairKey(rel.fromCharacterId, rel.toCharacterId);
       if (rel.relationGroupId != null &&
           _familyTypes.contains(rel.relationType)) {
@@ -513,6 +527,12 @@ class RelationPainter extends CustomPainter {
     bool isDark = false,
     bool isDimmed = false,
   }) {
+    // LOD Protection (PERF-001): When zoomed out (scale < 0.55), skip label text and badge layout unless selected
+    if (GraphViewportCulling.getLodLevel(scale) != GraphLodLevel.full &&
+        !isSelected) {
+      return;
+    }
+
     final alphaMultiplier = isDimmed ? 0.25 : 1.0;
     final textColor =
         (isSelected
@@ -616,7 +636,9 @@ class RelationPainter extends CustomPainter {
       old.positions != positions ||
       old.selectedRelationId != selectedRelationId ||
       old.filterState != filterState ||
-      old.isDark != isDark;
+      old.isDark != isDark ||
+      old.visibleRect != visibleRect ||
+      old.scale != scale;
 }
 
 /// Helper function to calculate label centers for each relation in scene space.

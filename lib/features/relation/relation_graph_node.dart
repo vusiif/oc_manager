@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
 
 Widget buildGenderShape(String gender, double size, Color color, String label) {
@@ -128,6 +129,7 @@ class DraggableNode extends StatefulWidget {
   final VoidCallback onEdit;
   final bool isPathHighlighted;
   final bool isDimmed;
+  final GraphLodLevel lodLevel;
 
   const DraggableNode({
     super.key,
@@ -146,6 +148,7 @@ class DraggableNode extends StatefulWidget {
     required this.onEdit,
     this.isPathHighlighted = false,
     this.isDimmed = false,
+    this.lodLevel = GraphLodLevel.full,
   });
 
   @override
@@ -227,6 +230,63 @@ class _DraggableNodeState extends State<DraggableNode> {
     final color = widget.character.status == 1
         ? Colors.grey
         : Theme.of(context).colorScheme.primary;
+
+    // Overview LOD: ultra-lightweight micro-dot for massive graph rendering (PERF-001)
+    if (widget.lodLevel == GraphLodLevel.overview) {
+      return Positioned(
+        left: _pos.dx - 10,
+        top: _pos.dy - 10,
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: color,
+            shape: widget.character.gender == '男'
+                ? BoxShape.rectangle
+                : BoxShape.circle,
+            borderRadius: widget.character.gender == '男'
+                ? BorderRadius.circular(3)
+                : null,
+            border: Border.all(
+              color: widget.isPathHighlighted
+                  ? AppColors.brand
+                  : Colors.white70,
+              width: widget.isPathHighlighted ? 2.5 : 1.0,
+            ),
+            boxShadow: widget.isPathHighlighted
+                ? [
+                    BoxShadow(
+                      color: AppColors.brand.withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+        ),
+      );
+    }
+
+    // Medium LOD: render shape with drag/context interaction, omit text below (PERF-001)
+    if (widget.lodLevel == GraphLodLevel.medium) {
+      return Positioned(
+        left: _pos.dx - 22,
+        top: _pos.dy - 22,
+        child: GestureDetector(
+          onSecondaryTapDown: _showContextMenu,
+          onPanStart: (_) => widget.onDragStart?.call(_pos),
+          onPanUpdate: (details) {
+            setState(() => _pos += details.delta);
+            widget.onDragUpdate(_pos);
+          },
+          onPanEnd: (_) => widget.onDragEnd(_pos),
+          child: Opacity(
+            opacity: widget.isDimmed ? 0.25 : 1.0,
+            child: buildGenderShape(widget.character.gender, 20, color, name),
+          ),
+        ),
+      );
+    }
 
     return Positioned(
       left: _pos.dx - 30,

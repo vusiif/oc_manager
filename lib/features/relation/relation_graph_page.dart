@@ -6,6 +6,7 @@ import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/util/graph_viewport_culling.dart';
 import 'package:flutter/services.dart';
 
 import '../character/character_dialog.dart';
@@ -59,6 +60,37 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   // GRAPH-005 大画布全局导览视口状态
   Size _currentViewport = const Size(1200, 800);
 
+  // PERF-001 大图谱视口裁剪与 LOD 状态
+  Rect? _visibleWorldRect;
+  double _currentScale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformController.addListener(_onTransformChanged);
+  }
+
+  void _onTransformChanged() {
+    if (!mounted) return;
+    final matrix = _transformController.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final rect = GraphViewportCulling.computeVisibleWorldRect(
+      transform: matrix,
+      viewportSize: _currentViewport,
+      bufferMargin: 160.0,
+    );
+    final scaleChanged = (_currentScale - scale).abs() > 0.03;
+    final rectMoved =
+        _visibleWorldRect == null ||
+        (_visibleWorldRect!.center - rect.center).distance > 50.0;
+    if (scaleChanged || rectMoved) {
+      setState(() {
+        _currentScale = scale;
+        _visibleWorldRect = rect;
+      });
+    }
+  }
+
   void _navigateToPosition(Offset targetWorldPos) {
     if (!mounted) return;
     final currentScale = _transformController.value.getMaxScaleOnAxis();
@@ -88,6 +120,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
   @override
   void dispose() {
+    _transformController.removeListener(_onTransformChanged);
     _historyManager.dispose();
     _transformController.dispose();
     super.dispose();
@@ -861,6 +894,16 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                       constraints.maxHeight,
                     );
                     _currentViewport = viewport;
+                    final visibleRect =
+                        _visibleWorldRect ??
+                        GraphViewportCulling.computeVisibleWorldRect(
+                          transform: _transformController.value,
+                          viewportSize: viewport,
+                          bufferMargin: 160.0,
+                        );
+                    final currentLod = GraphViewportCulling.getLodLevel(
+                      _currentScale,
+                    );
                     final canvasSize = Size(
                       max(viewport.width, 2000),
                       max(viewport.height, 2000),
@@ -934,6 +977,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                                               theme.brightness ==
                                               Brightness.dark,
                                           filterState: _filterState,
+                                          visibleRect: visibleRect,
+                                          scale: _currentScale,
                                         ),
                                       ),
                                       // 拖拽创建关系时的实时连线预览
@@ -953,11 +998,17 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                                         ),
                                       for (var character in characters)
                                         if (_positions.containsKey(
-                                          character.id,
-                                        ))
+                                              character.id,
+                                            ) &&
+                                            GraphViewportCulling.isNodeVisible(
+                                              _positions[character.id]!,
+                                              visibleRect,
+                                              radius: 40.0,
+                                            ))
                                           DraggableNode(
                                             character: character,
                                             position: _positions[character.id]!,
+                                            lodLevel: currentLod,
                                             allCharacters: characters,
                                             relations: relations,
                                             isPathHighlighted:
