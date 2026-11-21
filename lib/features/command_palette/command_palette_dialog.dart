@@ -8,6 +8,9 @@ import '../../core/design/design_tokens.dart';
 import '../../providers/world_provider.dart';
 import 'command_palette_model.dart';
 import 'command_palette_service.dart';
+import 'widgets/command_category_filter_bar.dart';
+import 'widgets/command_palette_footer.dart';
+import 'widgets/command_palette_item_tile.dart';
 
 bool _isCommandPaletteShowing = false;
 
@@ -209,7 +212,14 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSearchHeader(theme, isDark),
-                _buildCategoryFilterBar(theme, isDark),
+                CommandCategoryFilterBar(
+                  selectedCategory: _selectedCategory,
+                  isDark: isDark,
+                  onSelectCategory: (cat) {
+                    setState(() => _selectedCategory = cat);
+                    _applyFilter();
+                  },
+                ),
                 const Divider(height: 1, thickness: 1),
                 Expanded(
                   child: _isLoading && _displayItems.isEmpty
@@ -221,7 +231,10 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
                       : _buildResultsList(theme, isDark),
                 ),
                 const Divider(height: 1, thickness: 1),
-                _buildFooterShortcuts(theme, isDark),
+                CommandPaletteFooter(
+                  itemCount: _displayItems.length,
+                  isDark: isDark,
+                ),
               ],
             ),
           ),
@@ -311,89 +324,6 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
     );
   }
 
-  Widget _buildCategoryFilterBar(ThemeData theme, bool isDark) {
-    final categories = [
-      ('all', '全部', Icons.dashboard_outlined),
-      ('command', '命令', Icons.terminal_rounded),
-      ('world', '世界观', Icons.public_rounded),
-      ('character', '角色', Icons.person_rounded),
-      ('lore', '词条', Icons.auto_stories_rounded),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: categories.map((cat) {
-          final isSelected = _selectedCategory == cat.$1;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: InkWell(
-              key: Key('chip_cat_${cat.$1}'),
-              borderRadius: BorderRadius.circular(20),
-              onTap: () {
-                setState(() => _selectedCategory = cat.$1);
-                _applyFilter();
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.brand
-                      : isDark
-                      ? const Color(0xFF334155).withAlpha(100)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.brand
-                        : isDark
-                        ? const Color(0xFF475569)
-                        : const Color(0xFFE2E8F0),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      cat.$3,
-                      size: 14,
-                      color: isSelected
-                          ? Colors.white
-                          : isDark
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF64748B),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      cat.$2,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                        color: isSelected
-                            ? Colors.white
-                            : isDark
-                            ? const Color(0xFFCBD5E1)
-                            : const Color(0xFF475569),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _buildResultsList(ThemeData theme, bool isDark) {
     return ListView.builder(
       controller: _scrollController,
@@ -403,142 +333,14 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
         final item = _displayItems[index];
         final isSelected = index == _selectedIndex;
 
-        return MouseRegion(
-          onEnter: (_) {
+        return CommandPaletteItemTile(
+          item: item,
+          isSelected: isSelected,
+          isDark: isDark,
+          onTap: () => _executeItem(item),
+          onHover: () {
             setState(() => _selectedIndex = index);
           },
-          child: InkWell(
-            onTap: () => _executeItem(item),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 80),
-              height: 58,
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.brand.withAlpha(isDark ? 45 : 20)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.brand.withAlpha(100)
-                      : Colors.transparent,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: (item.iconColor ?? AppColors.brand).withAlpha(
-                        isDark ? 40 : 20,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      item.icon,
-                      color: item.iconColor ?? AppColors.brand,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                item.title,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1.5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF334155)
-                                    : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                item.category.label,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (item.subtitle != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            item.subtitle!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : const Color(0xFF64748B),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (isSelected)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.brand,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.keyboard_return_rounded,
-                            color: Colors.white,
-                            size: 12,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '执行',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
         );
       },
     );
@@ -573,68 +375,6 @@ class _CommandPaletteDialogState extends ConsumerState<CommandPaletteDialog> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFooterShortcuts(ThemeData theme, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            '共 ${_displayItems.length} 项可用操作',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-            ),
-          ),
-          Row(
-            children: [
-              _buildKeyBadge('↑↓', '导航', isDark),
-              const SizedBox(width: 10),
-              _buildKeyBadge('↵', '执行', isDark),
-              const SizedBox(width: 10),
-              _buildKeyBadge('ESC', '退出', isDark),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKeyBadge(String keyText, String label, bool isDark) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-              width: 0.8,
-            ),
-          ),
-          child: Text(
-            keyText,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-          ),
-        ),
-      ],
     );
   }
 }

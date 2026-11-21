@@ -1,15 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/design/design_tokens.dart';
 import '../../../core/util/graph_viewport_culling.dart';
 import '../../../data/database/app_database.dart';
 import '../../../providers/world_provider.dart';
 import '../lore_entity_detail_dialog.dart';
 import 'knowledge_network_filter_dialog.dart';
 import 'knowledge_network_layout_engine.dart';
+import 'knowledge_network_node_widget.dart';
 import 'knowledge_network_painter.dart';
 import 'knowledge_network_provider.dart';
 import 'knowledge_network_toolbar.dart';
@@ -280,7 +279,7 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
                                       visibleRect,
                                       radius: 45.0,
                                     )))
-                              _buildNodeWidget(
+                              KnowledgeNetworkNodeWidget(
                                 node: node,
                                 pos: _positions[node.id]!,
                                 isFocused:
@@ -290,8 +289,34 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
                                     _filterState.focusedNodeId != null &&
                                     !neighborNodeIds.contains(node.id),
                                 isDark: isDark,
-                                allEdges: visibleEdges,
+                                currentScale: _currentScale,
                                 lodLevel: lodLevel,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedNodeId = node.id;
+                                  });
+                                },
+                                onDoubleTap: () {
+                                  setState(() {
+                                    if (_filterState.focusedNodeId == node.id) {
+                                      _filterState = _filterState.copyWith(
+                                        clearFocusedNode: true,
+                                      );
+                                    } else {
+                                      _filterState = _filterState.copyWith(
+                                        focusedNodeId: node.id,
+                                      );
+                                    }
+                                  });
+                                },
+                                onPanUpdate: (scaledDelta) {
+                                  setState(() {
+                                    _positions[node.id] =
+                                        (_positions[node.id] ??
+                                            _positions[node.id]!) +
+                                        scaledDelta;
+                                  });
+                                },
                               ),
                         ],
                       ),
@@ -382,279 +407,6 @@ class _KnowledgeNetworkPageState extends ConsumerState<KnowledgeNetworkPage> {
         ],
       ),
     );
-  }
-
-  /// 构建节点 Widget (支持 LOD 分级渲染 - PERF-001)
-  Widget _buildNodeWidget({
-    required NetworkNode node,
-    required Offset pos,
-    required bool isFocused,
-    required bool isSelected,
-    required bool isDimmed,
-    required bool isDark,
-    required List<NetworkEdge> allEdges,
-    GraphLodLevel lodLevel = GraphLodLevel.full,
-  }) {
-    final typeColor = node.type.color;
-
-    // 1. Overview LOD: 轻量微点 (极简 22px，无文字/图片，大幅提升缩放帧率)
-    if (lodLevel == GraphLodLevel.overview) {
-      const dotSize = 22.0;
-      return Positioned(
-        left: pos.dx - dotSize / 2,
-        top: pos.dy - dotSize / 2,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            setState(() {
-              _selectedNodeId = node.id;
-            });
-          },
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: isDimmed ? 0.22 : 1.0,
-            child: Container(
-              width: dotSize,
-              height: dotSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: typeColor,
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.brand
-                      : (isDark ? Colors.white70 : Colors.black45),
-                  width: isSelected || isFocused ? 2.5 : 1.2,
-                ),
-                boxShadow: isFocused || isSelected
-                    ? [
-                        BoxShadow(
-                          color: typeColor.withValues(alpha: 0.6),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 2. Medium LOD: 中等大小几何头像 (42px，省略度数徽章与文本胶囊)
-    if (lodLevel == GraphLodLevel.medium) {
-      const mediumSize = 42.0;
-      return Positioned(
-        left: pos.dx - mediumSize / 2,
-        top: pos.dy - mediumSize / 2,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onPanUpdate: (details) {
-            setState(() {
-              _positions[node.id] =
-                  (_positions[node.id] ?? pos) + details.delta / _currentScale;
-            });
-          },
-          onTap: () {
-            setState(() {
-              _selectedNodeId = node.id;
-            });
-          },
-          onDoubleTap: () {
-            setState(() {
-              if (_filterState.focusedNodeId == node.id) {
-                _filterState = _filterState.copyWith(clearFocusedNode: true);
-              } else {
-                _filterState = _filterState.copyWith(focusedNodeId: node.id);
-              }
-            });
-          },
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: isDimmed ? 0.22 : 1.0,
-            child: Container(
-              width: mediumSize,
-              height: mediumSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.brand
-                      : (isFocused
-                            ? typeColor
-                            : typeColor.withValues(alpha: 0.6)),
-                  width: isSelected || isFocused ? 3.0 : 2.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isFocused ? typeColor : Colors.black).withValues(
-                      alpha: isFocused ? 0.35 : 0.12,
-                    ),
-                    blurRadius: isFocused ? 10 : 4,
-                  ),
-                ],
-              ),
-              child: ClipOval(child: _buildNodeAvatar(node, typeColor)),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 3. Full LOD: 全量卡片 (64px + 度数徽章 + 文本胶囊)
-    const nodeSize = 64.0;
-
-    return Positioned(
-      left: pos.dx - nodeSize / 2,
-      top: pos.dy - nodeSize / 2,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanUpdate: (details) {
-          setState(() {
-            _positions[node.id] =
-                (_positions[node.id] ?? pos) + details.delta / _currentScale;
-          });
-        },
-        onTap: () {
-          setState(() {
-            _selectedNodeId = node.id;
-          });
-        },
-        onDoubleTap: () {
-          // 双击快速进入/退出聚焦模式
-          setState(() {
-            if (_filterState.focusedNodeId == node.id) {
-              _filterState = _filterState.copyWith(clearFocusedNode: true);
-            } else {
-              _filterState = _filterState.copyWith(focusedNodeId: node.id);
-            }
-          });
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: isDimmed ? 0.22 : 1.0,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 节点头像 / 图标卡片
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: nodeSize,
-                    height: nodeSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.brand
-                            : (isFocused
-                                  ? typeColor
-                                  : typeColor.withValues(alpha: 0.6)),
-                        width: isSelected || isFocused ? 3.0 : 2.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isFocused ? typeColor : Colors.black)
-                              .withValues(alpha: isFocused ? 0.35 : 0.12),
-                          blurRadius: isFocused ? 12 : 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(child: _buildNodeAvatar(node, typeColor)),
-                  ),
-
-                  // 右上角度数徽章 (Degree Badge)
-                  if (node.degree > 0)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: typeColor,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF0F172A)
-                                : Colors.white,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Text(
-                          '${node.degree}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-
-              // 节点名称胶囊
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E293B).withValues(alpha: 0.9)
-                      : Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.brand
-                        : (isDark ? Colors.white12 : Colors.black12),
-                    width: isSelected ? 1.5 : 0.8,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  node.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    color: isSelected
-                        ? AppColors.brand
-                        : (isDark ? Colors.white : const Color(0xFF1E293B)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNodeAvatar(NetworkNode node, Color typeColor) {
-    if (node.imagePath != null &&
-        node.imagePath!.isNotEmpty &&
-        File(node.imagePath!).existsSync()) {
-      return Image.file(
-        File(node.imagePath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) =>
-            Icon(node.type.icon, color: typeColor, size: 28),
-      );
-    }
-    return Icon(node.type.icon, color: typeColor, size: 28);
   }
 
   /// 打开对应实体的详情弹窗或页面

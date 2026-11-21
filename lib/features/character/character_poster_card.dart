@@ -1,22 +1,14 @@
-import '../../core/storage/image_storage_service.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 
-import '../../core/design/components/radar_chart.dart';
+import '../../core/storage/image_storage_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/util/color_palette_extractor.dart';
 import '../../data/database/app_database.dart';
+import 'widgets/poster_palette_bar.dart';
+import 'widgets/poster_stats_section.dart';
+import 'widgets/poster_theme_style.dart';
 
-enum PosterThemeType {
-  magazine('现代杂志风', Icons.auto_awesome_rounded),
-  parchment('古典传奇风', Icons.history_edu_rounded),
-  cyber('赛博霓虹风', Icons.memory_rounded),
-  dossier('绝密档案风', Icons.folder_special_rounded);
-
-  final String label;
-  final IconData icon;
-  const PosterThemeType(this.label, this.icon);
-}
+export 'widgets/poster_theme_style.dart';
 
 class CharacterPosterCard extends StatelessWidget {
   final Character character;
@@ -81,7 +73,7 @@ class CharacterPosterCard extends StatelessWidget {
 
           // 3. 主色调调色板色卡条（若开启）
           if (showPalette && imagePath != null && imagePath!.isNotEmpty) ...[
-            _buildPaletteBar(style),
+            PosterPaletteBar(imagePath: imagePath, style: style),
             const SizedBox(height: 16),
           ],
 
@@ -97,7 +89,7 @@ class CharacterPosterCard extends StatelessWidget {
 
           // 6. 属性与六维雷达图
           if (showStats && stats.isNotEmpty) ...[
-            _buildStatsSection(style),
+            PosterStatsSection(stats: stats, style: style),
             const SizedBox(height: 16),
           ],
 
@@ -216,83 +208,6 @@ class CharacterPosterCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPaletteBar(PosterStyle style) {
-    return FutureBuilder<File?>(
-      future: ImageStorageService.instance.resolveImageFile(imagePath),
-      builder: (context, snapshot) {
-        final file = snapshot.data;
-        if (file == null || !file.existsSync()) return const SizedBox.shrink();
-
-        return FutureBuilder<List<Color>>(
-          future: PaletteExtractor.extractPalette(file, maxColors: 6),
-          builder: (context, pSnapshot) {
-            final colors = pSnapshot.data ?? [];
-            if (colors.isEmpty) return const SizedBox.shrink();
-
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: style.cardBgColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: style.cardBorderColor),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'COLOR PALETTE',
-                    style: AppFonts.textStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: style.subtextColor,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: colors.map((c) {
-                        final hex = PaletteExtractor.toHex(c);
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color: c,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  width: 1.2,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              hex,
-                              style: AppFonts.textStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: style.textColor,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   Widget _buildNameAndMeta(PosterStyle style) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -358,108 +273,6 @@ class CharacterPosterCard extends StatelessWidget {
           color: style.textColor,
           height: 1.45,
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatsSection(PosterStyle style) {
-    final radarItems = [
-      for (final s in stats)
-        RadarStatItem(label: s.label, value: s.value, maxValue: s.maxValue),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: style.cardBgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: style.cardBorderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.radar_rounded, size: 16, color: style.accentColor),
-              const SizedBox(width: 6),
-              Text(
-                'ABILITIES & STATS MATRIX',
-                style: AppFonts.textStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: style.accentColor,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 雷达图多边形
-              SizedBox(
-                width: 220,
-                height: 200,
-                child: RadarChart(
-                  items: radarItems,
-                  size: 200,
-                  strokeColor: style.accentColor,
-                  fillColor: style.accentColor.withValues(alpha: 0.24),
-                  gridColor: style.subtextColor.withValues(alpha: 0.2),
-                ),
-              ),
-              const SizedBox(width: 14),
-              // 右侧数值网格
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: stats.map((s) {
-                    final val = s.value.truncateToDouble() == s.value
-                        ? s.value.toInt()
-                        : s.value.toStringAsFixed(1);
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: style.bgColor.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: style.cardBorderColor.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            s.label,
-                            style: AppFonts.textStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: style.textColor,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$val',
-                            style: AppFonts.textStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: style.accentColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -560,105 +373,4 @@ class CharacterPosterCard extends StatelessWidget {
       ),
     );
   }
-
-  PosterStyle getPosterThemeStyle(PosterThemeType type) {
-    switch (type) {
-      case PosterThemeType.magazine:
-        return const PosterStyle(
-          bgColor: Color(0xFFF8FAFC),
-          cardBgColor: Colors.white,
-          borderColor: Color(0xFFE2E8F0),
-          cardBorderColor: Color(0xFFE2E8F0),
-          textColor: Color(0xFF0F172A),
-          subtextColor: Color(0xFF64748B),
-          accentColor: Color(0xFF6366F1),
-          borderRadius: 16.0,
-          borderWidth: 1.5,
-          imageRadius: 12.0,
-          headerLabel: 'MODERN EDITORIAL ARCHIVE',
-        );
-      case PosterThemeType.parchment:
-        return const PosterStyle(
-          bgColor: Color(0xFFF4ECD8),
-          bgGradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9F5EA), Color(0xFFEFE6CF)],
-          ),
-          cardBgColor: Color(0x70E5D9C3),
-          borderColor: Color(0xFF8C6D46),
-          cardBorderColor: Color(0xFFBCA685),
-          textColor: Color(0xFF2C221E),
-          subtextColor: Color(0xFF6B5848),
-          accentColor: Color(0xFFB45309),
-          borderRadius: 8.0,
-          borderWidth: 2.5,
-          imageRadius: 6.0,
-          headerLabel: '❖ CHRONICLE OF HEROES ❖',
-        );
-      case PosterThemeType.cyber:
-        return const PosterStyle(
-          bgColor: Color(0xFF090D16),
-          bgGradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF080C14), Color(0xFF0F172A)],
-          ),
-          cardBgColor: Color(0xFF141C2E),
-          borderColor: Color(0xFF00F0FF),
-          cardBorderColor: Color(0xFF1E293B),
-          textColor: Colors.white,
-          subtextColor: Color(0xFF94A3B8),
-          accentColor: Color(0xFF00F0FF),
-          borderRadius: 4.0,
-          borderWidth: 2.0,
-          imageRadius: 2.0,
-          headerLabel: '[SYSTEM: DECRYPTED SPECIMEN]',
-        );
-      case PosterThemeType.dossier:
-        return const PosterStyle(
-          bgColor: Color(0xFFEAE2D0),
-          cardBgColor: Color(0xFFDFD4BE),
-          borderColor: Color(0xFF5C5248),
-          cardBorderColor: Color(0xFFBFB39C),
-          textColor: Color(0xFF1F1D1A),
-          subtextColor: Color(0xFF5E564D),
-          accentColor: Color(0xFF991B1B),
-          borderRadius: 2.0,
-          borderWidth: 2.0,
-          imageRadius: 2.0,
-          headerLabel: '【 TOP SECRET // CLASSIFIED DOSSIER 】',
-        );
-    }
-  }
-}
-
-class PosterStyle {
-  final Color bgColor;
-  final Gradient? bgGradient;
-  final Color cardBgColor;
-  final Color borderColor;
-  final Color cardBorderColor;
-  final Color textColor;
-  final Color subtextColor;
-  final Color accentColor;
-  final double borderRadius;
-  final double borderWidth;
-  final double imageRadius;
-  final String headerLabel;
-
-  const PosterStyle({
-    required this.bgColor,
-    this.bgGradient,
-    required this.cardBgColor,
-    required this.borderColor,
-    required this.cardBorderColor,
-    required this.textColor,
-    required this.subtextColor,
-    required this.accentColor,
-    required this.borderRadius,
-    required this.borderWidth,
-    required this.imageRadius,
-    required this.headerLabel,
-  });
 }
