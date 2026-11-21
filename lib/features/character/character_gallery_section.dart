@@ -1,12 +1,12 @@
-import 'gallery_lightbox_dialog.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/storage/image_storage_service.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
+import 'gallery_lightbox_dialog.dart';
+import 'widgets/character_gallery_card.dart';
+import 'widgets/gallery_action_dialogs.dart';
 
 /// 角色专属画廊与多立绘/差分管理卡片
 class CharacterGallerySection extends ConsumerStatefulWidget {
@@ -33,7 +33,13 @@ class _CharacterGallerySectionState
       if (picked == null) return;
 
       if (!mounted) return;
-      _showUploadDialog(picked.path);
+      await showGalleryUploadDialog(
+        context,
+        pickedPath: picked.path,
+        characterId: widget.characterId,
+        worldId: widget.worldId,
+        ref: ref,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -41,173 +47,6 @@ class _CharacterGallerySectionState
         ).showSnackBar(SnackBar(content: Text('选择图片失败: $e')));
       }
     }
-  }
-
-  void _showUploadDialog(String pickedPath) {
-    final captionCtrl = TextEditingController(text: '常服');
-    bool isPrimary = false;
-
-    final suggestions = ['常服', '战斗服', '礼服', '立绘三视图', '幼年期', 'Q版表情', '约稿插画'];
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          title: const Text('添加画廊立绘 / 差分'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: 140,
-                      height: 180,
-                      child: Image.file(File(pickedPath), fit: BoxFit.cover),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: captionCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '分类 / 标签备注',
-                    hintText: '如：战斗形态、三视图、礼服',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: suggestions.map((tag) {
-                    return ActionChip(
-                      label: Text(tag, style: const TextStyle(fontSize: 11)),
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        setDlgState(() {
-                          captionCtrl.text = tag;
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    '同时设为角色主封面/头像',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  value: isPrimary,
-                  onChanged: (v) => setDlgState(() => isPrimary = v ?? false),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  final relPath = await ImageStorageService.instance
-                      .saveGalleryImage(
-                        sourcePath: pickedPath,
-                        characterId: widget.characterId,
-                      );
-
-                  await ref
-                      .read(characterActionsProvider)
-                      .addGalleryImage(
-                        characterId: widget.characterId,
-                        imagePath: relPath,
-                        caption: captionCtrl.text.trim(),
-                        isPrimary: isPrimary,
-                      );
-
-                  if (isPrimary) {
-                    ref.invalidate(characterByIdProvider(widget.characterId));
-                    ref.invalidate(charactersByWorldProvider(widget.worldId));
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('保存立绘失败: $e')));
-                  }
-                }
-              },
-              child: const Text('上传并保存'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEditCaptionDialog(CharacterGallery item) {
-    final ctrl = TextEditingController(text: item.caption);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('修改标签 / 备注'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: '标签名称',
-            hintText: '如：战斗服、三视图',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final newCaption = ctrl.text.trim();
-              await ref
-                  .read(characterActionsProvider)
-                  .updateGalleryCaption(item.id, newCaption);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(CharacterGallery item) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('删除立绘'),
-        content: const Text('确定要从画廊中删除该立绘吗？（已设为主头像的立绘仍会保留在角色卡片上）'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await ref
-                  .read(characterActionsProvider)
-                  .deleteGalleryImage(item.id);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _openLightbox(List<CharacterGallery> galleries, int initialIndex) {
@@ -328,21 +167,43 @@ class _CharacterGallerySectionState
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = 140.0;
-                    final itemHeight = 200.0;
+                    const itemWidth = 140.0;
+                    const itemHeight = 200.0;
 
                     return Wrap(
                       spacing: 12,
                       runSpacing: 12,
                       children: [
                         for (var i = 0; i < galleries.length; i++)
-                          _buildGalleryCard(
-                            galleries[i],
-                            i,
-                            galleries,
-                            itemWidth,
-                            itemHeight,
-                            theme,
+                          CharacterGalleryCard(
+                            item: galleries[i],
+                            width: itemWidth,
+                            height: itemHeight,
+                            onOpenLightbox: () => _openLightbox(galleries, i),
+                            onSetPrimary: () async {
+                              await ref
+                                  .read(characterActionsProvider)
+                                  .setPrimaryGalleryImage(
+                                    widget.characterId,
+                                    galleries[i].id,
+                                  );
+                              ref.invalidate(
+                                characterByIdProvider(widget.characterId),
+                              );
+                              ref.invalidate(
+                                charactersByWorldProvider(widget.worldId),
+                              );
+                            },
+                            onEditCaption: () => showEditCaptionDialog(
+                              context,
+                              item: galleries[i],
+                              ref: ref,
+                            ),
+                            onDelete: () => showConfirmDeleteGalleryDialog(
+                              context,
+                              item: galleries[i],
+                              ref: ref,
+                            ),
                           ),
                         // 快捷添加占位卡片
                         InkWell(
@@ -397,205 +258,4 @@ class _CharacterGallerySectionState
       ),
     );
   }
-
-  Widget _buildGalleryCard(
-    CharacterGallery item,
-    int index,
-    List<CharacterGallery> allItems,
-    double width,
-    double height,
-    ThemeData theme,
-  ) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: item.isPrimary
-              ? Colors.amber.shade600
-              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-          width: item.isPrimary ? 2.0 : 1.0,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 图片本体（点击打开全屏灯箱）
-          InkWell(
-            onTap: () => _openLightbox(allItems, index),
-            child: FutureBuilder<File?>(
-              future: ImageStorageService.instance.resolveImageFile(
-                item.imagePath,
-              ),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  );
-                }
-                final file = snapshot.data;
-                if (file != null && file.existsSync()) {
-                  return Image.file(file, fit: BoxFit.cover);
-                }
-                return Center(
-                  child: Icon(
-                    Icons.broken_image_rounded,
-                    color: theme.colorScheme.error,
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // 主封面金色徽标
-          if (item.isPrimary)
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade700,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.star_rounded, size: 12, color: Colors.white),
-                    SizedBox(width: 2),
-                    Text(
-                      '主封面',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // 更多操作按钮
-          Positioned(
-            top: 4,
-            right: 4,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.black45,
-                shape: BoxShape.circle,
-              ),
-              child: PopupMenuButton<String>(
-                padding: EdgeInsets.zero,
-                iconSize: 18,
-                icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
-                itemBuilder: (ctx) => [
-                  if (!item.isPrimary)
-                    const PopupMenuItem(
-                      value: 'set_primary',
-                      child: Row(
-                        children: [
-                          Icon(Icons.star_outline_rounded, size: 16),
-                          SizedBox(width: 8),
-                          Text('设为主封面/头像'),
-                        ],
-                      ),
-                    ),
-                  const PopupMenuItem(
-                    value: 'view_lightbox',
-                    child: Row(
-                      children: [
-                        Icon(Icons.fullscreen_rounded, size: 16),
-                        SizedBox(width: 8),
-                        Text('放大预览 / 提取色卡'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'edit_caption',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 16),
-                        SizedBox(width: 8),
-                        Text('修改标签备注'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 16,
-                          color: Colors.red,
-                        ),
-                        SizedBox(width: 8),
-                        Text('删除此立绘', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (val) {
-                  if (val == 'set_primary') {
-                    ref
-                        .read(characterActionsProvider)
-                        .setPrimaryGalleryImage(widget.characterId, item.id);
-                    ref.invalidate(characterByIdProvider(widget.characterId));
-                    ref.invalidate(charactersByWorldProvider(widget.worldId));
-                  } else if (val == 'view_lightbox') {
-                    _openLightbox(allItems, index);
-                  } else if (val == 'edit_caption') {
-                    _showEditCaptionDialog(item);
-                  } else if (val == 'delete') {
-                    _confirmDelete(item);
-                  }
-                },
-              ),
-            ),
-          ),
-
-          // 底部标签与分类栏
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black87],
-                ),
-              ),
-              child: Text(
-                item.caption.isNotEmpty ? item.caption : '立绘',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
-
-/// 全屏原图灯箱 (Lightbox) 与主色调色卡提取弹窗
