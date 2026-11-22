@@ -48,6 +48,11 @@ class CharacterTrashHandler {
             ))
             .get();
 
+    final povScenes = await (db.select(
+      db.storyScenes,
+    )..where((s) => s.povCharacterId.equals(character.id))).get();
+    final povSceneIds = povScenes.map((s) => s.id).toList();
+
     final fullData = {
       'character': {
         'id': character.id,
@@ -133,6 +138,7 @@ class CharacterTrashHandler {
             'createdAt': rev.createdAt.toIso8601String(),
           },
       ],
+      'povSceneIds': povSceneIds,
     };
 
     await db.transaction(() async {
@@ -175,6 +181,13 @@ class CharacterTrashHandler {
         db.loreRelations,
       )..where((r) => r.characterId.equals(character.id))).go();
       await db.revisionDao.deleteRevisions('character', character.id);
+
+      // 解除故事场景 POV 视点外键引用，防止硬约束崩溃
+      if (povSceneIds.isNotEmpty) {
+        await (db.update(db.storyScenes)
+              ..where((s) => s.povCharacterId.equals(character.id)))
+            .write(const StoryScenesCompanion(povCharacterId: Value(null)));
+      }
 
       // 3. 删除主角色
       await db.characterDao.deleteCharacter(character.id);
@@ -436,6 +449,15 @@ class CharacterTrashHandler {
                 createdAt: Value(DateTime.parse(rm['createdAt'] as String)),
               ),
             );
+      }
+
+      // 6.2 还原故事场景 POV 视点关联
+      final povSceneIds =
+          (parsed['povSceneIds'] as List<dynamic>?)?.cast<int>() ?? [];
+      for (final sId in povSceneIds) {
+        await (db.update(db.storyScenes)..where((s) => s.id.equals(sId))).write(
+          StoryScenesCompanion(povCharacterId: Value(charId)),
+        );
       }
 
       // 7. 移除回收站记录

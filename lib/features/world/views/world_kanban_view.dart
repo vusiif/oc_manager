@@ -366,9 +366,12 @@ class _KanbanColumnState extends State<_KanbanColumn> {
                     final char = widget.characters[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _DraggableKanbanCard(
-                        character: char,
-                        onTap: () => widget.onCharacterSelected?.call(char.id),
+                      child: RepaintBoundary(
+                        child: _DraggableKanbanCard(
+                          character: char,
+                          onTap: () =>
+                              widget.onCharacterSelected?.call(char.id),
+                        ),
                       ),
                     );
                   },

@@ -105,6 +105,10 @@ class LoreDao extends DatabaseAccessor<AppDatabase> with _$LoreDaoMixin {
         const LoreEntitiesCompanion(parentId: Value(null)),
       );
 
+      // 2.5 将引用该实体为地点 (locationId) 的故事场景置空，防止外键约束失败
+      await (db.update(db.storyScenes)..where((s) => s.locationId.equals(id)))
+          .write(const StoryScenesCompanion(locationId: Value(null)));
+
       // 3. 最终删除实体本身
       return (delete(loreEntities)..where((t) => t.id.equals(id))).go();
     });
@@ -112,6 +116,15 @@ class LoreDao extends DatabaseAccessor<AppDatabase> with _$LoreDaoMixin {
 
   Future<int> deleteEntitiesByWorld(int worldId) async {
     return transaction(() async {
+      final entities = await (select(
+        loreEntities,
+      )..where((t) => t.worldId.equals(worldId))).get();
+      final entityIds = entities.map((e) => e.id).toSet();
+      if (entityIds.isNotEmpty) {
+        await (db.update(db.storyScenes)
+              ..where((s) => s.locationId.isIn(entityIds)))
+            .write(const StoryScenesCompanion(locationId: Value(null)));
+      }
       await (delete(
         loreEntityRelations,
       )..where((r) => r.worldId.equals(worldId))).go();

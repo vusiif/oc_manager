@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../data/database/app_database.dart';
+import 'world_story_trash_helper.dart';
 
 /// Handler for cascading soft-deletion and safe restoration of Worlds in the trash bin.
 class WorldTrashHandler {
@@ -86,6 +87,7 @@ class WorldTrashHandler {
     final worldRevisions = await (db.select(
       db.entityRevisions,
     )..where((r) => r.worldId.equals(world.id))).get();
+    final storySnapshots = await WorldStoryTrashHelper(db).snapshot(world.id);
 
     final fullWorldData = {
       'world': {
@@ -186,6 +188,7 @@ class WorldTrashHandler {
             'createdAt': rev.createdAt.toIso8601String(),
           },
       ],
+      'storyWorks': storySnapshots,
     };
 
     await db.transaction(() async {
@@ -198,6 +201,9 @@ class WorldTrashHandler {
       );
 
       // 清除该世界观下所有关联数据（严格依照外键拓扑依赖顺序清理，避免外键约束失败）
+      // 必须先清理作品故事线（故事场景引用了人物与地点实体，必须先于人物与实体删除，避免外键约束失败）
+      await db.storyDao.deleteWorksByWorld(world.id);
+
       if (relations.isNotEmpty) {
         final relIds = relations.map((r) => r.id).toSet();
         await (db.delete(db.relations)..where((r) => r.id.isIn(relIds))).go();
@@ -525,6 +531,10 @@ class WorldTrashHandler {
               ),
             );
       }
+
+      // 5.4 恢复故事线作品、分卷章节与分镜场景
+      final storiesData = (parsed['storyWorks'] as List<dynamic>?) ?? [];
+      await WorldStoryTrashHelper(db).restore(worldId, storiesData);
 
       // 6. 移除回收站
       await db.trashDao.removeFromTrash(trashItem.id);

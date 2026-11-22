@@ -123,6 +123,14 @@ class RelationEditDialogs {
                   const SizedBox(height: 8),
                   TextField(
                     controller: customTypeController,
+                    maxLength: 50,
+                    buildCounter:
+                        (
+                          _, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) => null,
                     decoration: const InputDecoration(
                       labelText: '自定义关系名称',
                       hintText: '如：宿敌、前任、同门',
@@ -132,6 +140,14 @@ class RelationEditDialogs {
                 const SizedBox(height: 12),
                 TextField(
                   controller: noteController,
+                  maxLength: 200,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   decoration: const InputDecoration(
                     labelText: '备注（可选）',
                     hintText: '补充关系背景或细节说明',
@@ -175,49 +191,70 @@ class RelationEditDialogs {
                   ).showSnackBar(const SnackBar(content: Text('请输入关系名称')));
                   return;
                 }
+                if (relType.length > 50) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('关系名称长度不能超过 50 个字符')),
+                  );
+                  return;
+                }
 
                 final note = noteController.text.trim();
-                final id = await ref
-                    .read(relationActionsProvider)
-                    .create(
-                      fromCharacterId: selectedFrom!,
-                      toCharacterId: selectedTo!,
-                      relationType: relType,
-                      isBidirectional: isBidirectional,
-                      note: note.isEmpty ? null : note,
-                    );
-                ref.invalidate(relationsByWorldProvider(worldId));
+                if (note.length > 200) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('备注长度不能超过 200 个字符')),
+                  );
+                  return;
+                }
 
-                // 录入撤销/重做命令栈
-                final fromName = characters
-                    .firstWhere((c) => c.id == selectedFrom)
-                    .name;
-                final toName = characters
-                    .firstWhere((c) => c.id == selectedTo)
-                    .name;
-                historyManager.record(
-                  CreateRelationCommand(
-                    relation: Relation(
-                      id: id,
-                      fromCharacterId: selectedFrom!,
-                      toCharacterId: selectedTo!,
-                      relationType: relType,
-                      isBidirectional: isBidirectional,
-                      note: note.isEmpty ? null : note,
+                try {
+                  final id = await ref
+                      .read(relationActionsProvider)
+                      .create(
+                        fromCharacterId: selectedFrom!,
+                        toCharacterId: selectedTo!,
+                        relationType: relType,
+                        isBidirectional: isBidirectional,
+                        note: note.isEmpty ? null : note,
+                      );
+                  ref.invalidate(relationsByWorldProvider(worldId));
+
+                  // 录入撤销/重做命令栈
+                  final fromName = characters
+                      .firstWhere((c) => c.id == selectedFrom)
+                      .name;
+                  final toName = characters
+                      .firstWhere((c) => c.id == selectedTo)
+                      .name;
+                  historyManager.record(
+                    CreateRelationCommand(
+                      relation: Relation(
+                        id: id,
+                        fromCharacterId: selectedFrom!,
+                        toCharacterId: selectedTo!,
+                        relationType: relType,
+                        isBidirectional: isBidirectional,
+                        note: note.isEmpty ? null : note,
+                      ),
+                      descriptionText: '$fromName 与 $toName 的【$relType】',
+                      onDelete: (id) async {
+                        await ref.read(relationActionsProvider).delete(id);
+                        ref.invalidate(relationsByWorldProvider(worldId));
+                      },
+                      onRestore: (r) async {
+                        await ref.read(relationActionsProvider).restore(r);
+                        ref.invalidate(relationsByWorldProvider(worldId));
+                      },
                     ),
-                    descriptionText: '$fromName 与 $toName 的【$relType】',
-                    onDelete: (id) async {
-                      await ref.read(relationActionsProvider).delete(id);
-                      ref.invalidate(relationsByWorldProvider(worldId));
-                    },
-                    onRestore: (r) async {
-                      await ref.read(relationActionsProvider).restore(r);
-                      ref.invalidate(relationsByWorldProvider(worldId));
-                    },
-                  ),
-                );
+                  );
 
-                if (ctx.mounted) Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('添加关系失败: $e')));
+                  }
+                }
               },
               child: const Text('添加'),
             ),
@@ -331,6 +368,14 @@ class RelationEditDialogs {
               const SizedBox(height: 12),
               TextField(
                 controller: noteController,
+                maxLength: 200,
+                buildCounter:
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 decoration: const InputDecoration(labelText: '备注（可选）'),
               ),
             ],
@@ -343,15 +388,29 @@ class RelationEditDialogs {
             ElevatedButton(
               onPressed: () async {
                 final note = noteController.text.trim();
-                final oldRel = rel;
-                final newRel = rel.copyWith(
-                  relationType: currentType,
-                  note: Value(note.isEmpty ? null : note),
-                );
-                await ref.read(relationActionsProvider).update(newRel);
-                ref.invalidate(relationsByWorldProvider(worldId));
-                onRecordUpdate(oldRel, newRel, '$fromName 与 $toName 关系');
-                if (ctx.mounted) Navigator.pop(ctx);
+                if (note.length > 200) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('备注长度不能超过 200 个字符')),
+                  );
+                  return;
+                }
+                try {
+                  final oldRel = rel;
+                  final newRel = rel.copyWith(
+                    relationType: currentType,
+                    note: Value(note.isEmpty ? null : note),
+                  );
+                  await ref.read(relationActionsProvider).update(newRel);
+                  ref.invalidate(relationsByWorldProvider(worldId));
+                  onRecordUpdate(oldRel, newRel, '$fromName 与 $toName 关系');
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('保存关系失败: $e')));
+                  }
+                }
               },
               child: const Text('保存'),
             ),

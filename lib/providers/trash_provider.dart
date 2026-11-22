@@ -5,6 +5,7 @@ import 'database_provider.dart';
 import 'group_provider.dart';
 import 'lore_provider.dart';
 import 'relation_provider.dart';
+import 'story_provider.dart';
 import 'timeline_provider.dart';
 import 'trash/character_trash_handler.dart';
 import 'trash/world_trash_handler.dart';
@@ -74,6 +75,7 @@ class TrashActions {
     _ref.invalidate(graphLayoutsProvider(worldId));
     _ref.invalidate(worldTimelineEventsProvider(worldId));
     _ref.invalidate(loreEntitiesByWorldProvider(worldId));
+    _ref.invalidate(worksByWorldProvider(worldId));
     _refresh();
   }
 

@@ -44,6 +44,10 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
         children: [
           TextField(
             controller: _nameController,
+            maxLength: 100,
+            buildCounter:
+                (_, {required currentLength, required isFocused, maxLength}) =>
+                    null,
             decoration: const InputDecoration(
               labelText: '世界观名称',
               hintText: '例如：魔法大陆',
@@ -53,6 +57,10 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
           const SizedBox(height: 16),
           TextField(
             controller: _descController,
+            maxLength: 500,
+            buildCounter:
+                (_, {required currentLength, required isFocused, maxLength}) =>
+                    null,
             decoration: const InputDecoration(
               labelText: '描述（可选）',
               hintText: '简要描述这个世界观',
@@ -71,7 +79,7 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(
@@ -79,25 +87,41 @@ class _WorldDialogState extends ConsumerState<WorldDialog> {
       ).showSnackBar(const SnackBar(content: Text('请输入世界观名称')));
       return;
     }
-
-    final actions = ref.read(worldActionsProvider);
-    if (widget.world != null) {
-      actions.update(
-        widget.world!.id,
-        name,
-        description: _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-      );
-    } else {
-      actions.create(
-        name,
-        description: _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-      );
+    if (name.length > 100) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('世界观名称长度不能超过 100 个字符')));
+      return;
     }
 
-    Navigator.pop(context);
+    try {
+      final actions = ref.read(worldActionsProvider);
+      if (widget.world != null) {
+        await actions.update(
+          widget.world!.id,
+          name,
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
+        );
+      } else {
+        await actions.create(
+          name,
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
+        );
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存世界观失败: $e')));
+      }
+    }
   }
 }

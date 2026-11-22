@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:oc_manager/data/database/app_database.dart';
 import 'package:oc_manager/providers/database_provider.dart';
@@ -602,6 +602,223 @@ void main() {
         expect(restoredRevs.length, equals(1));
         expect(restoredRevs.first.title, equals('初始神话草案'));
         expect(restoredRevs.first.content, equals('最初的设定记载'));
+      },
+    );
+
+    test(
+      'Soft delete character safeguards story scenes povCharacterId and restores it',
+      () async {
+        final trashActions = container.read(trashActionsProvider);
+
+        final worldId = await db
+            .into(db.worlds)
+            .insert(WorldsCompanion.insert(name: '艾泽拉斯'));
+        final charId = await db
+            .into(db.characters)
+            .insert(CharactersCompanion.insert(worldId: worldId, name: '阿尔萨斯'));
+        final character = await db.characterDao.getCharacterById(charId);
+
+        final workId = await db
+            .into(db.storyWorks)
+            .insert(
+              StoryWorksCompanion.insert(worldId: worldId, title: '巫妖王之怒'),
+            );
+        final chapterId = await db
+            .into(db.storyChapters)
+            .insert(
+              StoryChaptersCompanion.insert(workId: workId, title: '第一章 斯坦索姆'),
+            );
+        final sceneId = await db
+            .into(db.storyScenes)
+            .insert(
+              StoryScenesCompanion.insert(
+                chapterId: chapterId,
+                title: '净化抉择',
+                povCharacterId: Value(charId),
+              ),
+            );
+
+        // 1. Soft delete character
+        await trashActions.deleteCharacter(character);
+
+        // 2. Character is deleted, scene's povCharacterId is safely nulled out (no FK violation!)
+        final remainingChars = await db.characterDao.getCharactersByWorld(
+          worldId,
+        );
+        expect(remainingChars, isEmpty);
+
+        final sceneAfterDelete = await (db.select(
+          db.storyScenes,
+        )..where((s) => s.id.equals(sceneId))).getSingle();
+        expect(sceneAfterDelete.povCharacterId, isNull);
+
+        // 3. Restore character from trash
+        final trashList = await db.trashDao.getAllTrash();
+        expect(trashList.length, equals(1));
+        await trashActions.restoreCharacter(trashList.first);
+
+        // 4. Character is restored, and scene's povCharacterId is safely restored
+        final restoredChar = await db.characterDao.getCharacterById(charId);
+        expect(restoredChar, isNotNull);
+        expect(restoredChar.name, equals('阿尔萨斯'));
+
+        final sceneAfterRestore = await (db.select(
+          db.storyScenes,
+        )..where((s) => s.id.equals(sceneId))).getSingle();
+        expect(sceneAfterRestore.povCharacterId, equals(charId));
+      },
+    );
+
+    test('Delete lore entity safeguards story scenes locationId', () async {
+      final worldId = await db
+          .into(db.worlds)
+          .insert(WorldsCompanion.insert(name: '艾泽拉斯'));
+      final loreId = await db.loreDao.createEntity(
+        LoreEntitiesCompanion.insert(
+          worldId: worldId,
+          entityType: 'location',
+          name: '斯坦索姆',
+          summary: const Value('北地重镇'),
+        ),
+      );
+
+      final workId = await db
+          .into(db.storyWorks)
+          .insert(
+            StoryWorksCompanion.insert(worldId: worldId, title: '洛丹伦的沦陷'),
+          );
+      final chapterId = await db
+          .into(db.storyChapters)
+          .insert(StoryChaptersCompanion.insert(workId: workId, title: '决裂之刻'));
+      final sceneId = await db
+          .into(db.storyScenes)
+          .insert(
+            StoryScenesCompanion.insert(
+              chapterId: chapterId,
+              title: '大门前',
+              locationId: Value(loreId),
+            ),
+          );
+
+      // 1. Delete lore entity directly
+      await db.loreDao.deleteEntity(loreId);
+
+      // 2. Lore entity is deleted and scene's locationId is safely nulled out
+      final lore = await db.loreDao.getEntityById(loreId);
+      expect(lore, isNull);
+
+      final scene = await (db.select(
+        db.storyScenes,
+      )..where((s) => s.id.equals(sceneId))).getSingle();
+      expect(scene.locationId, isNull);
+    });
+
+    test(
+      'Soft delete world cascades story works, chapters, and scenes, and restores them completely',
+      () async {
+        final trashActions = container.read(trashActionsProvider);
+
+        // 1. Setup full world with character, lore location, and story hierarchy
+        final worldId = await db
+            .into(db.worlds)
+            .insert(WorldsCompanion.insert(name: '星际争霸'));
+        final charId = await db
+            .into(db.characters)
+            .insert(CharactersCompanion.insert(worldId: worldId, name: '雷诺'));
+        final loreId = await db.loreDao.createEntity(
+          LoreEntitiesCompanion.insert(
+            worldId: worldId,
+            entityType: 'location',
+            name: '玛·萨拉',
+            summary: const Value('边境荒凉行星'),
+          ),
+        );
+
+        final workId = await db
+            .into(db.storyWorks)
+            .insert(
+              StoryWorksCompanion.insert(
+                worldId: worldId,
+                title: '自由之翼',
+                type: const Value('剧本'),
+                summary: const Value('游骑兵的反抗物语'),
+              ),
+            );
+        final chapterId = await db
+            .into(db.storyChapters)
+            .insert(
+              StoryChaptersCompanion.insert(
+                workId: workId,
+                title: '第一幕 玛·萨拉荒原',
+                arcName: const Value('反抗卷'),
+                summary: const Value('起义的号角'),
+              ),
+            );
+        final sceneId = await db
+            .into(db.storyScenes)
+            .insert(
+              StoryScenesCompanion.insert(
+                chapterId: chapterId,
+                title: '酒吧重逢',
+                summary: const Value('吉姆·雷诺与泰克斯重逢'),
+                povCharacterId: Value(charId),
+                locationId: Value(loreId),
+                locationName: const Value('乔伊·雷酒吧'),
+                mood: const Value('沧桑'),
+              ),
+            );
+
+        final world = await db.worldDao.getWorldById(worldId);
+
+        // 2. Soft delete world
+        await trashActions.deleteWorld(world);
+
+        // 3. Verify all active story tables are cleaned
+        final remainingWorks = await db.storyDao.getWorksByWorld(worldId);
+        final remainingChapters = await (db.select(
+          db.storyChapters,
+        )..where((c) => c.workId.equals(workId))).get();
+        final remainingScenes = await (db.select(
+          db.storyScenes,
+        )..where((s) => s.id.equals(sceneId))).get();
+        expect(remainingWorks, isEmpty);
+        expect(remainingChapters, isEmpty);
+        expect(remainingScenes, isEmpty);
+
+        // 4. Verify trash entry exists
+        final trashList = await db.trashDao.getAllTrash();
+        expect(trashList.length, equals(1));
+        expect(trashList.first.itemType, equals('world'));
+
+        // 5. Restore world from trash
+        await trashActions.restoreWorld(trashList.first);
+
+        // 6. Verify restored world and full story hierarchy
+        final restoredWorld = await db.worldDao.getWorldById(worldId);
+        expect(restoredWorld.name, equals('星际争霸'));
+
+        final restoredWorks = await db.storyDao.getWorksByWorld(worldId);
+        expect(restoredWorks.length, equals(1));
+        final rw = restoredWorks.first;
+        expect(rw.title, equals('自由之翼'));
+        expect(rw.type, equals('剧本'));
+        expect(rw.summary, equals('游骑兵的反抗物语'));
+
+        final restoredChapters = await db.storyDao.getChaptersByWork(rw.id);
+        expect(restoredChapters.length, equals(1));
+        final rc = restoredChapters.first;
+        expect(rc.title, equals('第一幕 玛·萨拉荒原'));
+        expect(rc.arcName, equals('反抗卷'));
+
+        final restoredScenes = await db.storyDao.getScenesByChapter(rc.id);
+        expect(restoredScenes.length, equals(1));
+        final rs = restoredScenes.first;
+        expect(rs.title, equals('酒吧重逢'));
+        expect(rs.summary, equals('吉姆·雷诺与泰克斯重逢'));
+        expect(rs.povCharacterId, equals(charId));
+        expect(rs.locationId, equals(loreId));
+        expect(rs.locationName, equals('乔伊·雷酒吧'));
+        expect(rs.mood, equals('沧桑'));
       },
     );
   });

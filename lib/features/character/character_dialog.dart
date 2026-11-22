@@ -131,6 +131,14 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _nameController,
+              maxLength: 100,
+              buildCounter:
+                  (
+                    _, {
+                    required currentLength,
+                    required isFocused,
+                    maxLength,
+                  }) => null,
               decoration: const InputDecoration(
                 labelText: '人物名称',
                 hintText: '例如：艾莉丝',
@@ -218,48 +226,62 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
       ).showSnackBar(const SnackBar(content: Text('请输入人物名称')));
       return;
     }
+    if (name.length > 100) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('人物名称长度不能超过 100 个字符')));
+      return;
+    }
 
     final gender = _isCustomGender
         ? _customGenderController.text.trim()
         : _gender;
 
-    final actions = ref.read(characterActionsProvider);
-    if (widget.character != null) {
-      actions.update(
-        widget.character!.copyWith(
+    try {
+      final actions = ref.read(characterActionsProvider);
+      if (widget.character != null) {
+        await actions.update(
+          widget.character!.copyWith(
+            name: name,
+            gender: gender,
+            status: _status,
+            avatarPath: Value(_avatarPath),
+          ),
+        );
+      } else {
+        final characterId = await actions.create(
+          worldId: widget.worldId,
           name: name,
-          gender: gender,
           status: _status,
-          avatarPath: Value(_avatarPath),
-        ),
-      );
-    } else {
-      final characterId = await actions.create(
-        worldId: widget.worldId,
-        name: name,
-        status: _status,
-        gender: gender,
-        avatarPath: _avatarPath,
-      );
+          gender: gender,
+          avatarPath: _avatarPath,
+        );
 
-      // 套用模板
-      if (_selectedTemplateId != null) {
-        final fields = await ref
-            .read(templateDaoProvider)
-            .getTemplateFields(_selectedTemplateId!);
-        for (final field in fields) {
-          await actions.updateField(
-            characterId,
-            field.fieldName,
-            field.fieldType,
-            field.defaultValue,
-          );
+        // 套用模板
+        if (_selectedTemplateId != null) {
+          final fields = await ref
+              .read(templateDaoProvider)
+              .getTemplateFields(_selectedTemplateId!);
+          for (final field in fields) {
+            await actions.updateField(
+              characterId,
+              field.fieldName,
+              field.fieldType,
+              field.defaultValue,
+            );
+          }
         }
       }
-    }
 
-    if (mounted) {
-      Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存人物失败: $e')));
+      }
     }
   }
 }
