@@ -89,53 +89,87 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
+      Future<void> safeAddColumn(
+        TableInfo table,
+        GeneratedColumn column,
+      ) async {
+        try {
+          final rows = await customSelect(
+            'PRAGMA table_info("${table.actualTableName}");',
+          ).get();
+          final exists = rows.any((r) => r.data['name'] == column.$name);
+          if (!exists) {
+            await m.addColumn(table, column);
+          }
+        } catch (e) {
+          if (!e.toString().contains('duplicate column name')) {
+            rethrow;
+          }
+        }
+      }
+
+      Future<void> safeCreateTable(TableInfo table) async {
+        try {
+          final rows = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='${table.actualTableName}';",
+          ).get();
+          if (rows.isEmpty) {
+            await m.createTable(table);
+          }
+        } catch (e) {
+          if (!e.toString().contains('already exists')) {
+            rethrow;
+          }
+        }
+      }
+
       if (from < 2) {
-        await m.addColumn(relations, relations.relationGroupId);
+        await safeAddColumn(relations, relations.relationGroupId);
       }
       if (from < 3) {
-        await m.addColumn(characters, characters.gender);
+        await safeAddColumn(characters, characters.gender);
       }
       if (from < 4) {
-        await m.addColumn(characters, characters.description);
+        await safeAddColumn(characters, characters.description);
       }
       if (from < 5) {
-        await m.createTable(settings);
-        await m.createTable(basicInfoFields);
+        await safeCreateTable(settings);
+        await safeCreateTable(basicInfoFields);
       }
       if (from < 6) {
-        await m.createTable(groups);
-        await m.createTable(characterGroups);
+        await safeCreateTable(groups);
+        await safeCreateTable(characterGroups);
       }
       if (from < 7) {
-        await m.createTable(characterStats);
+        await safeCreateTable(characterStats);
       }
       if (from < 8) {
-        await m.createTable(characterGalleries);
+        await safeCreateTable(characterGalleries);
       }
       if (from < 9) {
-        await m.createTable(timelineEvents);
+        await safeCreateTable(timelineEvents);
       }
       if (from < 10) {
-        await m.createTable(loreEntities);
+        await safeCreateTable(loreEntities);
       }
       if (from < 11) {
-        await m.createTable(entityRevisions);
+        await safeCreateTable(entityRevisions);
       }
       if (from < 12) {
-        await m.createTable(graphCanvases);
-        await m.addColumn(graphLayouts, graphLayouts.canvasId);
+        await safeCreateTable(graphCanvases);
+        await safeAddColumn(graphLayouts, graphLayouts.canvasId);
       }
       if (from < 13) {
-        await m.addColumn(loreEntities, loreEntities.parentId);
-        await m.createTable(loreRelations);
+        await safeAddColumn(loreEntities, loreEntities.parentId);
+        await safeCreateTable(loreRelations);
       }
       if (from < 14) {
-        await m.createTable(loreEntityRelations);
+        await safeCreateTable(loreEntityRelations);
       }
       if (from < 15) {
-        await m.createTable(storyWorks);
-        await m.createTable(storyChapters);
-        await m.createTable(storyScenes);
+        await safeCreateTable(storyWorks);
+        await safeCreateTable(storyChapters);
+        await safeCreateTable(storyScenes);
       }
     },
     beforeOpen: (details) async {
