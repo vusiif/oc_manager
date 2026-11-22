@@ -54,6 +54,49 @@ class ConnectingLinePainter extends CustomPainter {
       old.from != from || old.to != to || old.color != color;
 }
 
+/// Painter for rendering infinite dynamic grid background on relation canvas.
+class InfiniteGridPainter extends CustomPainter {
+  final Matrix4 transformMatrix;
+  final Color gridColor;
+  final double baseStep;
+
+  InfiniteGridPainter({
+    required this.transformMatrix,
+    required this.gridColor,
+    this.baseStep = 40.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = transformMatrix.getMaxScaleOnAxis();
+    final tx = transformMatrix.getTranslation().x;
+    final ty = transformMatrix.getTranslation().y;
+
+    final step = baseStep * scale;
+    if (step < 8.0) return;
+
+    final paint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.5;
+
+    final startX = tx % step;
+    for (double x = startX - step; x <= size.width + step; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    final startY = ty % step;
+    for (double y = startY - step; y <= size.height + step; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant InfiniteGridPainter oldDelegate) =>
+      oldDelegate.transformMatrix != transformMatrix ||
+      oldDelegate.gridColor != gridColor ||
+      oldDelegate.baseStep != baseStep;
+}
+
 /// Painter for rendering grid background on the relation canvas.
 class GridPainter extends CustomPainter {
   final Color color;

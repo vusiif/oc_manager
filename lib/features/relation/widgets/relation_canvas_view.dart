@@ -97,200 +97,217 @@ class RelationCanvasView extends StatelessWidget {
           max(viewport.height, max(maxNodeY + 800, 3000)),
         );
 
-        return Stack(
-          children: [
-            DragTarget<int>(
-              onAcceptWithDetails: (details) {
-                final renderBox = context.findRenderObject() as RenderBox;
-                final localPos = renderBox.globalToLocal(details.offset);
-                final charName =
-                    characters
-                        .where((c) => c.id == details.data)
-                        .map((c) => c.name)
-                        .firstOrNull ??
-                    '';
-                onDropCharacter(details.data, localPos, charName);
-              },
-              builder: (context, candidateData, rejectedData) {
-                return InteractiveViewer(
-                  transformationController: transformController,
-                  boundaryMargin: const EdgeInsets.all(2500),
-                  minScale: 0.1,
-                  maxScale: 3.0,
-                  onInteractionEnd: (_) => onPersistViewport(),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTapUp: (details) => onCanvasTap(details.localPosition),
-                    child: Container(
-                      width: canvasSize.width,
-                      height: canvasSize.height,
-                      color: theme.colorScheme.surfaceContainerLowest,
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: RepaintBoundary(
-                              child: CustomPaint(
-                                painter: GridPainter(
-                                  color: theme.colorScheme.outlineVariant
-                                      .withValues(alpha: 0.3),
-                                ),
-                              ),
-                            ),
-                          ),
-                          CustomPaint(
-                            size: canvasSize,
-                            painter: RelationPainter(
-                              relations: relations,
-                              positions: positions,
-                              characters: characters,
-                              revision: graphRevision,
-                              selectedRelationId: selectedRelationId,
-                              isDark: isDark,
-                              filterState: filterState,
-                              visibleRect: visibleRect,
-                              scale: currentScale,
-                            ),
-                          ),
-                          // 拖拽创建关系时的实时连线预览
-                          if (connectingFromId != null &&
-                              connectingCurrentPos != null &&
-                              positions.containsKey(connectingFromId))
+        return ClipRect(
+          child: Stack(
+            children: [
+              // 1. 全屏统一画布底色 (Solid Infinite Canvas Background)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: theme.colorScheme.surfaceContainerLowest,
+                ),
+              ),
+              // 2. 全屏无限动态网格 (Infinite Dynamic Grid)
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: transformController,
+                  builder: (context, _) {
+                    return CustomPaint(
+                      size: viewport,
+                      painter: InfiniteGridPainter(
+                        transformMatrix: transformController.value,
+                        gridColor: theme.colorScheme.outlineVariant.withValues(
+                          alpha: isDark ? 0.22 : 0.45,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // 3. 关系图内容层与手势交互 (Infinite InteractiveViewer)
+              DragTarget<int>(
+                onAcceptWithDetails: (details) {
+                  final renderBox = context.findRenderObject() as RenderBox;
+                  final localPos = renderBox.globalToLocal(details.offset);
+                  final charName =
+                      characters
+                          .where((c) => c.id == details.data)
+                          .map((c) => c.name)
+                          .firstOrNull ??
+                      '';
+                  onDropCharacter(details.data, localPos, charName);
+                },
+                builder: (context, candidateData, rejectedData) {
+                  return InteractiveViewer(
+                    transformationController: transformController,
+                    boundaryMargin: const EdgeInsets.all(double.infinity),
+                    clipBehavior: Clip.none,
+                    minScale: 0.1,
+                    maxScale: 3.0,
+                    onInteractionEnd: (_) => onPersistViewport(),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTapUp: (details) => onCanvasTap(details.localPosition),
+                      child: SizedBox(
+                        width: canvasSize.width,
+                        height: canvasSize.height,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
                             CustomPaint(
                               size: canvasSize,
-                              painter: ConnectingLinePainter(
-                                from: positions[connectingFromId]!,
-                                to: connectingCurrentPos!,
-                                color: AppColors.brand,
-                              ),
-                            ),
-                          for (var character in characters)
-                            if (positions.containsKey(character.id) &&
-                                GraphViewportCulling.isNodeVisible(
-                                  positions[character.id]!,
-                                  visibleRect,
-                                  radius: 40.0,
-                                ))
-                              DraggableNode(
-                                character: character,
-                                position: positions[character.id]!,
-                                lodLevel: currentLod,
-                                allCharacters: characters,
+                              painter: RelationPainter(
                                 relations: relations,
-                                isPathHighlighted:
-                                    filterState.highlightedPath?.nodePath
-                                        .contains(character.id) ??
-                                    false,
-                                isDimmed:
-                                    filterState.highlightedPath != null &&
-                                    !(filterState.highlightedPath!.nodePath
-                                        .contains(character.id)),
-                                onDragStart: (startPos) =>
-                                    onNodeDragStart(character.id, startPos),
-                                onDragUpdate: (newPos) =>
-                                    onNodeDragUpdate(character.id, newPos),
-                                onDragEnd: (newPos) =>
-                                    onNodeDragEnd(character.id, newPos),
-                                onConnectStart: (startPos) =>
-                                    onConnectStart(character.id, startPos),
-                                onConnectUpdate: onConnectUpdate,
-                                onConnectEnd: onConnectEnd,
-                                onRemove: () => onRemoveCharacter(character),
-                                onManageRelations: () =>
-                                    onManageRelations(character),
-                                onEdit: () => onEditCharacter(character),
-                              ),
-                          if (candidateData.isNotEmpty)
-                            Center(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '松开放置人物',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 16,
-                                  ),
-                                ),
+                                positions: positions,
+                                characters: characters,
+                                revision: graphRevision,
+                                selectedRelationId: selectedRelationId,
+                                isDark: isDark,
+                                filterState: filterState,
+                                visibleRect: visibleRect,
+                                scale: currentScale,
                               ),
                             ),
-                        ],
+                            // 拖拽创建关系时的实时连线预览
+                            if (connectingFromId != null &&
+                                connectingCurrentPos != null &&
+                                positions.containsKey(connectingFromId))
+                              CustomPaint(
+                                size: canvasSize,
+                                painter: ConnectingLinePainter(
+                                  from: positions[connectingFromId]!,
+                                  to: connectingCurrentPos!,
+                                  color: AppColors.brand,
+                                ),
+                              ),
+                            for (var character in characters)
+                              if (positions.containsKey(character.id) &&
+                                  GraphViewportCulling.isNodeVisible(
+                                    positions[character.id]!,
+                                    visibleRect,
+                                    radius: 40.0,
+                                  ))
+                                DraggableNode(
+                                  character: character,
+                                  position: positions[character.id]!,
+                                  lodLevel: currentLod,
+                                  allCharacters: characters,
+                                  relations: relations,
+                                  isPathHighlighted:
+                                      filterState.highlightedPath?.nodePath
+                                          .contains(character.id) ??
+                                      false,
+                                  isDimmed:
+                                      filterState.highlightedPath != null &&
+                                      !(filterState.highlightedPath!.nodePath
+                                          .contains(character.id)),
+                                  onDragStart: (startPos) =>
+                                      onNodeDragStart(character.id, startPos),
+                                  onDragUpdate: (newPos) =>
+                                      onNodeDragUpdate(character.id, newPos),
+                                  onDragEnd: (newPos) =>
+                                      onNodeDragEnd(character.id, newPos),
+                                  onConnectStart: (startPos) =>
+                                      onConnectStart(character.id, startPos),
+                                  onConnectUpdate: onConnectUpdate,
+                                  onConnectEnd: onConnectEnd,
+                                  onRemove: () => onRemoveCharacter(character),
+                                  onManageRelations: () =>
+                                      onManageRelations(character),
+                                  onEdit: () => onEditCharacter(character),
+                                ),
+                            if (candidateData.isNotEmpty)
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '松开放置人物',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.primary,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (filterState.hasActiveFilter)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: RepaintBoundary(
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(24),
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.alt_route,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              filterState.highlightedPath != null
+                                  ? '最短路径: ${filterState.highlightedPath!.hopCount} 步跃迁'
+                                  : '已应用过滤条件',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.close, size: 16),
+                              tooltip: '清除高亮',
+                              onPressed: onClearFilter,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-            if (filterState.hasActiveFilter)
+                ),
+              // GRAPH-005: 悬浮全局导览小地图
               Positioned(
-                top: 16,
+                bottom: 16,
                 right: 16,
                 child: RepaintBoundary(
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(24),
-                    color: theme.colorScheme.surfaceContainerHigh,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.alt_route,
-                            size: 18,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            filterState.highlightedPath != null
-                                ? '最短路径: ${filterState.highlightedPath!.hopCount} 步跃迁'
-                                : '已应用过滤条件',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.close, size: 16),
-                            tooltip: '清除高亮',
-                            onPressed: onClearFilter,
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: GraphMinimap(
+                    positions: positions,
+                    characters: characters,
+                    relations: relations,
+                    transformController: transformController,
+                    viewportSize: viewport,
+                    isDark: isDark,
+                    onNavigate: onNavigateToPosition,
                   ),
                 ),
               ),
-            // GRAPH-005: 悬浮全局导览小地图
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: RepaintBoundary(
-                child: GraphMinimap(
-                  positions: positions,
-                  characters: characters,
-                  relations: relations,
-                  transformController: transformController,
-                  viewportSize: viewport,
-                  isDark: isDark,
-                  onNavigate: onNavigateToPosition,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
