@@ -1,21 +1,20 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-import '../../core/design/design_tokens.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
 import 'graph_geometry.dart';
 import 'painters/relation_label_helper.dart';
+import 'painters/relation_style_helper.dart';
 import 'relation_advanced_analysis.dart';
 
 export 'painters/background_painters.dart';
 export 'painters/relation_label_helper.dart';
+export 'painters/relation_style_helper.dart';
 
 const _familyTypes = familyRelationTypes;
 
-// --- 关系连线绘制 ---
-
+/// CustomPainter for rendering graph edges, arrowheads, and labels.
 class RelationPainter extends CustomPainter {
   final List<Relation> relations;
   final Map<int, Offset> positions;
@@ -72,6 +71,9 @@ class RelationPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final linePaint = Paint()
       ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true
       ..style = PaintingStyle.stroke;
 
     final textPainter = TextPainter(
@@ -81,7 +83,7 @@ class RelationPainter extends CustomPainter {
 
     final characterMap = {for (final c in characters) c.id: c};
 
-    // 分离家谱组和普通组
+    // Separate family pedigree groups and normal relations
     final familyGroups = <String, List<Relation>>{};
     final normalGroups = <String, List<Relation>>{};
 
@@ -108,7 +110,7 @@ class RelationPainter extends CustomPainter {
       }
     }
 
-    // 绘制家谱
+    // 1. Draw family pedigree trees
     for (final entry in familyGroups.entries) {
       _drawFamilyGroup(
         canvas,
@@ -119,7 +121,7 @@ class RelationPainter extends CustomPainter {
       );
     }
 
-    // 绘制普通关系
+    // 2. Draw normal relations (curved/straight lines)
     for (final entry in normalGroups.entries) {
       _drawNormalGroup(
         canvas,
@@ -131,8 +133,6 @@ class RelationPainter extends CustomPainter {
     }
   }
 
-  // --- 家谱图：遗传图风格 ---
-
   void _drawFamilyGroup(
     Canvas canvas,
     TextPainter tp,
@@ -140,12 +140,10 @@ class RelationPainter extends CustomPainter {
     List<Relation> group,
     Map<int, Character> characterMap,
   ) {
-    // 收集父母和子女
     final parentIds = <int>{};
     final childIds = <int>{};
 
     for (final rel in group) {
-      // fromCharacterId = 父母, toCharacterId = 子女
       if (rel.fromCharacterId != rel.toCharacterId) {
         parentIds.add(rel.fromCharacterId);
         childIds.add(rel.toCharacterId);
@@ -165,14 +163,19 @@ class RelationPainter extends CustomPainter {
 
     final isPathHit = group.any(_isRelInPath);
     final isDimmed = group.every(_isRelDimmed);
-    Color color = Colors.blue.shade300;
-    if (isPathHit) {
-      color = AppColors.brand;
-    } else if (isDimmed) {
-      color = color.withValues(alpha: 0.15);
-    }
+    final isSelected = group.any((r) => r.id == selectedRelationId);
+    final relType = group.first.relationType;
+
+    final color = RelationStyleHelper.getRelationColor(
+      relType,
+      isBidirectional: true,
+      isDark: isDark,
+      isSelected: isSelected || isPathHit,
+      isDimmed: isDimmed && !isPathHit && !isSelected,
+    );
+
     paint.color = color;
-    paint.strokeWidth = isPathHit ? 3.5 : (isDimmed ? 1.0 : 2.0);
+    paint.strokeWidth = isSelected || isPathHit ? 3.0 : (isDimmed ? 1.0 : 2.0);
 
     final childYs = children.map((c) => c.dy).toList();
     final minChildY = childYs.reduce(min);
@@ -196,10 +199,16 @@ class RelationPainter extends CustomPainter {
       );
       canvas.drawLine(edge1, edge2, paint);
 
-      // 父母中点
       parentMid = Offset((edge1.dx + edge2.dx) / 2, (edge1.dy + edge2.dy) / 2);
+      canvas.drawCircle(
+        parentMid,
+        3.0,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
+      );
 
-      // 更多父母连到中点
       for (var i = 2; i < parents.length; i++) {
         final pi = parents[i];
         final pid = parentIds.skip(i).first;
@@ -211,17 +220,12 @@ class RelationPainter extends CustomPainter {
         canvas.drawLine(edge, parentMid, paint);
       }
     } else {
-      // 单亲家庭支持
       parentMid = parents[0];
     }
 
-    // 确定 busY：在 parentMid 下方
-    double busY;
-    if (minChildY > parentMid.dy) {
-      busY = parentMid.dy + (minChildY - parentMid.dy) * 0.4;
-    } else {
-      busY = parentMid.dy + 50;
-    }
+    double busY = minChildY > parentMid.dy
+        ? parentMid.dy + (minChildY - parentMid.dy) * 0.4
+        : parentMid.dy + 50;
 
     final busStart = Offset(parentMid.dx, busY);
     final topPoint = parents.length >= 2
@@ -232,7 +236,16 @@ class RelationPainter extends CustomPainter {
             angle: pi / 2,
           );
     canvas.drawLine(topPoint, busStart, paint);
+    canvas.drawCircle(
+      busStart,
+      3.0,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true,
+    );
 
+    const arrowLen = 10.0;
     if (children.length == 1) {
       final child = children[0];
       final childId = childIds.first;
@@ -245,10 +258,16 @@ class RelationPainter extends CustomPainter {
       );
 
       canvas.drawLine(junction, midPoint, paint);
-      canvas.drawLine(midPoint, cEdge, paint);
-
       final childDir = (child - midPoint).direction;
-      _drawArrowDir(canvas, cEdge, childDir, color);
+      final childEnd =
+          cEdge - Offset(arrowLen * cos(childDir), arrowLen * sin(childDir));
+      canvas.drawLine(midPoint, childEnd, paint);
+      RelationStyleHelper.drawFilledArrow(
+        canvas,
+        tip: cEdge,
+        direction: childDir,
+        color: color,
+      );
     } else {
       final childXs = children.map((c) => c.dx).toList()..sort();
       final busLeft = Offset(childXs.first, busY);
@@ -269,26 +288,40 @@ class RelationPainter extends CustomPainter {
           toCenter: child,
           toGender: characterMap[childId]?.gender ?? '',
         );
-        canvas.drawLine(junction, cEdge, paint);
+
+        canvas.drawCircle(
+          junction,
+          2.6,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.fill
+            ..isAntiAlias = true,
+        );
         final childDir = (child - junction).direction;
-        _drawArrowDir(canvas, cEdge, childDir, color);
+        final childEnd =
+            cEdge - Offset(arrowLen * cos(childDir), arrowLen * sin(childDir));
+        canvas.drawLine(junction, childEnd, paint);
+        RelationStyleHelper.drawFilledArrow(
+          canvas,
+          tip: cEdge,
+          direction: childDir,
+          color: color,
+        );
       }
     }
 
-    final isSelected = group.any((r) => r.id == selectedRelationId);
-    final relType = group.first.relationType;
-    _drawLabel(
+    RelationStyleHelper.drawRelationBadge(
       canvas,
       tp,
       relType,
       Offset(parentMid.dx, parentMid.dy + 16),
+      color: color,
       isSelected: isSelected || isPathHit,
       isDark: isDark,
       isDimmed: isDimmed && !isPathHit && !isSelected,
+      scale: scale,
     );
   }
-
-  // --- 普通关系：弧线/直线 ---
 
   void _drawNormalGroup(
     Canvas canvas,
@@ -310,30 +343,28 @@ class RelationPainter extends CustomPainter {
       final isSelected = (rel.id == selectedRelationId);
       final isPathHit = _isRelInPath(rel);
       final isDimmed = _isRelDimmed(rel);
+      final isDashed = RelationStyleHelper.isDashedRelation(rel.relationType);
 
-      Color color = isSelected || isPathHit
-          ? AppColors.brand
-          : (rel.isBidirectional
-                ? Colors.blue.shade300
-                : Colors.orange.shade300);
-
-      if (isDimmed && !isPathHit && !isSelected) {
-        color = color.withValues(alpha: 0.15);
-      }
+      final color = RelationStyleHelper.getRelationColor(
+        rel.relationType,
+        isBidirectional: rel.isBidirectional,
+        isDark: isDark,
+        isSelected: isSelected || isPathHit,
+        isDimmed: isDimmed && !isPathHit && !isSelected,
+      );
 
       paint.color = color;
       paint.strokeWidth = isSelected || isPathHit
-          ? 3.5
+          ? 3.0
           : (isDimmed ? 1.0 : 2.0);
 
       final isReversed = (rel.fromCharacterId != baseFromId);
-
-      final offset = count == 1 ? 0.0 : (i - (count - 1) / 2) * 40.0;
       final dx = to.dx - from.dx;
       final dy = to.dy - from.dy;
       final dist = sqrt(dx * dx + dy * dy);
       final nx = dist > 0 ? -dy / dist : 0.0;
       final ny = dist > 0 ? dx / dist : 0.0;
+      const arrowLen = 10.0;
 
       if (count == 1) {
         final p1 = GraphGeometry.getExitPoint(
@@ -346,39 +377,75 @@ class RelationPainter extends CustomPainter {
           toCenter: to,
           toGender: toGender,
         );
+        final dir = (p2 - p1).direction;
+        final chordDist = (p2 - p1).distance;
+
+        final lineStart = (rel.isBidirectional && chordDist > arrowLen * 2.5)
+            ? p1 + Offset(arrowLen * cos(dir), arrowLen * sin(dir))
+            : p1;
+        final lineEnd = (chordDist > arrowLen * 2.5)
+            ? p2 - Offset(arrowLen * cos(dir), arrowLen * sin(dir))
+            : p2;
+
+        final path = Path()
+          ..moveTo(lineStart.dx, lineStart.dy)
+          ..lineTo(lineEnd.dx, lineEnd.dy);
 
         if (isSelected || isPathHit) {
-          final haloPaint = Paint()
-            ..color = AppColors.brand.withValues(alpha: 0.35)
-            ..strokeWidth = 7.0
-            ..style = PaintingStyle.stroke;
-          canvas.drawLine(p1, p2, haloPaint);
+          RelationStyleHelper.drawGlow(canvas, path, color);
         }
 
-        canvas.drawLine(p1, p2, paint);
+        if (isDashed) {
+          RelationStyleHelper.drawDashedPath(canvas, path, paint);
+        } else {
+          canvas.drawPath(path, paint);
+        }
 
         if (rel.isBidirectional) {
-          _drawArrow(canvas, p1, p2, color);
-          _drawArrow(canvas, p2, p1, color);
+          RelationStyleHelper.drawFilledArrow(
+            canvas,
+            tip: p2,
+            direction: dir,
+            color: color,
+          );
+          RelationStyleHelper.drawFilledArrow(
+            canvas,
+            tip: p1,
+            direction: dir + pi,
+            color: color,
+          );
         } else {
           if (isReversed) {
-            _drawArrow(canvas, p2, p1, color);
+            RelationStyleHelper.drawFilledArrow(
+              canvas,
+              tip: p1,
+              direction: dir + pi,
+              color: color,
+            );
           } else {
-            _drawArrow(canvas, p1, p2, color);
+            RelationStyleHelper.drawFilledArrow(
+              canvas,
+              tip: p2,
+              direction: dir,
+              color: color,
+            );
           }
         }
 
         final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-        _drawLabel(
+        RelationStyleHelper.drawRelationBadge(
           canvas,
           tp,
           rel.relationType,
           mid,
+          color: color,
           isSelected: isSelected || isPathHit,
           isDark: isDark,
           isDimmed: isDimmed && !isPathHit && !isSelected,
+          scale: scale,
         );
       } else {
+        final offset = RelationStyleHelper.computeCurveOffset(i, count, dist);
         final cp = Offset(
           (from.dx + to.dx) / 2 + nx * offset,
           (from.dy + to.dy) / 2 + ny * offset,
@@ -403,28 +470,61 @@ class RelationPainter extends CustomPainter {
           (p1.dy + p2.dy) / 2 + ny * offset,
         );
 
+        final tangentStart = (adjCp - p1).direction;
+        final tangentEnd = (p2 - adjCp).direction;
+
+        final curveStart = rel.isBidirectional
+            ? p1 +
+                  Offset(
+                    arrowLen * cos(tangentStart),
+                    arrowLen * sin(tangentStart),
+                  )
+            : p1;
+        final curveEnd =
+            p2 - Offset(arrowLen * cos(tangentEnd), arrowLen * sin(tangentEnd));
+
         final path = Path()
-          ..moveTo(p1.dx, p1.dy)
-          ..quadraticBezierTo(adjCp.dx, adjCp.dy, p2.dx, p2.dy);
+          ..moveTo(curveStart.dx, curveStart.dy)
+          ..quadraticBezierTo(adjCp.dx, adjCp.dy, curveEnd.dx, curveEnd.dy);
 
         if (isSelected || isPathHit) {
-          final haloPaint = Paint()
-            ..color = AppColors.brand.withValues(alpha: 0.35)
-            ..strokeWidth = 7.0
-            ..style = PaintingStyle.stroke;
-          canvas.drawPath(path, haloPaint);
+          RelationStyleHelper.drawGlow(canvas, path, color);
         }
 
-        canvas.drawPath(path, paint);
+        if (isDashed) {
+          RelationStyleHelper.drawDashedPath(canvas, path, paint);
+        } else {
+          canvas.drawPath(path, paint);
+        }
 
         if (rel.isBidirectional) {
-          _drawArrowDir(canvas, p2, tEnd, color);
-          _drawArrowDir(canvas, p1, tStart + pi, color);
+          RelationStyleHelper.drawFilledArrow(
+            canvas,
+            tip: p2,
+            direction: tangentEnd,
+            color: color,
+          );
+          RelationStyleHelper.drawFilledArrow(
+            canvas,
+            tip: p1,
+            direction: tangentStart + pi,
+            color: color,
+          );
         } else {
           if (isReversed) {
-            _drawArrowDir(canvas, p1, tStart + pi, color);
+            RelationStyleHelper.drawFilledArrow(
+              canvas,
+              tip: p1,
+              direction: tangentStart + pi,
+              color: color,
+            );
           } else {
-            _drawArrowDir(canvas, p2, tEnd, color);
+            RelationStyleHelper.drawFilledArrow(
+              canvas,
+              tip: p2,
+              direction: tangentEnd,
+              color: color,
+            );
           }
         }
 
@@ -437,14 +537,16 @@ class RelationPainter extends CustomPainter {
             (1 - t) * (1 - t) * p1.dy +
             2 * (1 - t) * t * adjCp.dy +
             t * t * p2.dy;
-        _drawLabel(
+        RelationStyleHelper.drawRelationBadge(
           canvas,
           tp,
           rel.relationType,
           Offset(labelX, labelY),
+          color: color,
           isSelected: isSelected || isPathHit,
           isDark: isDark,
           isDimmed: isDimmed && !isPathHit && !isSelected,
+          scale: scale,
         );
       }
     }
@@ -454,117 +556,6 @@ class RelationPainter extends CustomPainter {
     final minId = a < b ? a : b;
     final maxId = a < b ? b : a;
     return '$minId-$maxId';
-  }
-
-  void _drawLabel(
-    Canvas canvas,
-    TextPainter tp,
-    String text,
-    Offset center, {
-    bool isSelected = false,
-    bool isDark = false,
-    bool isDimmed = false,
-  }) {
-    // LOD Protection (PERF-001): When zoomed out (scale < 0.55), skip label text and badge layout unless selected
-    if (GraphViewportCulling.getLodLevel(scale) != GraphLodLevel.full &&
-        !isSelected) {
-      return;
-    }
-
-    final alphaMultiplier = isDimmed ? 0.25 : 1.0;
-    final textColor =
-        (isSelected
-                ? AppColors.brand
-                : (isDark ? Colors.white70 : Colors.grey.shade800))
-            .withValues(alpha: alphaMultiplier);
-    final bgColor =
-        (isSelected
-                ? (isDark
-                      ? AppColors.brand.withValues(alpha: 0.25)
-                      : AppColors.brandLight)
-                : (isDark ? const Color(0xFF2C2C2E) : Colors.white))
-            .withValues(alpha: alphaMultiplier);
-    final borderColor =
-        (isSelected
-                ? AppColors.brand
-                : (isDark ? const Color(0xFF3A3A3C) : Colors.grey.shade300))
-            .withValues(alpha: alphaMultiplier);
-
-    tp.text = TextSpan(
-      text: text,
-      style: AppFonts.textStyle(
-        color: textColor,
-        fontSize: 11,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-    tp.layout();
-
-    final rect = Rect.fromCenter(
-      center: center,
-      width: tp.width + 12,
-      height: tp.height + 6,
-    );
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
-
-    if (isSelected) {
-      final shadowPaint = Paint()
-        ..color = AppColors.brand.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 4);
-      canvas.drawRRect(rrect, shadowPaint);
-    }
-
-    // Badge background
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..color = bgColor
-        ..style = PaintingStyle.fill,
-    );
-
-    // Badge border
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..color = borderColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = isSelected ? 1.5 : 1.0,
-    );
-
-    // Label text
-    tp.paint(
-      canvas,
-      Offset(center.dx - tp.width / 2, center.dy - tp.height / 2),
-    );
-  }
-
-  void _drawArrow(Canvas canvas, Offset from, Offset to, Color color) {
-    _drawArrowDir(canvas, to, (to - from).direction, color);
-  }
-
-  void _drawArrowDir(Canvas canvas, Offset pos, double direction, Color color) {
-    const arrowSize = 10.0;
-    const arrowAngle = 0.5;
-
-    final path = Path()
-      ..moveTo(pos.dx, pos.dy)
-      ..lineTo(
-        pos.dx - arrowSize * cos(direction - arrowAngle),
-        pos.dy - arrowSize * sin(direction - arrowAngle),
-      )
-      ..moveTo(pos.dx, pos.dy)
-      ..lineTo(
-        pos.dx - arrowSize * cos(direction + arrowAngle),
-        pos.dy - arrowSize * sin(direction + arrowAngle),
-      );
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = 2.0
-        ..style = PaintingStyle.stroke,
-    );
   }
 
   @override

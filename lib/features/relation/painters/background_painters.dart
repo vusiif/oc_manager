@@ -14,23 +14,39 @@ class ConnectingLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // 1. Soft atmospheric glow
     final haloPaint = Paint()
-      ..color = color.withValues(alpha: 0.3)
+      ..color = color.withValues(alpha: 0.25)
       ..strokeWidth = 6.0
-      ..style = PaintingStyle.stroke;
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.drawLine(from, to, haloPaint);
 
+    // 2. Main sleek connecting line
     final paint = Paint()
       ..color = color
       ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(from, to, haloPaint);
     canvas.drawLine(from, to, paint);
 
-    final endCircle = Paint()
+    // 3. Magnetic target reticle at cursor/target
+    final outerRing = Paint()
+      ..color = color.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(to, 8.0, outerRing);
+
+    final innerCircle = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(to, 5.0, endCircle);
+    canvas.drawCircle(to, 4.0, innerCircle);
+
+    final centerDot = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(to, 1.5, centerDot);
   }
 
   @override

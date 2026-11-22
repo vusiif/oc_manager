@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../../data/database/app_database.dart';
+import 'relation_style_helper.dart';
 
 const familyRelationTypes = ['亲子', '父母', '父女', '父子', '母子', '母女', '家人'];
 
@@ -67,10 +68,10 @@ Map<int, Offset> calculateRelationLabelCenters({
 
     for (var i = 0; i < count; i++) {
       final rel = group[i];
-      final offset = count == 1 ? 0.0 : (i - (count - 1) / 2) * 40.0;
       final dx = to.dx - from.dx;
       final dy = to.dy - from.dy;
       final dist = sqrt(dx * dx + dy * dy);
+      final offset = RelationStyleHelper.computeCurveOffset(i, count, dist);
       final nx = dist > 0 ? -dy / dist : 0.0;
       final ny = dist > 0 ? dx / dist : 0.0;
 
