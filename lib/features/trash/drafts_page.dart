@@ -52,47 +52,52 @@ class DraftsPage extends ConsumerWidget {
             itemCount: drafts.length,
             itemBuilder: (context, index) {
               final draft = drafts[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade300,
-                    child: Text(
-                      draft.name.isNotEmpty ? draft.name[0] : '?',
-                      style: const TextStyle(color: Colors.grey),
+              return RepaintBoundary(
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.grey.shade300,
+                      child: Text(
+                        draft.name.isNotEmpty ? draft.name[0] : '?',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ),
-                  ),
-                  title: Text(draft.name),
-                  subtitle: FutureBuilder<World>(
-                    future: ref
-                        .read(databaseProvider)
-                        .worldDao
-                        .getWorldById(draft.worldId),
-                    builder: (context, snapshot) {
-                      return Text(snapshot.data?.name ?? '加载中');
-                    },
-                  ),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'publish',
-                        child: Text('转为正式'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('删除', style: TextStyle(color: Colors.red)),
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'publish') {
-                        _publishDraft(ref, draft);
-                      } else if (value == 'delete') {
-                        _confirmDelete(context, ref, draft);
-                      }
-                    },
-                  ),
-                  onTap: () => context.push(
-                    '/world/${draft.worldId}/character/${draft.id}',
+                    title: Text(draft.name),
+                    subtitle: FutureBuilder<World>(
+                      future: ref
+                          .read(databaseProvider)
+                          .worldDao
+                          .getWorldById(draft.worldId),
+                      builder: (context, snapshot) {
+                        return Text(snapshot.data?.name ?? '加载中');
+                      },
+                    ),
+                    trailing: PopupMenuButton(
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'publish',
+                          child: Text('转为正式'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text(
+                            '删除',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'publish') {
+                          _publishDraft(context, ref, draft);
+                        } else if (value == 'delete') {
+                          _confirmDelete(context, ref, draft);
+                        }
+                      },
+                    ),
+                    onTap: () => context.push(
+                      '/world/${draft.worldId}/character/${draft.id}',
+                    ),
                   ),
                 ),
               );
@@ -107,23 +112,43 @@ class DraftsPage extends ConsumerWidget {
     return ref.read(databaseProvider).characterDao.getDraftCharacters();
   }
 
-  void _publishDraft(WidgetRef ref, Character character) async {
-    await ref
-        .read(databaseProvider)
-        .characterDao
-        .updateCharacter(
-          CharactersCompanion(
-            id: drift.Value(character.id),
-            worldId: drift.Value(character.worldId),
-            name: drift.Value(character.name),
-            avatarPath: drift.Value(character.avatarPath),
-            status: const drift.Value(0),
-            isFavorite: drift.Value(character.isFavorite),
-            isPinned: drift.Value(character.isPinned),
-            createdAt: drift.Value(character.createdAt),
-            updatedAt: drift.Value(DateTime.now()),
+  void _publishDraft(
+    BuildContext context,
+    WidgetRef ref,
+    Character character,
+  ) async {
+    try {
+      await ref
+          .read(databaseProvider)
+          .characterDao
+          .updateCharacter(
+            CharactersCompanion(
+              id: drift.Value(character.id),
+              worldId: drift.Value(character.worldId),
+              name: drift.Value(character.name),
+              avatarPath: drift.Value(character.avatarPath),
+              status: const drift.Value(0),
+              isFavorite: drift.Value(character.isFavorite),
+              isPinned: drift.Value(character.isPinned),
+              createdAt: drift.Value(character.createdAt),
+              updatedAt: drift.Value(DateTime.now()),
+            ),
+          );
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已转为正式角色: ${character.name}')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('转为正式失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
+      }
+    }
   }
 
   void _confirmDelete(
@@ -133,21 +158,32 @@ class DraftsPage extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('删除草稿'),
         content: Text('确定要删除"${character.name}"吗？'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              ref
-                  .read(databaseProvider)
-                  .characterDao
-                  .deleteCharacter(character.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ref
+                    .read(databaseProvider)
+                    .characterDao
+                    .deleteCharacter(character.id);
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+              } catch (e) {
+                if (dialogCtx.mounted) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    SnackBar(
+                      content: Text('删除草稿失败: $e'),
+                      backgroundColor: Theme.of(dialogCtx).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),

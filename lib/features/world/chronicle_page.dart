@@ -323,75 +323,77 @@ class _ChroniclePageState extends ConsumerState<ChroniclePage> {
             ? charMap[ev.characterId]
             : null;
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 时间轴节点轴线
-              SizedBox(
-                width: 48,
-                child: Column(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        width: 2.5,
-                        color: isFirst
-                            ? Colors.transparent
-                            : cat.color.withValues(alpha: 0.35),
+        return RepaintBoundary(
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 时间轴节点轴线
+                SizedBox(
+                  width: 48,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          width: 2.5,
+                          color: isFirst
+                              ? Colors.transparent
+                              : cat.color.withValues(alpha: 0.35),
+                        ),
                       ),
-                    ),
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: cat.color.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: cat.color, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: cat.color.withValues(alpha: 0.2),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                          ),
-                        ],
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: cat.color.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: cat.color, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cat.color.withValues(alpha: 0.2),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Icon(cat.icon, size: 18, color: cat.color),
                       ),
-                      child: Icon(cat.icon, size: 18, color: cat.color),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        width: 2.5,
-                        color: isLast
-                            ? Colors.transparent
-                            : cat.color.withValues(alpha: 0.35),
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          width: 2.5,
+                          color: isLast
+                              ? Colors.transparent
+                              : cat.color.withValues(alpha: 0.35),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // 主体卡片
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: ChronicleEventCard(
-                    event: ev,
-                    category: cat,
-                    character: boundChar,
-                    worldId: widget.worldId,
-                    onEdit: () => _openEventDialog(
-                      context,
-                      ref,
-                      event: ev,
-                      characters: characters,
-                    ),
-                    onDelete: () => _confirmDelete(context, ref, ev),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 16),
+
+                // 主体卡片
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: ChronicleEventCard(
+                      event: ev,
+                      category: cat,
+                      character: boundChar,
+                      worldId: widget.worldId,
+                      onEdit: () => _openEventDialog(
+                        context,
+                        ref,
+                        event: ev,
+                        characters: characters,
+                      ),
+                      onDelete: () => _confirmDelete(context, ref, ev),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

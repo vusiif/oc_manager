@@ -221,6 +221,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                     // Scene Title
                     TextFormField(
                       controller: _titleController,
+                      maxLength: 100,
                       decoration: const InputDecoration(
                         labelText: '场景标题 *',
                         hintText: '如：旧城废墟的秘密接头、暴风雨之夜的决裂',
@@ -323,6 +324,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                         Expanded(
                           child: TextFormField(
                             controller: _locationNameController,
+                            maxLength: 50,
                             decoration: const InputDecoration(
                               labelText: '发生地点名称',
                               hintText: '如：王都东郊酒馆地下室',
@@ -341,6 +343,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                         Expanded(
                           child: TextFormField(
                             controller: _timelineTimeController,
+                            maxLength: 50,
                             decoration: const InputDecoration(
                               labelText: '发生时间',
                               hintText: '如：大陆历734年夏末 黄昏',
@@ -353,6 +356,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                         Expanded(
                           child: TextFormField(
                             controller: _moodController,
+                            maxLength: 50,
                             decoration: const InputDecoration(
                               labelText: '氛围基调 / 情感色彩',
                               hintText: '如：紧张压抑、史诗对决',
@@ -472,6 +476,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                     TextFormField(
                       controller: _summaryController,
                       maxLines: 2,
+                      maxLength: 500,
                       decoration: const InputDecoration(
                         labelText: '场景概要 / 一句话提炼',
                         hintText: '提炼该场景发生的主要事件与冲突结果...',
@@ -484,6 +489,7 @@ class _StorySceneDialogState extends ConsumerState<StorySceneDialog> {
                     TextFormField(
                       controller: _contentController,
                       maxLines: 6,
+                      maxLength: 5000,
                       decoration: const InputDecoration(
                         labelText: '分镜要点 / 剧情推进与台词草稿',
                         hintText:

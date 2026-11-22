@@ -365,6 +365,7 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                                 children: [
                                   TextFormField(
                                     controller: _nameController,
+                                    maxLength: 100,
                                     decoration: const InputDecoration(
                                       labelText: '实体名称 *',
                                       hintText: '如：阿瓦隆群岛、荒坂集团、圣剑誓约',
@@ -378,6 +379,7 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                                   const SizedBox(height: 12),
                                   TextFormField(
                                     controller: _summaryController,
+                                    maxLength: 500,
                                     decoration: const InputDecoration(
                                       labelText: '一句话摘要',
                                       hintText: '简明阐述该实体的核心定义与世界地位',
@@ -401,6 +403,7 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _tagsController,
+                          maxLength: 200,
                           decoration: const InputDecoration(
                             labelText: '所属标签',
                             hintText: '多个标签请以逗号隔开，如：神圣, 古遗迹, 禁忌',
@@ -419,6 +422,7 @@ class _LoreEntityDialogState extends ConsumerState<LoreEntityDialog> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _contentController,
+                          maxLength: 10000,
                           decoration: const InputDecoration(
                             labelText: '详细设定 / 百科词条正文',
                             hintText: '支持 Markdown 格式与 [[角色名]] 双向链接引用...',

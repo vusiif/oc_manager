@@ -233,11 +233,13 @@ class _LoreEncyclopediaPageState extends ConsumerState<LoreEncyclopediaPage> {
                       itemCount: filteredEntities.length,
                       itemBuilder: (context, index) {
                         final entity = filteredEntities[index];
-                        return _LoreEntityCard(
-                          entity: entity,
-                          onTap: () => LoreEntityDetailDialog.show(
-                            context,
+                        return RepaintBoundary(
+                          child: _LoreEntityCard(
                             entity: entity,
+                            onTap: () => LoreEntityDetailDialog.show(
+                              context,
+                              entity: entity,
+                            ),
                           ),
                         );
                       },

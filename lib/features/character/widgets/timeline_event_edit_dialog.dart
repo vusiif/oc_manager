@@ -65,48 +65,59 @@ class _TimelineEventEditDialogState
     final desc = _descController.text.trim();
     final sort = double.tryParse(_sortController.text.trim()) ?? 0.0;
 
-    final actions = ref.read(timelineActionsProvider);
-    if (widget.event == null) {
-      await actions.createEvent(
-        worldId: widget.worldId,
-        characterId: widget.characterId,
-        year: year,
-        sortOrder: sort,
-        title: title,
-        description: desc,
-        category: _category,
-        importance: _importance,
-      );
-    } else {
-      final ev = widget.event!;
-      final hasChanged =
-          ev.title != title ||
-          ev.year != year ||
-          ev.description != desc ||
-          ev.category != _category ||
-          ev.importance != _importance ||
-          ev.sortOrder != sort;
+    try {
+      final actions = ref.read(timelineActionsProvider);
+      if (widget.event == null) {
+        await actions.createEvent(
+          worldId: widget.worldId,
+          characterId: widget.characterId,
+          year: year,
+          sortOrder: sort,
+          title: title,
+          description: desc,
+          category: _category,
+          importance: _importance,
+        );
+      } else {
+        final ev = widget.event!;
+        final hasChanged =
+            ev.title != title ||
+            ev.year != year ||
+            ev.description != desc ||
+            ev.category != _category ||
+            ev.importance != _importance ||
+            ev.sortOrder != sort;
 
-      if (hasChanged) {
-        await ref
-            .read(revisionActionsProvider)
-            .recordEventSnapshot(event: ev, source: 'auto');
+        if (hasChanged) {
+          await ref
+              .read(revisionActionsProvider)
+              .recordEventSnapshot(event: ev, source: 'auto');
+        }
+        await actions.updateEvent(
+          id: widget.event!.id,
+          worldId: widget.worldId,
+          characterId: widget.characterId,
+          year: year,
+          sortOrder: sort,
+          title: title,
+          description: desc,
+          category: _category,
+          importance: _importance,
+        );
       }
-      await actions.updateEvent(
-        id: widget.event!.id,
-        worldId: widget.worldId,
-        characterId: widget.characterId,
-        year: year,
-        sortOrder: sort,
-        title: title,
-        description: desc,
-        category: _category,
-        importance: _importance,
-      );
-    }
 
-    if (mounted) {
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存事件失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -128,6 +139,7 @@ class _TimelineEventEditDialogState
                 // 年份 / 纪元
                 TextFormField(
                   controller: _yearController,
+                  maxLength: 50,
                   decoration: const InputDecoration(
                     labelText: '纪元 / 年份 *',
                     hintText: '例如：光历 742 年、18岁、第三纪元',
@@ -146,6 +158,7 @@ class _TimelineEventEditDialogState
                 // 标题
                 TextFormField(
                   controller: _titleController,
+                  maxLength: 100,
                   decoration: const InputDecoration(
                     labelText: '事件标题 *',
                     hintText: '例如：觉醒暗夜异能、参与苍穹决战',
@@ -244,6 +257,7 @@ class _TimelineEventEditDialogState
                 TextFormField(
                   controller: _descController,
                   maxLines: 4,
+                  maxLength: 2000,
                   decoration: const InputDecoration(
                     labelText: '事件详细记载',
                     hintText: '记录此时刻的故事背景、起因发展、涉及的宿敌或关键后果…',

@@ -85,6 +85,7 @@ class LoreRelationDialogs {
                           const SizedBox(height: 14),
                           TextFormField(
                             controller: roleController,
+                            maxLength: 50,
                             decoration: InputDecoration(
                               labelText: entity.entityType == 'faction'
                                   ? '组织身份 / 职务'
@@ -143,15 +144,28 @@ class LoreRelationDialogs {
                           final role = roleController.text.trim().isEmpty
                               ? (entity.entityType == 'faction' ? '成员' : '常驻')
                               : roleController.text.trim();
-                          await ref
-                              .read(loreActionsProvider)
-                              .linkCharacter(
-                                worldId: entity.worldId,
-                                loreId: entity.id,
-                                characterId: selectedCharId!,
-                                role: role,
+                          try {
+                            await ref
+                                .read(loreActionsProvider)
+                                .linkCharacter(
+                                  worldId: entity.worldId,
+                                  loreId: entity.id,
+                                  characterId: selectedCharId!,
+                                  role: role,
+                                );
+                            if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                          } catch (e) {
+                            if (dialogCtx.mounted) {
+                              ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                                SnackBar(
+                                  content: Text('关联人物失败: $e'),
+                                  backgroundColor: Theme.of(
+                                    dialogCtx,
+                                  ).colorScheme.error,
+                                ),
                               );
-                          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                            }
+                          }
                         },
                   child: const Text('添加关联'),
                 ),
@@ -293,6 +307,7 @@ class LoreRelationDialogs {
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: noteController,
+                      maxLength: 500,
                       decoration: const InputDecoration(
                         labelText: '外交条约 / 背景备注',
                         hintText: '如：签署《百年互不侵犯条约》、争夺圣遗物引发宿怨',
@@ -312,17 +327,30 @@ class LoreRelationDialogs {
               ),
               FilledButton(
                 onPressed: () async {
-                  await ref
-                      .read(loreActionsProvider)
-                      .linkEntityRelation(
-                        worldId: entity.worldId,
-                        fromLoreId: entity.id,
-                        toLoreId: selectedTargetId,
-                        relationType: selectedRelationType,
-                        isBidirectional: isBidirectional,
-                        note: noteController.text.trim(),
+                  try {
+                    await ref
+                        .read(loreActionsProvider)
+                        .linkEntityRelation(
+                          worldId: entity.worldId,
+                          fromLoreId: entity.id,
+                          toLoreId: selectedTargetId,
+                          relationType: selectedRelationType,
+                          isBidirectional: isBidirectional,
+                          note: noteController.text.trim(),
+                        );
+                    if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                  } catch (e) {
+                    if (dialogCtx.mounted) {
+                      ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                        SnackBar(
+                          content: Text('建立实体关系失败: $e'),
+                          backgroundColor: Theme.of(
+                            dialogCtx,
+                          ).colorScheme.error,
+                        ),
                       );
-                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                    }
+                  }
                 },
                 child: const Text('确定建立'),
               ),

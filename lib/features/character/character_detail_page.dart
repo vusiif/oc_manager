@@ -19,6 +19,7 @@ import 'character_story_appearance_section.dart';
 import 'character_stats_section.dart';
 import 'character_lore_section.dart';
 import 'character_relation_section.dart';
+import 'widgets/character_field_rows.dart';
 
 class CharacterDetailPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -240,16 +241,16 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _InfoRow(label: '名称', value: character.name),
+                      CharacterInfoRow(label: '名称', value: character.name),
                       if (character.gender.isNotEmpty)
-                        _InfoRow(label: '性别', value: character.gender),
-                      _InfoRow(
+                        CharacterInfoRow(label: '性别', value: character.gender),
+                      CharacterInfoRow(
                         label: '状态',
                         value: CharacterCreationStatus.find(
                           character.status,
                         ).label,
                       ),
-                      _InfoRow(
+                      CharacterInfoRow(
                         label: '创建时间',
                         value: _formatDate(character.createdAt),
                       ),
@@ -277,7 +278,7 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                         ),
                         const Divider(),
                         for (final field in fields)
-                          _FieldRow(
+                          CharacterFieldRow(
                             field: field,
                             characterId: widget.characterId,
                           ),
@@ -376,6 +377,14 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
             children: [
               TextField(
                 controller: nameController,
+                maxLength: 50,
+                buildCounter:
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 decoration: const InputDecoration(
                   labelText: '字段名称',
                   hintText: '例如：种族、魔法属性',
@@ -392,11 +401,8 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
                   DropdownMenuItem(value: 'select', child: Text('单选')),
                   DropdownMenuItem(value: 'multi_select', child: Text('多选')),
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => fieldType = value);
-                  }
-                },
+                onChanged: (value) =>
+                    setState(() => fieldType = value ?? 'text'),
               ),
             ],
           ),
@@ -406,13 +412,31 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
               child: const Text('取消'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  ref
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('请输入字段名称')));
+                  return;
+                }
+                if (name.length > 50) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('字段名称长度不能超过 50 个字符')),
+                  );
+                  return;
+                }
+                try {
+                  await ref
                       .read(characterActionsProvider)
                       .updateField(widget.characterId, name, fieldType, null);
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('添加字段失败: $e')));
+                  }
                 }
               },
               child: const Text('添加'),
@@ -436,15 +460,23 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
           ),
           TextButton(
             onPressed: () async {
-              await ref
-                  .read(characterActionsProvider)
-                  .delete(widget.characterId);
-              if (context.mounted) {
-                Navigator.pop(context);
-                if (widget.onDeleted != null) {
-                  widget.onDeleted!();
-                } else if (Navigator.canPop(context)) {
+              try {
+                await ref
+                    .read(characterActionsProvider)
+                    .delete(widget.characterId);
+                if (context.mounted) {
                   Navigator.pop(context);
+                  if (widget.onDeleted != null) {
+                    widget.onDeleted!();
+                  } else if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('删除人物失败: $e')));
                 }
               }
             },
@@ -457,107 +489,5 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldRow extends ConsumerStatefulWidget {
-  final dynamic field;
-  final int characterId;
-
-  const _FieldRow({required this.field, required this.characterId});
-
-  @override
-  ConsumerState<_FieldRow> createState() => _FieldRowState();
-}
-
-class _FieldRowState extends ConsumerState<_FieldRow> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.field.value ?? '');
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              widget.field.fieldName,
-              style: const TextStyle(color: Colors.grey, fontSize: 13),
-            ),
-          ),
-          Expanded(
-            child: widget.field.fieldType == 'long_text'
-                ? TextField(
-                    controller: _controller,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                    onSubmitted: _save,
-                  )
-                : TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      contentPadding: EdgeInsets.all(8),
-                    ),
-                    onSubmitted: _save,
-                  ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.check, size: 18),
-            onPressed: () => _save(_controller.text),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _save(String value) {
-    ref
-        .read(characterActionsProvider)
-        .updateField(
-          widget.characterId,
-          widget.field.fieldName,
-          widget.field.fieldType,
-          value,
-        );
   }
 }

@@ -257,6 +257,7 @@ class _StoryWorkDialogState extends ConsumerState<StoryWorkDialog> {
                     // Title
                     TextFormField(
                       controller: _titleController,
+                      maxLength: 100,
                       decoration: const InputDecoration(
                         labelText: '作品标题 *',
                         hintText: '如：《风暴王座》、《双生纪元》',
@@ -329,6 +330,7 @@ class _StoryWorkDialogState extends ConsumerState<StoryWorkDialog> {
                     TextFormField(
                       controller: _summaryController,
                       maxLines: 4,
+                      maxLength: 2000,
                       decoration: const InputDecoration(
                         labelText: '作品简介 / 核心梗概',
                         hintText: '描述故事背景、主线冲突、核心主题或一句话立意...',

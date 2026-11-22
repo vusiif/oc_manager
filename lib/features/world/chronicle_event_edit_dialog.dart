@@ -66,49 +66,57 @@ class _ChronicleEventEditDialogState
     final desc = _descController.text.trim();
     final sort = double.tryParse(_sortController.text.trim()) ?? 0.0;
 
-    final actions = ref.read(timelineActionsProvider);
-    if (widget.event == null) {
-      await actions.createEvent(
-        worldId: widget.worldId,
-        characterId: _characterId,
-        year: year,
-        sortOrder: sort,
-        title: title,
-        description: desc,
-        category: _category,
-        importance: _importance,
-      );
-    } else {
-      final ev = widget.event!;
-      final hasChanged =
-          ev.title != title ||
-          ev.year != year ||
-          ev.description != desc ||
-          ev.category != _category ||
-          ev.importance != _importance ||
-          ev.characterId != _characterId ||
-          ev.sortOrder != sort;
+    try {
+      final actions = ref.read(timelineActionsProvider);
+      if (widget.event == null) {
+        await actions.createEvent(
+          worldId: widget.worldId,
+          characterId: _characterId,
+          year: year,
+          sortOrder: sort,
+          title: title,
+          description: desc,
+          category: _category,
+          importance: _importance,
+        );
+      } else {
+        final ev = widget.event!;
+        final hasChanged =
+            ev.title != title ||
+            ev.year != year ||
+            ev.description != desc ||
+            ev.category != _category ||
+            ev.importance != _importance ||
+            ev.characterId != _characterId ||
+            ev.sortOrder != sort;
 
-      if (hasChanged) {
-        await ref
-            .read(revisionActionsProvider)
-            .recordEventSnapshot(event: ev, source: 'auto');
+        if (hasChanged) {
+          await ref
+              .read(revisionActionsProvider)
+              .recordEventSnapshot(event: ev, source: 'auto');
+        }
+        await actions.updateEvent(
+          id: widget.event!.id,
+          worldId: widget.worldId,
+          characterId: _characterId,
+          year: year,
+          sortOrder: sort,
+          title: title,
+          description: desc,
+          category: _category,
+          importance: _importance,
+        );
       }
-      await actions.updateEvent(
-        id: widget.event!.id,
-        worldId: widget.worldId,
-        characterId: _characterId,
-        year: year,
-        sortOrder: sort,
-        title: title,
-        description: desc,
-        category: _category,
-        importance: _importance,
-      );
-    }
 
-    if (mounted) {
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存事件失败: $e')));
+      }
     }
   }
 
@@ -152,6 +160,14 @@ class _ChronicleEventEditDialogState
                 // 纪元 / 年份
                 TextFormField(
                   controller: _yearController,
+                  maxLength: 50,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   decoration: const InputDecoration(
                     labelText: '纪元 / 年份 *',
                     hintText: '例如：帝国历 1024 年、创世纪、第三纪元初期',
@@ -162,6 +178,9 @@ class _ChronicleEventEditDialogState
                     if (v == null || v.trim().isEmpty) {
                       return '请输入纪元或年份';
                     }
+                    if (v.trim().length > 50) {
+                      return '纪元或年份不能超过 50 个字符';
+                    }
                     return null;
                   },
                 ),
@@ -170,6 +189,14 @@ class _ChronicleEventEditDialogState
                 // 标题
                 TextFormField(
                   controller: _titleController,
+                  maxLength: 100,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   decoration: const InputDecoration(
                     labelText: '事件大标题 *',
                     hintText: '例如：星落浩劫、王都政变、神降契约缔结',
@@ -179,6 +206,9 @@ class _ChronicleEventEditDialogState
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return '请输入纪事大标题';
+                    }
+                    if (v.trim().length > 100) {
+                      return '大标题不能超过 100 个字符';
                     }
                     return null;
                   },
@@ -267,6 +297,14 @@ class _ChronicleEventEditDialogState
                 // 详细描述
                 TextFormField(
                   controller: _descController,
+                  maxLength: 2000,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   maxLines: 4,
                   decoration: const InputDecoration(
                     labelText: '长卷详细记载',

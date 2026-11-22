@@ -40,23 +40,25 @@ class TagManagementPage extends ConsumerWidget {
               final tag = tags[index];
               final color = _parseColor(tag.color);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(backgroundColor: color, radius: 16),
-                  title: Text(tag.name),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showEditDialog(context, ref, tag),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _confirmDelete(context, ref, tag),
-                      ),
-                    ],
+              return RepaintBoundary(
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(backgroundColor: color, radius: 16),
+                    title: Text(tag.name),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _showEditDialog(context, ref, tag),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _confirmDelete(context, ref, tag),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -87,6 +89,14 @@ class TagManagementPage extends ConsumerWidget {
             children: [
               TextField(
                 controller: nameController,
+                maxLength: 30,
+                buildCounter:
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 decoration: const InputDecoration(
                   labelText: '标签名称',
                   hintText: '例如：主角团、反派',
@@ -128,11 +138,29 @@ class TagManagementPage extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 final name = nameController.text.trim();
-                if (name.isNotEmpty) {
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('请输入标签名称')));
+                  return;
+                }
+                if (name.length > 30) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('标签名称长度不能超过 30 个字符')),
+                  );
+                  return;
+                }
+                try {
                   await ref
                       .read(tagActionsProvider)
                       .create(name, selectedColor);
                   if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('创建标签失败: $e')));
+                  }
                 }
               },
               child: const Text('创建'),
@@ -157,6 +185,14 @@ class TagManagementPage extends ConsumerWidget {
             children: [
               TextField(
                 controller: nameController,
+                maxLength: 30,
+                buildCounter:
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 decoration: const InputDecoration(labelText: '标签名称'),
               ),
               const SizedBox(height: 16),
@@ -192,13 +228,31 @@ class TagManagementPage extends ConsumerWidget {
               child: const Text('取消'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  ref
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('请输入标签名称')));
+                  return;
+                }
+                if (name.length > 30) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('标签名称长度不能超过 30 个字符')),
+                  );
+                  return;
+                }
+                try {
+                  await ref
                       .read(tagActionsProvider)
                       .update(tag.copyWith(name: name, color: selectedColor));
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('更新标签失败: $e')));
+                  }
                 }
               },
               child: const Text('保存'),
@@ -221,9 +275,17 @@ class TagManagementPage extends ConsumerWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              ref.read(tagActionsProvider).delete(tag.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ref.read(tagActionsProvider).delete(tag.id);
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('删除标签失败: $e')));
+                }
+              }
             },
             child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),

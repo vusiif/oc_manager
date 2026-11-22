@@ -85,6 +85,14 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
                   children: [
                     TextField(
                       controller: _nameController,
+                      maxLength: 50,
+                      buildCounter:
+                          (
+                            _, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) => null,
                       decoration: const InputDecoration(
                         labelText: '模板名称',
                         hintText: '例如：奇幻角色、现代角色',
@@ -219,39 +227,55 @@ class _TemplateDialogState extends ConsumerState<TemplateDialog> {
       ).showSnackBar(const SnackBar(content: Text('请输入模板名称')));
       return;
     }
-
-    final actions = ref.read(templateActionsProvider);
-
-    int templateId;
-    if (widget.template != null) {
-      await actions.update(widget.template!.id, name);
-      templateId = widget.template!.id;
-      // 删除旧字段，重新创建
-      await ref.read(templateDaoProvider).deleteAllTemplateFields(templateId);
-    } else {
-      templateId = await actions.create(name: name);
+    if (name.length > 50) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('模板名称长度不能超过 50 个字符')));
+      return;
     }
 
-    // 保存字段
-    for (int i = 0; i < _fields.length; i++) {
-      final f = _fields[i];
-      final fieldName = f.nameController.text.trim();
-      if (fieldName.isEmpty) continue;
+    try {
+      final actions = ref.read(templateActionsProvider);
 
-      await actions.addField(
-        templateId: templateId,
-        fieldName: fieldName,
-        fieldType: f.type,
-        defaultValue: f.defaultController.text.trim().isEmpty
-            ? null
-            : f.defaultController.text.trim(),
-        sortOrder: i,
-      );
+      int templateId;
+      if (widget.template != null) {
+        await actions.update(widget.template!.id, name);
+        templateId = widget.template!.id;
+        // 删除旧字段，重新创建
+        await ref.read(templateDaoProvider).deleteAllTemplateFields(templateId);
+      } else {
+        templateId = await actions.create(name: name);
+      }
+
+      // 保存字段
+      for (int i = 0; i < _fields.length; i++) {
+        final f = _fields[i];
+        final fieldName = f.nameController.text.trim();
+        if (fieldName.isEmpty) continue;
+
+        await actions.addField(
+          templateId: templateId,
+          fieldName: fieldName.length > 50
+              ? fieldName.substring(0, 50)
+              : fieldName,
+          fieldType: f.type,
+          defaultValue: f.defaultController.text.trim().isEmpty
+              ? null
+              : f.defaultController.text.trim(),
+          sortOrder: i,
+        );
+      }
+
+      ref.invalidate(globalTemplatesProvider);
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存模板失败: $e')));
+      }
     }
-
-    ref.invalidate(globalTemplatesProvider);
-
-    if (mounted) Navigator.pop(context);
   }
 }
 

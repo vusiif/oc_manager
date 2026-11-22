@@ -89,37 +89,39 @@ class WorldListPage extends ConsumerWidget {
             itemCount: worlds.length,
             itemBuilder: (context, index) {
               final world = worlds[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.public)),
-                  title: Text(
-                    world.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+              return RepaintBoundary(
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.public)),
+                    title: Text(
+                      world.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: world.description != null
+                        ? Text(
+                            world.description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (world.isLocked)
+                          const Icon(Icons.lock, color: Colors.orange),
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _showEditDialog(context, ref, world),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _confirmDelete(context, ref, world),
+                        ),
+                      ],
+                    ),
+                    onTap: () => context.push('/world/${world.id}'),
                   ),
-                  subtitle: world.description != null
-                      ? Text(
-                          world.description!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (world.isLocked)
-                        const Icon(Icons.lock, color: Colors.orange),
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showEditDialog(context, ref, world),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _confirmDelete(context, ref, world),
-                      ),
-                    ],
-                  ),
-                  onTap: () => context.push('/world/${world.id}'),
                 ),
               );
             },
@@ -159,8 +161,19 @@ class WorldListPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(worldActionsProvider).delete(world.id);
-              if (context.mounted) Navigator.pop(context);
+              try {
+                await ref.read(worldActionsProvider).delete(world.id);
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('删除世界观失败: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),

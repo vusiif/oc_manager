@@ -219,136 +219,154 @@ class StoryChapterOutlinePanel extends ConsumerWidget {
         break;
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: isSelected
-            ? Border.all(color: theme.colorScheme.primary)
-            : Border.all(color: Colors.transparent),
-      ),
-      child: Material(
-        color: isSelected
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: ListTile(
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 2,
-          ),
-          leading: CircleAvatar(
-            radius: 12,
-            backgroundColor: isSelected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.surfaceContainerHighest,
-            child: Text(
-              '${chapter.sortOrder + 1}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isSelected
-                    ? theme.colorScheme.onPrimary
-                    : theme.colorScheme.onSurfaceVariant,
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected
+              ? Border.all(color: theme.colorScheme.primary)
+              : Border.all(color: Colors.transparent),
+        ),
+        child: Material(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          child: ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 2,
+            ),
+            leading: CircleAvatar(
+              radius: 12,
+              backgroundColor: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.surfaceContainerHighest,
+              child: Text(
+                '${chapter.sortOrder + 1}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
-          title: Text(
-            chapter.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface,
+            title: Text(
+              chapter.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
             ),
-          ),
-          subtitle: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  chapter.status,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
+            subtitle: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    chapter.status,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
                   ),
                 ),
-              ),
-              if (chapter.wordCount > 0) ...[
-                const SizedBox(width: 6),
-                Text(
-                  '${chapter.wordCount}字',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: theme.colorScheme.outline,
+                if (chapter.wordCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '${chapter.wordCount}字',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            trailing: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 18),
+              padding: EdgeInsets.zero,
+              tooltip: '章节操作',
+              onSelected: (val) async {
+                if (val == 'edit') {
+                  StoryChapterDialog.show(
+                    context,
+                    workId: workId,
+                    chapter: chapter,
+                  );
+                } else if (val == 'delete') {
+                  final confirmed = await showConfirmDialog(
+                    context: context,
+                    title: '删除章节确认',
+                    content: '确定要删除章节《${chapter.title}》吗？\n删除章节将同时清理其下的所有场景分镜。',
+                    confirmLabel: '删除',
+                    isDestructive: true,
+                  );
+                  if (confirmed) {
+                    try {
+                      await ref
+                          .read(storyActionsProvider)
+                          .deleteChapter(chapter.id, workId);
+                      if (selectedChapterId == chapter.id) {
+                        onSelectChapter(null);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('删除章节失败: $e'),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 16),
+                      SizedBox(width: 8),
+                      Text('编辑章节'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('删除章节', style: TextStyle(color: Colors.red)),
+                    ],
                   ),
                 ),
               ],
-            ],
-          ),
-          trailing: PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 18),
-            padding: EdgeInsets.zero,
-            tooltip: '章节操作',
-            onSelected: (val) async {
-              if (val == 'edit') {
-                StoryChapterDialog.show(
-                  context,
-                  workId: workId,
-                  chapter: chapter,
-                );
-              } else if (val == 'delete') {
-                final confirmed = await showConfirmDialog(
-                  context: context,
-                  title: '删除章节确认',
-                  content: '确定要删除章节《${chapter.title}》吗？\n删除章节将同时清理其下的所有场景分镜。',
-                  confirmLabel: '删除',
-                  isDestructive: true,
-                );
-                if (confirmed) {
-                  await ref
-                      .read(storyActionsProvider)
-                      .deleteChapter(chapter.id, workId);
-                  if (selectedChapterId == chapter.id) {
-                    onSelectChapter(null);
-                  }
-                }
-              }
+            ),
+            onTap: () {
+              onSelectChapter(chapter.id);
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_outlined, size: 16),
-                    SizedBox(width: 8),
-                    Text('编辑章节'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('删除章节', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
           ),
-          onTap: () {
-            onSelectChapter(chapter.id);
-          },
         ),
       ),
     );

@@ -49,6 +49,7 @@ Future<void> showGalleryUploadDialog(
               const SizedBox(height: 16),
               TextField(
                 controller: captionCtrl,
+                maxLength: 50,
                 decoration: const InputDecoration(
                   labelText: '分类 / 标签备注',
                   hintText: '如：战斗形态、三视图、礼服',
@@ -141,6 +142,7 @@ Future<void> showEditCaptionDialog(
       content: TextField(
         controller: ctrl,
         autofocus: true,
+        maxLength: 50,
         decoration: const InputDecoration(
           labelText: '标签名称',
           hintText: '如：战斗服、三视图',
@@ -154,10 +156,18 @@ Future<void> showEditCaptionDialog(
         FilledButton(
           onPressed: () async {
             final newCaption = ctrl.text.trim();
-            await ref
-                .read(characterActionsProvider)
-                .updateGalleryCaption(item.id, newCaption);
-            if (ctx.mounted) Navigator.pop(ctx);
+            try {
+              await ref
+                  .read(characterActionsProvider)
+                  .updateGalleryCaption(item.id, newCaption);
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(
+                  ctx,
+                ).showSnackBar(SnackBar(content: Text('更新备注失败: $e')));
+              }
+            }
           },
           child: const Text('保存'),
         ),
@@ -185,10 +195,18 @@ Future<void> showConfirmDeleteGalleryDialog(
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () async {
-            await ref
-                .read(characterActionsProvider)
-                .deleteGalleryImage(item.id);
-            if (ctx.mounted) Navigator.pop(ctx);
+            try {
+              await ref
+                  .read(characterActionsProvider)
+                  .deleteGalleryImage(item.id);
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(
+                  ctx,
+                ).showSnackBar(SnackBar(content: Text('删除立绘失败: $e')));
+              }
+            }
           },
           child: const Text('删除'),
         ),

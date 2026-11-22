@@ -173,6 +173,7 @@ class _StoryChapterDialogState extends ConsumerState<StoryChapterDialog> {
                     // Title
                     TextFormField(
                       controller: _titleController,
+                      maxLength: 100,
                       decoration: const InputDecoration(
                         labelText: '章节标题 *',
                         hintText: '如：第一章 暴风雨的序曲',
@@ -194,6 +195,7 @@ class _StoryChapterDialogState extends ConsumerState<StoryChapterDialog> {
                     // Arc / Phase / Volume
                     TextFormField(
                       controller: _arcNameController,
+                      maxLength: 50,
                       decoration: const InputDecoration(
                         labelText: '所属故事阶段 / 分卷',
                         hintText: '如：正卷、第一卷：风暴初临、支线：游侠身世',
@@ -251,6 +253,7 @@ class _StoryChapterDialogState extends ConsumerState<StoryChapterDialog> {
                     TextFormField(
                       controller: _summaryController,
                       maxLines: 5,
+                      maxLength: 2000,
                       decoration: const InputDecoration(
                         labelText: '本章大纲摘要 / 核心冲突',
                         hintText: '描述本章的核心剧情转折、人物行动目标、悬念铺设或结局走向...',

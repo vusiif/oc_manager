@@ -98,6 +98,7 @@ void showAddStatDialog(
           TextField(
             controller: labelCtrl,
             autofocus: true,
+            maxLength: 30,
             decoration: const InputDecoration(
               labelText: '维度名称',
               hintText: '如：攻击力、意志、灵力',
@@ -137,18 +138,26 @@ void showAddStatDialog(
             final val = double.tryParse(valueCtrl.text) ?? 60.0;
             final max = double.tryParse(maxCtrl.text) ?? 100.0;
 
-            await ref
-                .read(characterActionsProvider)
-                .addStat(
-                  CharacterStatsCompanion.insert(
-                    characterId: characterId,
-                    label: label,
-                    value: Value(val),
-                    maxValue: Value(max > 0 ? max : 100.0),
-                    sortOrder: Value(currentCount),
-                  ),
-                );
-            if (ctx.mounted) Navigator.pop(ctx);
+            try {
+              await ref
+                  .read(characterActionsProvider)
+                  .addStat(
+                    CharacterStatsCompanion.insert(
+                      characterId: characterId,
+                      label: label,
+                      value: Value(val.clamp(0.0, max > 0 ? max : 100.0)),
+                      maxValue: Value(max > 0 ? max : 100.0),
+                      sortOrder: Value(currentCount),
+                    ),
+                  );
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(
+                  ctx,
+                ).showSnackBar(SnackBar(content: Text('添加属性维度失败: $e')));
+              }
+            }
           },
           child: const Text('添加'),
         ),
@@ -176,6 +185,7 @@ void showEditStatDialog(
           TextField(
             controller: labelCtrl,
             autofocus: true,
+            maxLength: 30,
             decoration: const InputDecoration(labelText: '维度名称'),
           ),
           const SizedBox(height: 12),
@@ -197,19 +207,27 @@ void showEditStatDialog(
             if (label.isEmpty) return;
             final max = double.tryParse(maxCtrl.text) ?? stat.maxValue;
 
-            await ref
-                .read(characterActionsProvider)
-                .updateStat(
-                  CharacterStatsCompanion(
-                    id: Value(stat.id),
-                    characterId: Value(stat.characterId),
-                    label: Value(label),
-                    value: Value(stat.value > max ? max : stat.value),
-                    maxValue: Value(max > 0 ? max : 100.0),
-                    sortOrder: Value(stat.sortOrder),
-                  ),
-                );
-            if (ctx.mounted) Navigator.pop(ctx);
+            try {
+              await ref
+                  .read(characterActionsProvider)
+                  .updateStat(
+                    CharacterStatsCompanion(
+                      id: Value(stat.id),
+                      characterId: Value(stat.characterId),
+                      label: Value(label),
+                      value: Value(stat.value > max ? max : stat.value),
+                      maxValue: Value(max > 0 ? max : 100.0),
+                      sortOrder: Value(stat.sortOrder),
+                    ),
+                  );
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(
+                  ctx,
+                ).showSnackBar(SnackBar(content: Text('修改属性维度失败: $e')));
+              }
+            }
           },
           child: const Text('保存'),
         ),

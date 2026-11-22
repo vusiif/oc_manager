@@ -61,38 +61,40 @@ class TrashPage extends ConsumerWidget {
               final deletedAt = item.deletedAt;
               final daysLeft = 30 - DateTime.now().difference(deletedAt).inDays;
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: Icon(
-                    isCharacter ? Icons.person : Icons.public,
-                    color: Colors.grey,
-                  ),
-                  title: Text(name),
-                  subtitle: Text(
-                    '${isCharacter ? "人物" : "世界观"} · '
-                    '删除于 ${_formatDate(deletedAt)}'
-                    '${daysLeft > 0 ? " · $daysLeft天后自动清理" : ""}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.restore, size: 20),
-                        tooltip: '恢复',
-                        onPressed: () => _restore(context, ref, item),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_forever,
-                          size: 20,
-                          color: Colors.red,
+              return RepaintBoundary(
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: Icon(
+                      isCharacter ? Icons.person : Icons.public,
+                      color: Colors.grey,
+                    ),
+                    title: Text(name),
+                    subtitle: Text(
+                      '${isCharacter ? "人物" : "世界观"} · '
+                      '删除于 ${_formatDate(deletedAt)}'
+                      '${daysLeft > 0 ? " · $daysLeft天后自动清理" : ""}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.restore, size: 20),
+                          tooltip: '恢复',
+                          onPressed: () => _restore(context, ref, item),
                         ),
-                        tooltip: '永久删除',
-                        onPressed: () =>
-                            _confirmPermanentDelete(context, ref, item),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_forever,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          tooltip: '永久删除',
+                          onPressed: () =>
+                              _confirmPermanentDelete(context, ref, item),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -110,16 +112,24 @@ class TrashPage extends ConsumerWidget {
   }
 
   void _restore(BuildContext context, WidgetRef ref, dynamic item) async {
-    final actions = ref.read(trashActionsProvider);
-    if (item.itemType == 'character') {
-      await actions.restoreCharacter(item);
-    } else {
-      await actions.restoreWorld(item);
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已恢复')));
+    try {
+      final actions = ref.read(trashActionsProvider);
+      if (item.itemType == 'character') {
+        await actions.restoreCharacter(item);
+      } else {
+        await actions.restoreWorld(item);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已恢复')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('恢复失败: $e')));
+      }
     }
   }
 
@@ -143,8 +153,16 @@ class TrashPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(trashActionsProvider).permanentDelete(item.id);
-              if (context.mounted) Navigator.pop(context);
+              try {
+                await ref.read(trashActionsProvider).permanentDelete(item.id);
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+                }
+              }
             },
             child: const Text('永久删除', style: TextStyle(color: Colors.red)),
           ),
@@ -166,8 +184,16 @@ class TrashPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(trashActionsProvider).emptyTrash();
-              if (context.mounted) Navigator.pop(context);
+              try {
+                await ref.read(trashActionsProvider).emptyTrash();
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('清空失败: $e')));
+                }
+              }
             },
             child: const Text('清空', style: TextStyle(color: Colors.red)),
           ),
