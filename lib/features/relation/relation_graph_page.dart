@@ -130,6 +130,18 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     List<Character> characters,
     List<Relation> relations,
   ) {
+    Offset? targetCenter;
+    final vp = _currentViewport.width > 0
+        ? _currentViewport
+        : MediaQuery.of(context).size;
+    try {
+      final inv = Matrix4.inverted(_transformController.value);
+      targetCenter = MatrixUtils.transformPoint(
+        inv,
+        Offset(vp.width / 2, vp.height / 2),
+      );
+    } catch (_) {}
+
     RelationGraphCommands.applyAutoLayout(
       context: context,
       ref: ref,
@@ -140,6 +152,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       relations: relations,
       currentPositions: _positions,
       historyManager: _historyManager,
+      targetCenter: targetCenter,
       onPositionsUpdated: (newPositions) {
         if (!mounted) return;
         setState(() {
@@ -150,23 +163,38 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
           }
           _graphRevision++;
         });
-        final size = MediaQuery.of(context).size;
-        _fitCanvasToNodes(size);
+        _fitCanvasToNodes(_currentViewport);
       },
-      onFitCanvas: () {
-        final size = MediaQuery.of(context).size;
-        _fitCanvasToNodes(size);
-      },
+      onFitCanvas: () => _fitCanvasToNodes(_currentViewport),
     );
   }
 
   void _undoAutoLayout() {
     if (_historyManager.canUndo) {
       _historyManager.undo();
+      _fitCanvasToNodes(_currentViewport);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('已撤销自动排版')));
     }
+  }
+
+  void _addCharacterMemory(int id, Offset pos) {
+    if (!mounted) return;
+    setState(() {
+      _positions[id] = pos;
+      _loadedFromDbCharacters.add(id);
+      _graphRevision++;
+    });
+  }
+
+  void _removeCharacterMemory(int id) {
+    if (!mounted) return;
+    setState(() {
+      _positions.remove(id);
+      _loadedFromDbCharacters.remove(id);
+      _graphRevision++;
+    });
   }
 
   void _dropCharacter(
@@ -183,22 +211,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       screenDropPos: screenDropPos,
       transformMatrix: _transformController.value,
       historyManager: _historyManager,
-      onAddMemory: (id, pos) {
-        if (!mounted) return;
-        setState(() {
-          _positions[id] = pos;
-          _loadedFromDbCharacters.add(id);
-          _graphRevision++;
-        });
-      },
-      onRemoveMemory: (id) {
-        if (!mounted) return;
-        setState(() {
-          _positions.remove(id);
-          _loadedFromDbCharacters.remove(id);
-          _graphRevision++;
-        });
-      },
+      onAddMemory: _addCharacterMemory,
+      onRemoveMemory: _removeCharacterMemory,
     );
   }
 
@@ -213,31 +227,23 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       characterName: characterName,
       currentPos: currentPos,
       historyManager: _historyManager,
-      onAddMemory: (id, pos) {
-        if (!mounted) return;
-        setState(() {
-          _positions[id] = pos;
-          _loadedFromDbCharacters.add(id);
-          _graphRevision++;
-        });
-      },
-      onRemoveMemory: (id) {
-        if (!mounted) return;
-        setState(() {
-          _positions.remove(id);
-          _loadedFromDbCharacters.remove(id);
-          _graphRevision++;
-        });
-      },
+      onAddMemory: _addCharacterMemory,
+      onRemoveMemory: _removeCharacterMemory,
     );
   }
 
   /// 适应画布：将所有节点自动居中并自适应缩放到视野中
-  void _fitCanvasToNodes(Size viewportSize) {
+  void _fitCanvasToNodes([Size? customViewport]) {
+    final vp = (customViewport != null && customViewport.width > 0)
+        ? customViewport
+        : (_currentViewport.width > 0
+              ? _currentViewport
+              : MediaQuery.of(context).size);
+    if (_positions.isEmpty) return;
     setState(() {
       _transformController.value =
           RelationViewportHelper.computeFitCanvasMatrix(
-            viewportSize: viewportSize,
+            viewportSize: vp,
             positions: _positions,
           );
     });
@@ -362,10 +368,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
           onRelationDeleted: () => setState(() => _selectedRelationId = null),
         );
       }
-    } else {
-      if (_selectedRelationId != null) {
-        setState(() => _selectedRelationId = null);
-      }
+    } else if (_selectedRelationId != null) {
+      setState(() => _selectedRelationId = null);
     }
   }
 
@@ -412,9 +416,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
               .read(canvasActionsProvider)
               .ensureDefault(widget.worldId);
           if (mounted && _selectedCanvasId == null) {
-            setState(() {
-              _selectedCanvasId = def.id;
-            });
+            setState(() => _selectedCanvasId = def.id);
           }
         }
       });
@@ -450,7 +452,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
         graphRevision: _graphRevision,
         onSelectCanvas: _switchToCanvas,
         onCanvasRenamed: () => setState(() => _graphRevision++),
-        onFitCanvas: () => _fitCanvasToNodes(MediaQuery.of(context).size),
+        onFitCanvas: () => _fitCanvasToNodes(_currentViewport),
         onApplyAutoLayout: (mode) => _applyAutoLayout(
           mode,
           charactersAsync.valueOrNull ?? [],
@@ -566,9 +568,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   },
                   onNavigateToPosition: _navigateToPosition,
                   onClearFilter: () {
-                    setState(() {
-                      _filterState = const RelationFilterState();
-                    });
+                    setState(() => _filterState = const RelationFilterState());
                     _persistCurrentViewport();
                   },
                 ),

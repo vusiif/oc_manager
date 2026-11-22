@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -152,14 +153,38 @@ class RelationGraphCommands {
     required GraphHistoryManager historyManager,
     required void Function(Map<int, Offset> newPositions) onPositionsUpdated,
     required VoidCallback onFitCanvas,
+    Offset? targetCenter,
   }) {
-    if (characters.isEmpty) return;
+    final placedChars = characters
+        .where((c) => currentPositions.containsKey(c.id))
+        .toList();
+    final charsToLayout = placedChars.isNotEmpty ? placedChars : characters;
+    if (charsToLayout.isEmpty) return;
+
+    final Offset layoutCenter;
+    if (targetCenter != null) {
+      layoutCenter = targetCenter;
+    } else if (placedChars.isNotEmpty) {
+      double minX = double.infinity, maxX = -double.infinity;
+      double minY = double.infinity, maxY = -double.infinity;
+      for (final c in placedChars) {
+        final pos = currentPositions[c.id]!;
+        minX = min(minX, pos.dx);
+        maxX = max(maxX, pos.dx);
+        minY = min(minY, pos.dy);
+        maxY = max(maxY, pos.dy);
+      }
+      layoutCenter = Offset((minX + maxX) / 2.0, (minY + maxY) / 2.0);
+    } else {
+      layoutCenter = const Offset(1000.0, 800.0);
+    }
 
     final oldPositions = Map<int, Offset>.of(currentPositions);
     final newLayout = GraphAutoLayoutEngine.computeLayout(
       mode: mode,
-      characters: characters,
+      characters: charsToLayout,
       relations: relations,
+      center: layoutCenter,
     );
 
     final mergedPositions = Map<int, Offset>.of(currentPositions)
@@ -196,6 +221,7 @@ class RelationGraphCommands {
           onPressed: () {
             if (historyManager.canUndo) {
               historyManager.undo();
+              onFitCanvas();
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(const SnackBar(content: Text('已撤销自动排版')));

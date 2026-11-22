@@ -159,7 +159,7 @@ class GraphAutoLayoutEngine {
     required AutoLayoutMode mode,
     required List<Character> characters,
     required List<Relation> relations,
-    Offset center = const Offset(1500, 1200),
+    Offset center = const Offset(1000, 800),
   }) {
     if (characters.isEmpty) return const {};
     if (characters.length == 1) {
@@ -222,21 +222,36 @@ class GraphAutoLayoutEngine {
     List<Relation> relations,
     Offset center,
   ) {
-    // Determine in-degrees
+    // Determine degrees
     final inDegree = <int, int>{for (final c in characters) c.id: 0};
+    final totalDegree = <int, int>{for (final c in characters) c.id: 0};
     for (final r in relations) {
       if (inDegree.containsKey(r.toCharacterId)) {
         inDegree[r.toCharacterId] = inDegree[r.toCharacterId]! + 1;
       }
+      if (totalDegree.containsKey(r.fromCharacterId)) {
+        totalDegree[r.fromCharacterId] = totalDegree[r.fromCharacterId]! + 1;
+      }
+      if (totalDegree.containsKey(r.toCharacterId)) {
+        totalDegree[r.toCharacterId] = totalDegree[r.toCharacterId]! + 1;
+      }
     }
 
-    // Layer 0: Root nodes (inDegree == 0) or highest degree if cycle
     final layers = <List<Character>>[];
     final remaining = List.of(characters);
 
-    final roots = remaining.where((c) => (inDegree[c.id] ?? 0) == 0).toList();
+    // Prefer connected nodes with zero in-degree as root
+    var roots = remaining
+        .where(
+          (c) => (inDegree[c.id] ?? 0) == 0 && (totalDegree[c.id] ?? 0) > 0,
+        )
+        .toList();
     if (roots.isEmpty) {
-      roots.add(remaining.first);
+      // If cycle or disconnected, pick highest degree node
+      remaining.sort(
+        (a, b) => (totalDegree[b.id] ?? 0).compareTo(totalDegree[a.id] ?? 0),
+      );
+      roots = [remaining.first];
     }
     layers.add(roots);
     remaining.removeWhere((c) => roots.contains(c));
@@ -247,10 +262,12 @@ class GraphAutoLayoutEngine {
       final nextLayer = <Character>[];
 
       for (final r in relations) {
-        if (prevLayerIds.contains(r.fromCharacterId)) {
-          final target = remaining
-              .where((c) => c.id == r.toCharacterId)
-              .firstOrNull;
+        if (prevLayerIds.contains(r.fromCharacterId) ||
+            (r.isBidirectional && prevLayerIds.contains(r.toCharacterId))) {
+          final targetId = prevLayerIds.contains(r.fromCharacterId)
+              ? r.toCharacterId
+              : r.fromCharacterId;
+          final target = remaining.where((c) => c.id == targetId).firstOrNull;
           if (target != null && !nextLayer.contains(target)) {
             nextLayer.add(target);
           }
@@ -258,7 +275,7 @@ class GraphAutoLayoutEngine {
       }
 
       if (nextLayer.isEmpty) {
-        // Disconnected nodes
+        // Remaining disconnected nodes
         nextLayer.addAll(remaining);
       }
 

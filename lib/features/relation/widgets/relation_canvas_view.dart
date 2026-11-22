@@ -87,9 +87,14 @@ class RelationCanvasView extends StatelessWidget {
               bufferMargin: 160.0,
             );
         final currentLod = GraphViewportCulling.getLodLevel(currentScale);
+        double maxNodeX = 0, maxNodeY = 0;
+        for (final pos in positions.values) {
+          if (pos.dx > maxNodeX) maxNodeX = pos.dx;
+          if (pos.dy > maxNodeY) maxNodeY = pos.dy;
+        }
         final canvasSize = Size(
-          max(viewport.width, 2000),
-          max(viewport.height, 2000),
+          max(viewport.width, max(maxNodeX + 800, 3000)),
+          max(viewport.height, max(maxNodeY + 800, 3000)),
         );
 
         return Stack(
@@ -109,7 +114,7 @@ class RelationCanvasView extends StatelessWidget {
               builder: (context, candidateData, rejectedData) {
                 return InteractiveViewer(
                   transformationController: transformController,
-                  boundaryMargin: const EdgeInsets.all(500),
+                  boundaryMargin: const EdgeInsets.all(2500),
                   minScale: 0.1,
                   maxScale: 3.0,
                   onInteractionEnd: (_) => onPersistViewport(),
