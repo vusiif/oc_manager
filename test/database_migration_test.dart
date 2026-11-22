@@ -9,7 +9,10 @@ class _SimulatedV6User extends QueryExecutorUser {
   final int schemaVersion = 6;
 
   @override
-  Future<void> beforeOpen(QueryExecutor executor, OpeningDetails details) async {}
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
 }
 
 void main() {
@@ -43,16 +46,20 @@ void main() {
     final appDb = AppDatabase.forTesting(NativeDatabase(dbFile));
 
     // Force initialization and migration
-    final versionResult = await appDb.customSelect('PRAGMA user_version;').getSingle();
+    final versionResult = await appDb
+        .customSelect('PRAGMA user_version;')
+        .getSingle();
     final newVersion = versionResult.data.values.first;
 
     expect(newVersion, 15);
 
     // Verify tables exist
-    final tablesResult = await appDb.customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table';",
-    ).get();
-    final tableNames = tablesResult.map((r) => r.data['name'] as String).toSet();
+    final tablesResult = await appDb
+        .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
+        .get();
+    final tableNames = tablesResult
+        .map((r) => r.data['name'] as String)
+        .toSet();
 
     expect(tableNames.contains('story_works'), isTrue);
     expect(tableNames.contains('story_chapters'), isTrue);
@@ -61,7 +68,9 @@ void main() {
     expect(tableNames.contains('lore_entity_relations'), isTrue);
 
     // Verify parent_id column exists on lore_entities
-    final colsResult = await appDb.customSelect('PRAGMA table_info("lore_entities");').get();
+    final colsResult = await appDb
+        .customSelect('PRAGMA table_info("lore_entities");')
+        .get();
     final colNames = colsResult.map((r) => r.data['name'] as String).toSet();
     expect(colNames.contains('parent_id'), isTrue);
 
@@ -71,37 +80,46 @@ void main() {
     }
   });
 
-  test('Migration succeeds on real user database copy without errors', () async {
-    final userProfile = Platform.environment['USERPROFILE'];
-    if (userProfile == null) return;
-    final userDbFile = File('$userProfile/Documents/oc_manager.db');
-    if (!await userDbFile.exists()) return;
+  test(
+    'Migration succeeds on real user database copy without errors',
+    () async {
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile == null) return;
+      final userDbFile = File('$userProfile/Documents/oc_manager.db');
+      if (!await userDbFile.exists()) return;
 
-    final tempDir = await Directory.systemTemp.createTemp('user_db_migration_');
-    final copyFile = File('${tempDir.path}/test_copy.db');
-    await userDbFile.copy(copyFile.path);
+      final tempDir = await Directory.systemTemp.createTemp(
+        'user_db_migration_',
+      );
+      final copyFile = File('${tempDir.path}/test_copy.db');
+      await userDbFile.copy(copyFile.path);
 
-    final appDb = AppDatabase.forTesting(NativeDatabase(copyFile));
-    final versionResult = await appDb.customSelect('PRAGMA user_version;').getSingle();
-    final newVersion = versionResult.data.values.first;
+      final appDb = AppDatabase.forTesting(NativeDatabase(copyFile));
+      final versionResult = await appDb
+          .customSelect('PRAGMA user_version;')
+          .getSingle();
+      final newVersion = versionResult.data.values.first;
 
-    expect(newVersion, 15);
+      expect(newVersion, 15);
 
-    // Verify all tables exist
-    final tablesResult = await appDb.customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table';",
-    ).get();
-    final tableNames = tablesResult.map((r) => r.data['name'] as String).toSet();
-    expect(tableNames.contains('worlds'), isTrue);
-    expect(tableNames.contains('characters'), isTrue);
-    expect(tableNames.contains('lore_entities'), isTrue);
-    expect(tableNames.contains('story_works'), isTrue);
-    expect(tableNames.contains('story_chapters'), isTrue);
-    expect(tableNames.contains('story_scenes'), isTrue);
+      // Verify all tables exist
+      final tablesResult = await appDb
+          .customSelect("SELECT name FROM sqlite_master WHERE type='table';")
+          .get();
+      final tableNames = tablesResult
+          .map((r) => r.data['name'] as String)
+          .toSet();
+      expect(tableNames.contains('worlds'), isTrue);
+      expect(tableNames.contains('characters'), isTrue);
+      expect(tableNames.contains('lore_entities'), isTrue);
+      expect(tableNames.contains('story_works'), isTrue);
+      expect(tableNames.contains('story_chapters'), isTrue);
+      expect(tableNames.contains('story_scenes'), isTrue);
 
-    await appDb.close();
-    if (await tempDir.exists()) {
-      await tempDir.delete(recursive: true);
-    }
-  });
+      await appDb.close();
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    },
+  );
 }

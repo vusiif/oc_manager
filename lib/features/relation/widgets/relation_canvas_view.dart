@@ -165,36 +165,34 @@ class RelationCanvasView extends StatelessWidget {
                                   visibleRect,
                                   radius: 40.0,
                                 ))
-                              RepaintBoundary(
-                                child: DraggableNode(
-                                  character: character,
-                                  position: positions[character.id]!,
-                                  lodLevel: currentLod,
-                                  allCharacters: characters,
-                                  relations: relations,
-                                  isPathHighlighted:
-                                      filterState.highlightedPath?.nodePath
-                                          .contains(character.id) ??
-                                      false,
-                                  isDimmed:
-                                      filterState.highlightedPath != null &&
-                                      !(filterState.highlightedPath!.nodePath
-                                          .contains(character.id)),
-                                  onDragStart: (startPos) =>
-                                      onNodeDragStart(character.id, startPos),
-                                  onDragUpdate: (newPos) =>
-                                      onNodeDragUpdate(character.id, newPos),
-                                  onDragEnd: (newPos) =>
-                                      onNodeDragEnd(character.id, newPos),
-                                  onConnectStart: (startPos) =>
-                                      onConnectStart(character.id, startPos),
-                                  onConnectUpdate: onConnectUpdate,
-                                  onConnectEnd: onConnectEnd,
-                                  onRemove: () => onRemoveCharacter(character),
-                                  onManageRelations: () =>
-                                      onManageRelations(character),
-                                  onEdit: () => onEditCharacter(character),
-                                ),
+                              DraggableNode(
+                                character: character,
+                                position: positions[character.id]!,
+                                lodLevel: currentLod,
+                                allCharacters: characters,
+                                relations: relations,
+                                isPathHighlighted:
+                                    filterState.highlightedPath?.nodePath
+                                        .contains(character.id) ??
+                                    false,
+                                isDimmed:
+                                    filterState.highlightedPath != null &&
+                                    !(filterState.highlightedPath!.nodePath
+                                        .contains(character.id)),
+                                onDragStart: (startPos) =>
+                                    onNodeDragStart(character.id, startPos),
+                                onDragUpdate: (newPos) =>
+                                    onNodeDragUpdate(character.id, newPos),
+                                onDragEnd: (newPos) =>
+                                    onNodeDragEnd(character.id, newPos),
+                                onConnectStart: (startPos) =>
+                                    onConnectStart(character.id, startPos),
+                                onConnectUpdate: onConnectUpdate,
+                                onConnectEnd: onConnectEnd,
+                                onRemove: () => onRemoveCharacter(character),
+                                onManageRelations: () =>
+                                    onManageRelations(character),
+                                onEdit: () => onEditCharacter(character),
                               ),
                           if (candidateData.isNotEmpty)
                             Center(

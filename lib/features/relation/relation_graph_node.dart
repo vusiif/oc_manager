@@ -236,32 +236,34 @@ class _DraggableNodeState extends State<DraggableNode> {
       return Positioned(
         left: _pos.dx - 10,
         top: _pos.dy - 10,
-        child: Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: color,
-            shape: widget.character.gender == '男'
-                ? BoxShape.rectangle
-                : BoxShape.circle,
-            borderRadius: widget.character.gender == '男'
-                ? BorderRadius.circular(3)
-                : null,
-            border: Border.all(
-              color: widget.isPathHighlighted
-                  ? AppColors.brand
-                  : Colors.white70,
-              width: widget.isPathHighlighted ? 2.5 : 1.0,
+        child: RepaintBoundary(
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: color,
+              shape: widget.character.gender == '男'
+                  ? BoxShape.rectangle
+                  : BoxShape.circle,
+              borderRadius: widget.character.gender == '男'
+                  ? BorderRadius.circular(3)
+                  : null,
+              border: Border.all(
+                color: widget.isPathHighlighted
+                    ? AppColors.brand
+                    : Colors.white70,
+                width: widget.isPathHighlighted ? 2.5 : 1.0,
+              ),
+              boxShadow: widget.isPathHighlighted
+                  ? [
+                      BoxShadow(
+                        color: AppColors.brand.withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
             ),
-            boxShadow: widget.isPathHighlighted
-                ? [
-                    BoxShadow(
-                      color: AppColors.brand.withValues(alpha: 0.6),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : null,
           ),
         ),
       );
@@ -272,17 +274,19 @@ class _DraggableNodeState extends State<DraggableNode> {
       return Positioned(
         left: _pos.dx - 22,
         top: _pos.dy - 22,
-        child: GestureDetector(
-          onSecondaryTapDown: _showContextMenu,
-          onPanStart: (_) => widget.onDragStart?.call(_pos),
-          onPanUpdate: (details) {
-            setState(() => _pos += details.delta);
-            widget.onDragUpdate(_pos);
-          },
-          onPanEnd: (_) => widget.onDragEnd(_pos),
-          child: Opacity(
-            opacity: widget.isDimmed ? 0.25 : 1.0,
-            child: buildGenderShape(widget.character.gender, 20, color, name),
+        child: RepaintBoundary(
+          child: GestureDetector(
+            onSecondaryTapDown: _showContextMenu,
+            onPanStart: (_) => widget.onDragStart?.call(_pos),
+            onPanUpdate: (details) {
+              setState(() => _pos += details.delta);
+              widget.onDragUpdate(_pos);
+            },
+            onPanEnd: (_) => widget.onDragEnd(_pos),
+            child: Opacity(
+              opacity: widget.isDimmed ? 0.25 : 1.0,
+              child: buildGenderShape(widget.character.gender, 20, color, name),
+            ),
           ),
         ),
       );
@@ -291,126 +295,130 @@ class _DraggableNodeState extends State<DraggableNode> {
     return Positioned(
       left: _pos.dx - 30,
       top: _pos.dy - 30,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            GestureDetector(
-              onSecondaryTapDown: _showContextMenu,
-              onLongPressStart: (details) => _showContextMenu(
-                TapDownDetails(
-                  globalPosition: details.globalPosition,
-                  localPosition: details.localPosition,
+      child: RepaintBoundary(
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onSecondaryTapDown: _showContextMenu,
+                onLongPressStart: (details) => _showContextMenu(
+                  TapDownDetails(
+                    globalPosition: details.globalPosition,
+                    localPosition: details.localPosition,
+                  ),
                 ),
-              ),
-              onPanStart: (_) => widget.onDragStart?.call(_pos),
-              onPanUpdate: (details) {
-                setState(() {
-                  _pos += details.delta;
-                });
-                widget.onDragUpdate(_pos);
-              },
-              onPanEnd: (_) {
-                widget.onDragEnd(_pos);
-              },
-              child: Opacity(
-                opacity: widget.isDimmed ? 0.25 : 1.0,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (widget.isPathHighlighted)
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.brand.withValues(alpha: 0.7),
-                                  blurRadius: 18,
-                                  spreadRadius: 4,
-                                ),
-                              ],
+                onPanStart: (_) => widget.onDragStart?.call(_pos),
+                onPanUpdate: (details) {
+                  setState(() {
+                    _pos += details.delta;
+                  });
+                  widget.onDragUpdate(_pos);
+                },
+                onPanEnd: (_) {
+                  widget.onDragEnd(_pos);
+                },
+                child: Opacity(
+                  opacity: widget.isDimmed ? 0.25 : 1.0,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (widget.isPathHighlighted)
+                            Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.brand.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                    blurRadius: 18,
+                                    spreadRadius: 4,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        buildGenderShape(
-                          widget.character.gender,
-                          24,
-                          color,
-                          name,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: 64,
-                      child: Text(
-                        name,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: widget.isPathHighlighted
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: widget.isPathHighlighted
-                              ? AppColors.brand
-                              : null,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // 节点连接手柄：鼠标悬停在节点上时浮现
-            if (_isHovered)
-              Positioned(
-                right: -6,
-                top: 15,
-                child: Tooltip(
-                  message: '拖拽到另一人物创建关系',
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanStart: (details) {
-                      widget.onConnectStart?.call(_pos);
-                    },
-                    onPanUpdate: (details) {
-                      widget.onConnectUpdate?.call(details.delta);
-                    },
-                    onPanEnd: (_) {
-                      widget.onConnectEnd?.call();
-                    },
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: AppColors.brand,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 4,
+                          buildGenderShape(
+                            widget.character.gender,
+                            24,
+                            color,
+                            name,
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 11,
-                        color: Colors.white,
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: 64,
+                        child: Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: widget.isPathHighlighted
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: widget.isPathHighlighted
+                                ? AppColors.brand
+                                : null,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 节点连接手柄：鼠标悬停在节点上时浮现
+              if (_isHovered)
+                Positioned(
+                  right: -6,
+                  top: 15,
+                  child: Tooltip(
+                    message: '拖拽到另一人物创建关系',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onPanStart: (details) {
+                        widget.onConnectStart?.call(_pos);
+                      },
+                      onPanUpdate: (details) {
+                        widget.onConnectUpdate?.call(details.delta);
+                      },
+                      onPanEnd: (_) {
+                        widget.onConnectEnd?.call();
+                      },
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: AppColors.brand,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          size: 11,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
