@@ -10,7 +10,7 @@ import '../relation_graph_painters.dart';
 import 'graph_minimap.dart';
 
 /// Canvas view for relation graph rendering (nodes, edges, minimap, drag & drop, and filters).
-class RelationCanvasView extends StatelessWidget {
+class RelationCanvasView extends StatefulWidget {
   final TransformationController transformController;
   final List<Character> characters;
   final List<Relation> relations;
@@ -70,6 +70,41 @@ class RelationCanvasView extends StatelessWidget {
   });
 
   @override
+  State<RelationCanvasView> createState() => _RelationCanvasViewState();
+}
+
+class _RelationCanvasViewState extends State<RelationCanvasView> {
+  bool _isNodeInteracting = false;
+
+  void _onNodeDragStart(int characterId, Offset startPos) {
+    if (!_isNodeInteracting) {
+      setState(() => _isNodeInteracting = true);
+    }
+    widget.onNodeDragStart(characterId, startPos);
+  }
+
+  void _onNodeDragEnd(int characterId, Offset newPos) {
+    if (_isNodeInteracting) {
+      setState(() => _isNodeInteracting = false);
+    }
+    widget.onNodeDragEnd(characterId, newPos);
+  }
+
+  void _onConnectStart(int characterId, Offset startPos) {
+    if (!_isNodeInteracting) {
+      setState(() => _isNodeInteracting = true);
+    }
+    widget.onConnectStart(characterId, startPos);
+  }
+
+  void _onConnectEnd() {
+    if (_isNodeInteracting) {
+      setState(() => _isNodeInteracting = false);
+    }
+    widget.onConnectEnd();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -77,18 +112,20 @@ class RelationCanvasView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewport = Size(constraints.maxWidth, constraints.maxHeight);
-        onViewportChanged(viewport);
+        widget.onViewportChanged(viewport);
 
         final visibleRect =
-            visibleWorldRect ??
+            widget.visibleWorldRect ??
             GraphViewportCulling.computeVisibleWorldRect(
-              transform: transformController.value,
+              transform: widget.transformController.value,
               viewportSize: viewport,
               bufferMargin: 160.0,
             );
-        final currentLod = GraphViewportCulling.getLodLevel(currentScale);
+        final currentLod = GraphViewportCulling.getLodLevel(
+          widget.currentScale,
+        );
         double maxNodeX = 0, maxNodeY = 0;
-        for (final pos in positions.values) {
+        for (final pos in widget.positions.values) {
           if (pos.dx > maxNodeX) maxNodeX = pos.dx;
           if (pos.dy > maxNodeY) maxNodeY = pos.dy;
         }
@@ -109,12 +146,12 @@ class RelationCanvasView extends StatelessWidget {
               // 2. 全屏无限动态网格 (Infinite Dynamic Grid)
               Positioned.fill(
                 child: ListenableBuilder(
-                  listenable: transformController,
+                  listenable: widget.transformController,
                   builder: (context, _) {
                     return CustomPaint(
                       size: viewport,
                       painter: InfiniteGridPainter(
-                        transformMatrix: transformController.value,
+                        transformMatrix: widget.transformController.value,
                         gridColor: theme.colorScheme.outlineVariant.withValues(
                           alpha: isDark ? 0.22 : 0.45,
                         ),
@@ -124,127 +161,149 @@ class RelationCanvasView extends StatelessWidget {
                 ),
               ),
               // 3. 关系图内容层与手势交互 (Infinite InteractiveViewer)
-              DragTarget<int>(
-                onAcceptWithDetails: (details) {
-                  final renderBox = context.findRenderObject() as RenderBox;
-                  final localPos = renderBox.globalToLocal(details.offset);
-                  final charName =
-                      characters
-                          .where((c) => c.id == details.data)
-                          .map((c) => c.name)
-                          .firstOrNull ??
-                      '';
-                  onDropCharacter(details.data, localPos, charName);
-                },
-                builder: (context, candidateData, rejectedData) {
-                  return InteractiveViewer(
-                    transformationController: transformController,
-                    boundaryMargin: const EdgeInsets.all(double.infinity),
-                    clipBehavior: Clip.none,
-                    minScale: 0.1,
-                    maxScale: 3.0,
-                    onInteractionEnd: (_) => onPersistViewport(),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTapUp: (details) => onCanvasTap(details.localPosition),
-                      child: SizedBox(
-                        width: canvasSize.width,
-                        height: canvasSize.height,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            CustomPaint(
-                              size: canvasSize,
-                              painter: RelationPainter(
-                                relations: relations,
-                                positions: positions,
-                                characters: characters,
-                                revision: graphRevision,
-                                selectedRelationId: selectedRelationId,
-                                isDark: isDark,
-                                filterState: filterState,
-                                visibleRect: visibleRect,
-                                scale: currentScale,
-                              ),
-                            ),
-                            // 拖拽创建关系时的实时连线预览
-                            if (connectingFromId != null &&
-                                connectingCurrentPos != null &&
-                                positions.containsKey(connectingFromId))
+              Positioned.fill(
+                child: DragTarget<int>(
+                  onAcceptWithDetails: (details) {
+                    final renderBox = context.findRenderObject() as RenderBox;
+                    final localPos = renderBox.globalToLocal(details.offset);
+                    final charName =
+                        widget.characters
+                            .where((c) => c.id == details.data)
+                            .map((c) => c.name)
+                            .firstOrNull ??
+                        '';
+                    widget.onDropCharacter(details.data, localPos, charName);
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return InteractiveViewer(
+                      transformationController: widget.transformController,
+                      constrained: false,
+                      panEnabled: !_isNodeInteracting,
+                      scaleEnabled: !_isNodeInteracting,
+                      boundaryMargin: const EdgeInsets.all(double.infinity),
+                      clipBehavior: Clip.none,
+                      minScale: 0.1,
+                      maxScale: 3.0,
+                      onInteractionEnd: (_) => widget.onPersistViewport(),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTapUp: (details) =>
+                            widget.onCanvasTap(details.localPosition),
+                        child: SizedBox(
+                          width: canvasSize.width,
+                          height: canvasSize.height,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
                               CustomPaint(
                                 size: canvasSize,
-                                painter: ConnectingLinePainter(
-                                  from: positions[connectingFromId]!,
-                                  to: connectingCurrentPos!,
-                                  color: AppColors.brand,
+                                painter: RelationPainter(
+                                  relations: widget.relations,
+                                  positions: widget.positions,
+                                  characters: widget.characters,
+                                  revision: widget.graphRevision,
+                                  selectedRelationId: widget.selectedRelationId,
+                                  isDark: isDark,
+                                  filterState: widget.filterState,
+                                  visibleRect: visibleRect,
+                                  scale: widget.currentScale,
                                 ),
                               ),
-                            for (var character in characters)
-                              if (positions.containsKey(character.id) &&
-                                  GraphViewportCulling.isNodeVisible(
-                                    positions[character.id]!,
-                                    visibleRect,
-                                    radius: 40.0,
+                              // 拖拽创建关系时的实时连线预览
+                              if (widget.connectingFromId != null &&
+                                  widget.connectingCurrentPos != null &&
+                                  widget.positions.containsKey(
+                                    widget.connectingFromId,
                                   ))
-                                DraggableNode(
-                                  character: character,
-                                  position: positions[character.id]!,
-                                  lodLevel: currentLod,
-                                  allCharacters: characters,
-                                  relations: relations,
-                                  isPathHighlighted:
-                                      filterState.highlightedPath?.nodePath
-                                          .contains(character.id) ??
-                                      false,
-                                  isDimmed:
-                                      filterState.highlightedPath != null &&
-                                      !(filterState.highlightedPath!.nodePath
-                                          .contains(character.id)),
-                                  onDragStart: (startPos) =>
-                                      onNodeDragStart(character.id, startPos),
-                                  onDragUpdate: (newPos) =>
-                                      onNodeDragUpdate(character.id, newPos),
-                                  onDragEnd: (newPos) =>
-                                      onNodeDragEnd(character.id, newPos),
-                                  onConnectStart: (startPos) =>
-                                      onConnectStart(character.id, startPos),
-                                  onConnectUpdate: onConnectUpdate,
-                                  onConnectEnd: onConnectEnd,
-                                  onRemove: () => onRemoveCharacter(character),
-                                  onManageRelations: () =>
-                                      onManageRelations(character),
-                                  onEdit: () => onEditCharacter(character),
-                                ),
-                            if (candidateData.isNotEmpty)
-                              Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '松开放置人物',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.primary,
-                                      fontSize: 16,
-                                    ),
+                                CustomPaint(
+                                  size: canvasSize,
+                                  painter: ConnectingLinePainter(
+                                    from: widget
+                                        .positions[widget.connectingFromId]!,
+                                    to: widget.connectingCurrentPos!,
+                                    color: AppColors.brand,
                                   ),
                                 ),
-                              ),
-                          ],
+                              for (var character in widget.characters)
+                                if (widget.positions.containsKey(
+                                      character.id,
+                                    ) &&
+                                    GraphViewportCulling.isNodeVisible(
+                                      widget.positions[character.id]!,
+                                      visibleRect,
+                                      radius: 40.0,
+                                    ))
+                                  DraggableNode(
+                                    key: ValueKey(character.id),
+                                    character: character,
+                                    position: widget.positions[character.id]!,
+                                    lodLevel: currentLod,
+                                    allCharacters: widget.characters,
+                                    relations: widget.relations,
+                                    isPathHighlighted:
+                                        widget
+                                            .filterState
+                                            .highlightedPath
+                                            ?.nodePath
+                                            .contains(character.id) ??
+                                        false,
+                                    isDimmed:
+                                        widget.filterState.highlightedPath !=
+                                            null &&
+                                        !(widget
+                                            .filterState
+                                            .highlightedPath!
+                                            .nodePath
+                                            .contains(character.id)),
+                                    onDragStart: (startPos) => _onNodeDragStart(
+                                      character.id,
+                                      startPos,
+                                    ),
+                                    onDragUpdate: (newPos) => widget
+                                        .onNodeDragUpdate(character.id, newPos),
+                                    onDragEnd: (newPos) =>
+                                        _onNodeDragEnd(character.id, newPos),
+                                    onConnectStart: (startPos) =>
+                                        _onConnectStart(character.id, startPos),
+                                    onConnectUpdate: widget.onConnectUpdate,
+                                    onConnectEnd: _onConnectEnd,
+                                    onRemove: () =>
+                                        widget.onRemoveCharacter(character),
+                                    onManageRelations: () =>
+                                        widget.onManageRelations(character),
+                                    onEdit: () =>
+                                        widget.onEditCharacter(character),
+                                  ),
+                              if (candidateData.isNotEmpty)
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '松开放置人物',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-              if (filterState.hasActiveFilter)
+              if (widget.filterState.hasActiveFilter)
                 Positioned(
                   top: 16,
                   right: 16,
@@ -268,8 +327,8 @@ class RelationCanvasView extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              filterState.highlightedPath != null
-                                  ? '最短路径: ${filterState.highlightedPath!.hopCount} 步跃迁'
+                              widget.filterState.highlightedPath != null
+                                  ? '最短路径: ${widget.filterState.highlightedPath!.hopCount} 步跃迁'
                                   : '已应用过滤条件',
                               style: TextStyle(
                                 fontSize: 12,
@@ -282,7 +341,7 @@ class RelationCanvasView extends StatelessWidget {
                               visualDensity: VisualDensity.compact,
                               icon: const Icon(Icons.close, size: 16),
                               tooltip: '清除高亮',
-                              onPressed: onClearFilter,
+                              onPressed: widget.onClearFilter,
                             ),
                           ],
                         ),
@@ -296,13 +355,13 @@ class RelationCanvasView extends StatelessWidget {
                 right: 16,
                 child: RepaintBoundary(
                   child: GraphMinimap(
-                    positions: positions,
-                    characters: characters,
-                    relations: relations,
-                    transformController: transformController,
+                    positions: widget.positions,
+                    characters: widget.characters,
+                    relations: widget.relations,
+                    transformController: widget.transformController,
                     viewportSize: viewport,
                     isDark: isDark,
-                    onNavigate: onNavigateToPosition,
+                    onNavigate: widget.onNavigateToPosition,
                   ),
                 ),
               ),

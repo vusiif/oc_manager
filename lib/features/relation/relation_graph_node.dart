@@ -237,32 +237,46 @@ class _DraggableNodeState extends State<DraggableNode> {
         left: _pos.dx - 10,
         top: _pos.dy - 10,
         child: RepaintBoundary(
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: color,
-              shape: widget.character.gender == '男'
-                  ? BoxShape.rectangle
-                  : BoxShape.circle,
-              borderRadius: widget.character.gender == '男'
-                  ? BorderRadius.circular(3)
-                  : null,
-              border: Border.all(
-                color: widget.isPathHighlighted
-                    ? AppColors.brand
-                    : Colors.white70,
-                width: widget.isPathHighlighted ? 2.5 : 1.0,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onSecondaryTapDown: _showContextMenu,
+            onPanStart: (_) => widget.onDragStart?.call(_pos),
+            onPanUpdate: (details) {
+              final newX = max(40.0, _pos.dx + details.delta.dx);
+              final newY = max(40.0, _pos.dy + details.delta.dy);
+              final nextPos = Offset(newX, newY);
+              setState(() => _pos = nextPos);
+              widget.onDragUpdate(nextPos);
+            },
+            onPanEnd: (_) => widget.onDragEnd(_pos),
+            onPanCancel: () => widget.onDragEnd(_pos),
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: color,
+                shape: widget.character.gender == '男'
+                    ? BoxShape.rectangle
+                    : BoxShape.circle,
+                borderRadius: widget.character.gender == '男'
+                    ? BorderRadius.circular(3)
+                    : null,
+                border: Border.all(
+                  color: widget.isPathHighlighted
+                      ? AppColors.brand
+                      : Colors.white70,
+                  width: widget.isPathHighlighted ? 2.5 : 1.0,
+                ),
+                boxShadow: widget.isPathHighlighted
+                    ? [
+                        BoxShadow(
+                          color: AppColors.brand.withValues(alpha: 0.6),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
               ),
-              boxShadow: widget.isPathHighlighted
-                  ? [
-                      BoxShadow(
-                        color: AppColors.brand.withValues(alpha: 0.6),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
             ),
           ),
         ),
@@ -276,13 +290,18 @@ class _DraggableNodeState extends State<DraggableNode> {
         top: _pos.dy - 22,
         child: RepaintBoundary(
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onSecondaryTapDown: _showContextMenu,
             onPanStart: (_) => widget.onDragStart?.call(_pos),
             onPanUpdate: (details) {
-              setState(() => _pos += details.delta);
-              widget.onDragUpdate(_pos);
+              final newX = max(40.0, _pos.dx + details.delta.dx);
+              final newY = max(40.0, _pos.dy + details.delta.dy);
+              final nextPos = Offset(newX, newY);
+              setState(() => _pos = nextPos);
+              widget.onDragUpdate(nextPos);
             },
             onPanEnd: (_) => widget.onDragEnd(_pos),
+            onPanCancel: () => widget.onDragEnd(_pos),
             child: Opacity(
               opacity: widget.isDimmed ? 0.25 : 1.0,
               child: buildGenderShape(widget.character.gender, 20, color, name),
@@ -303,6 +322,7 @@ class _DraggableNodeState extends State<DraggableNode> {
             clipBehavior: Clip.none,
             children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onSecondaryTapDown: _showContextMenu,
                 onLongPressStart: (details) => _showContextMenu(
                   TapDownDetails(
@@ -312,12 +332,18 @@ class _DraggableNodeState extends State<DraggableNode> {
                 ),
                 onPanStart: (_) => widget.onDragStart?.call(_pos),
                 onPanUpdate: (details) {
+                  final newX = max(40.0, _pos.dx + details.delta.dx);
+                  final newY = max(40.0, _pos.dy + details.delta.dy);
+                  final nextPos = Offset(newX, newY);
                   setState(() {
-                    _pos += details.delta;
+                    _pos = nextPos;
                   });
-                  widget.onDragUpdate(_pos);
+                  widget.onDragUpdate(nextPos);
                 },
                 onPanEnd: (_) {
+                  widget.onDragEnd(_pos);
+                },
+                onPanCancel: () {
                   widget.onDragEnd(_pos);
                 },
                 child: Opacity(
