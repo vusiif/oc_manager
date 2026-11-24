@@ -4,112 +4,9 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
+import 'widgets/relation_node_avatar.dart';
 
-Widget buildGenderShape(String gender, double size, Color color, String label) {
-  final half = size;
-  final text = label.isNotEmpty ? label[0] : '?';
-
-  if (gender == '男') {
-    // 方形
-    return Container(
-      width: half * 2,
-      height: half * 2,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: half * 0.75,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  } else if (gender == '女') {
-    // 圆形
-    return CircleAvatar(
-      radius: half,
-      backgroundColor: color,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: half * 0.75,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  } else {
-    // 菱形
-    return Transform.rotate(
-      angle: pi / 4,
-      child: Container(
-        width: half * 1.6,
-        height: half * 1.6,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        alignment: Alignment.center,
-        child: Transform.rotate(
-          angle: -pi / 4,
-          child: Text(
-            text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: half * 0.65,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// --- 侧边栏条目 ---
-
-class RelationSidebarItem extends StatelessWidget {
-  final Character character;
-  final bool placed;
-
-  const RelationSidebarItem({
-    super.key,
-    required this.character,
-    required this.placed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = character.status == 1
-        ? Colors.grey
-        : theme.colorScheme.primary;
-
-    return Opacity(
-      opacity: placed ? 0.4 : 1.0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          buildGenderShape(character.gender, 22, color, character.name),
-          const SizedBox(height: 4),
-          Text(
-            character.name,
-            style: TextStyle(
-              fontSize: 11,
-              color: placed ? theme.colorScheme.onSurfaceVariant : null,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
+export 'widgets/relation_node_avatar.dart';
 
 // --- 画布上可拖拽节点 ---
 
@@ -319,7 +216,12 @@ class _DraggableNodeState extends State<DraggableNode> {
             onPanCancel: () => widget.onDragEnd(_pos),
             child: Opacity(
               opacity: widget.isDimmed ? 0.25 : 1.0,
-              child: buildGenderShape(widget.character.gender, 20, color, name),
+              child: buildCharacterAvatar(
+                character: widget.character,
+                size: 40,
+                color: color,
+                isHighlighted: widget.isPathHighlighted,
+              ),
             ),
           ),
         ),
@@ -436,18 +338,51 @@ class _DraggableNodeState extends State<DraggableNode> {
                                       ),
                                     ),
                                   ),
-                                buildGenderShape(
-                                  widget.character.gender,
-                                  24,
-                                  color,
-                                  name,
+                                buildCharacterAvatar(
+                                  character: widget.character,
+                                  size: 48,
+                                  color: color,
+                                  isHighlighted: widget.isPathHighlighted,
+                                  isConnectTarget: widget.isConnectTarget,
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 4),
-                          SizedBox(
+                          Container(
                             width: 64,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? const Color(
+                                      0xFF0F172A,
+                                    ).withValues(alpha: 0.88)
+                                  : Colors.white.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color:
+                                    (widget.isPathHighlighted ||
+                                        widget.isConnectTarget)
+                                    ? AppColors.brand.withValues(alpha: 0.85)
+                                    : (Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white12
+                                          : Colors.black12),
+                                width: 1.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
                             child: Text(
                               name,
                               textAlign: TextAlign.center,
@@ -457,7 +392,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                                     (widget.isPathHighlighted ||
                                         widget.isConnectTarget)
                                     ? FontWeight.bold
-                                    : FontWeight.normal,
+                                    : FontWeight.w500,
                                 color:
                                     (widget.isPathHighlighted ||
                                         widget.isConnectTarget)

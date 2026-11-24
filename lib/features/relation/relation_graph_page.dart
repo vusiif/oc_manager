@@ -255,18 +255,15 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     });
   }
 
-  void _onStartConnecting(int characterId, Offset startPos) {
-    setState(() {
-      _connectingFromId = characterId;
-      _connectingCurrentPos = startPos;
-    });
-  }
+  void _onStartConnecting(int characterId, Offset startPos) => setState(() {
+    _connectingFromId = characterId;
+    _connectingCurrentPos = startPos;
+  });
 
   void _onUpdateConnecting(Offset scenePos) {
-    if (_connectingFromId == null) return;
-    setState(() {
-      _connectingCurrentPos = scenePos;
-    });
+    if (_connectingFromId != null) {
+      setState(() => _connectingCurrentPos = scenePos);
+    }
   }
 
   void _onEndConnecting(List<Character> characters) {
@@ -523,22 +520,43 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                               historyManager: _historyManager,
                             ),
                       ),
-                  onEditCharacter: (char) {
-                    showDialog(
-                      context: context,
-                      builder: (_) => CharacterDialog(
-                        worldId: widget.worldId,
-                        character: char,
+                  onEditCharacter: (char) =>
+                      showDialog(
+                        context: context,
+                        builder: (_) => CharacterDialog(
+                          worldId: widget.worldId,
+                          character: char,
+                        ),
+                      ).then(
+                        (_) => ref.invalidate(
+                          charactersByWorldProvider(widget.worldId),
+                        ),
                       ),
-                    ).then((_) {
-                      ref.invalidate(charactersByWorldProvider(widget.worldId));
-                    });
-                  },
                   onNavigateToPosition: _navigateToPosition,
                   onClearFilter: () {
                     setState(() => _filterState = const RelationFilterState());
                     _persistCurrentViewport();
                   },
+                  onDeselectRelation: () =>
+                      setState(() => _selectedRelationId = null),
+                  onOpenFullRelationDialog: (rel) =>
+                      _showRelationActionDialog(rel, characters),
+                  onUpdateRelation: (newRel, desc) {
+                    final oldRel = relations
+                        .where((r) => r.id == newRel.id)
+                        .firstOrNull;
+                    if (oldRel != null) {
+                      RelationGraphCommands.recordUpdateRelation(
+                        ref: ref,
+                        worldId: widget.worldId,
+                        oldRel: oldRel,
+                        newRel: newRel,
+                        desc: desc,
+                        historyManager: _historyManager,
+                      );
+                    }
+                  },
+                  onDeleteRelation: _handleDeleteRelation,
                 ),
               ),
             ],
@@ -551,7 +569,69 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
     return RelationGraphShortcuts(
       historyManager: _historyManager,
+      onDeleteSelected: _deleteCurrentSelectedRelation,
+      onEscape: () {
+        if (_selectedRelationId != null) {
+          setState(() => _selectedRelationId = null);
+        }
+      },
       child: scaffold,
     );
+  }
+
+  void _showRelationActionDialog(Relation rel, List<Character> characters) {
+    RelationEditDialogs.showRelationActionDialog(
+      context: context,
+      ref: ref,
+      worldId: widget.worldId,
+      rel: rel,
+      characters: characters,
+      onRecordUpdate: (oldRel, newRel, desc) =>
+          RelationGraphCommands.recordUpdateRelation(
+            ref: ref,
+            worldId: widget.worldId,
+            oldRel: oldRel,
+            newRel: newRel,
+            desc: desc,
+            historyManager: _historyManager,
+          ),
+      onRecordDelete: (r, desc) => _handleDeleteRelation(r),
+      onRelationDeleted: () => setState(() => _selectedRelationId = null),
+    );
+  }
+
+  void _handleDeleteRelation(Relation rel) {
+    RelationGraphCommands.recordDeleteRelation(
+      ref: ref,
+      worldId: widget.worldId,
+      rel: rel,
+      desc: '删除关系【${rel.relationType}】',
+      historyManager: _historyManager,
+    );
+    setState(() => _selectedRelationId = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已删除关系【${rel.relationType}】'),
+        action: SnackBarAction(
+          label: '撤销',
+          textColor: Colors.amberAccent,
+          onPressed: () {
+            if (_historyManager.canUndo) {
+              _historyManager.undo();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  void _deleteCurrentSelectedRelation() {
+    if (_selectedRelationId == null) return;
+    final relations =
+        ref.read(relationsByWorldProvider(widget.worldId)).valueOrNull ?? [];
+    final rel = relations.where((r) => r.id == _selectedRelationId).firstOrNull;
+    if (rel != null) {
+      _handleDeleteRelation(rel);
+    }
   }
 }

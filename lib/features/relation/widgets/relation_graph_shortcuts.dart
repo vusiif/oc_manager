@@ -8,11 +8,15 @@ import '../graph_history_manager.dart';
 /// while safely ignoring triggers during active text editing.
 class RelationGraphShortcuts extends StatelessWidget {
   final GraphHistoryManager historyManager;
+  final VoidCallback? onDeleteSelected;
+  final VoidCallback? onEscape;
   final Widget child;
 
   const RelationGraphShortcuts({
     super.key,
     required this.historyManager,
+    this.onDeleteSelected,
+    this.onEscape,
     required this.child,
   });
 
@@ -56,6 +60,21 @@ class RelationGraphShortcuts extends StatelessWidget {
         ): () {
           if (!_isEditingText() && historyManager.canRedo) {
             historyManager.redo();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.delete): () {
+          if (!_isEditingText()) {
+            onDeleteSelected?.call();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.backspace): () {
+          if (!_isEditingText()) {
+            onDeleteSelected?.call();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (!_isEditingText()) {
+            onEscape?.call();
           }
         },
       },

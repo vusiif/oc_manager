@@ -12,6 +12,7 @@ class OcAvatar extends StatefulWidget {
   final BoxShape shape;
   final double borderRadius;
   final bool isDraft;
+  final bool solidFallback;
 
   const OcAvatar({
     super.key,
@@ -22,6 +23,7 @@ class OcAvatar extends StatefulWidget {
     this.shape = BoxShape.circle,
     this.borderRadius = 8.0,
     this.isDraft = false,
+    this.solidFallback = false,
   });
 
   @override
@@ -103,6 +105,40 @@ class _OcAvatarState extends State<OcAvatar> {
   }
 
   Widget _buildFallback(Color genderColor, String initial) {
+    if (widget.solidFallback) {
+      final baseColor = widget.isDraft ? Colors.grey.shade500 : genderColor;
+      return Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              baseColor,
+              Color.lerp(baseColor, Colors.black, 0.22) ?? baseColor,
+            ],
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontSize: widget.size * 0.44,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: const [
+              Shadow(
+                color: Colors.black26,
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final bgColor = widget.isDraft
         ? Colors.grey.shade400
         : genderColor.withValues(alpha: 0.15);

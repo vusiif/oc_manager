@@ -9,6 +9,7 @@ import '../relation_graph_node.dart';
 import '../relation_graph_painters.dart';
 import 'graph_minimap.dart';
 import 'relation_connection_helper.dart';
+import 'relation_inspector_panel.dart';
 
 /// Canvas view for relation graph rendering (nodes, edges, minimap, drag & drop, and filters).
 class RelationCanvasView extends StatefulWidget {
@@ -39,6 +40,10 @@ class RelationCanvasView extends StatefulWidget {
   final ValueChanged<Character> onEditCharacter;
   final ValueChanged<Offset> onNavigateToPosition;
   final VoidCallback onClearFilter;
+  final VoidCallback? onDeselectRelation;
+  final ValueChanged<Relation>? onOpenFullRelationDialog;
+  final void Function(Relation newRel, String desc)? onUpdateRelation;
+  final ValueChanged<Relation>? onDeleteRelation;
 
   const RelationCanvasView({
     super.key,
@@ -68,6 +73,10 @@ class RelationCanvasView extends StatefulWidget {
     required this.onEditCharacter,
     required this.onNavigateToPosition,
     required this.onClearFilter,
+    this.onDeselectRelation,
+    this.onOpenFullRelationDialog,
+    this.onUpdateRelation,
+    this.onDeleteRelation,
   });
 
   @override
@@ -392,6 +401,49 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                     onNavigate: widget.onNavigateToPosition,
                   ),
                 ),
+              ),
+              // 关系属性检查面板 (Obsidian Canvas 交互)
+              Builder(
+                builder: (context) {
+                  final selectedRel = widget.selectedRelationId != null
+                      ? widget.relations
+                            .where((r) => r.id == widget.selectedRelationId)
+                            .firstOrNull
+                      : null;
+                  final fromChar = selectedRel != null
+                      ? widget.characters
+                            .where((c) => c.id == selectedRel.fromCharacterId)
+                            .firstOrNull
+                      : null;
+                  final toChar = selectedRel != null
+                      ? widget.characters
+                            .where((c) => c.id == selectedRel.toCharacterId)
+                            .firstOrNull
+                      : null;
+
+                  if (selectedRel != null &&
+                      fromChar != null &&
+                      toChar != null) {
+                    return Positioned(
+                      bottom: 16,
+                      left: 16,
+                      child: RelationInspectorPanel(
+                        key: ValueKey(selectedRel.id),
+                        relation: selectedRel,
+                        fromCharacter: fromChar,
+                        toCharacter: toChar,
+                        onClose: widget.onDeselectRelation ?? () {},
+                        onOpenFullDialog: () =>
+                            widget.onOpenFullRelationDialog?.call(selectedRel),
+                        onUpdateRelation: (newRel, desc) =>
+                            widget.onUpdateRelation?.call(newRel, desc),
+                        onDeleteRelation: () =>
+                            widget.onDeleteRelation?.call(selectedRel),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
             ],
           ),

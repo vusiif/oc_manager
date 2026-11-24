@@ -66,12 +66,13 @@ class RelationCharacterDrawer extends StatelessWidget {
                             child: Draggable<int>(
                               data: c.id,
                               feedback: Material(
-                                elevation: 6,
-                                child: buildGenderShape(
-                                  c.gender,
-                                  28,
-                                  color,
-                                  c.name,
+                                elevation: 8,
+                                color: Colors.transparent,
+                                child: buildCharacterAvatar(
+                                  character: c,
+                                  size: 48,
+                                  color: color,
+                                  isHighlighted: true,
                                 ),
                               ),
                               childWhenDragging: Opacity(
