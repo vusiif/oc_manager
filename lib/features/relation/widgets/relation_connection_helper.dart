@@ -14,17 +14,25 @@ class RelationConnectionHelper {
     required int? sourceId,
     required Offset? currentPos,
     required Map<int, Offset> positions,
-    double hitRadius = 45.0,
+    double hitRadius = 65.0,
   }) {
     if (sourceId == null || currentPos == null) return null;
+    int? bestTargetId;
+    double minDistance = hitRadius;
+
     for (final entry in positions.entries) {
       if (entry.key != sourceId) {
-        if ((entry.value - currentPos).distance <= hitRadius) {
-          return entry.key;
+        final nodeCenter = entry.value;
+        // Evaluate distance against visual center (slightly below avatar due to text)
+        final visualCenter = Offset(nodeCenter.dx, nodeCenter.dy + 10.0);
+        final dist = (visualCenter - currentPos).distance;
+        if (dist <= minDistance) {
+          minDistance = dist;
+          bestTargetId = entry.key;
         }
       }
     }
-    return null;
+    return bestTargetId;
   }
 
   /// Hit-tests relation labels to find tapped relation ID.

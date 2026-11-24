@@ -116,14 +116,39 @@ class RelationStyleHelper {
     return multiplier * baseOffset;
   }
 
+  /// Computes a subtle organic curve offset for single relation lines.
+  static double computeSingleLineOffset(double dist) {
+    return (dist * 0.06).clamp(10.0, 22.0);
+  }
+
+  /// Computes a subtle organic bezier control point for a single relation line
+  /// to eliminate rigid stiff straight lines and evoke an Obsidian Canvas feel.
+  static Offset computeSingleLineControlPoint(Offset p1, Offset p2) {
+    final dx = p2.dx - p1.dx;
+    final dy = p2.dy - p1.dy;
+    final dist = sqrt(dx * dx + dy * dy);
+    if (dist < 1e-4) return p1;
+
+    // Normal unit vector
+    final nx = -dy / dist;
+    final ny = dx / dist;
+
+    // Gentle curvature: 12 to 24px offset depending on distance
+    final curvature = (dist * 0.07).clamp(10.0, 24.0);
+    return Offset(
+      (p1.dx + p2.dx) / 2 + nx * curvature,
+      (p1.dy + p2.dy) / 2 + ny * curvature,
+    );
+  }
+
   /// Draws a modern filled arrowhead with an aerodynamic dart notch.
   static void drawFilledArrow(
     Canvas canvas, {
     required Offset tip,
     required double direction,
     required Color color,
-    double length = 10.5,
-    double width = 8.0,
+    double length = 11.0,
+    double width = 7.5,
   }) {
     final cosD = cos(direction);
     final sinD = sin(direction);
@@ -141,8 +166,8 @@ class RelationStyleHelper {
       baseCenter.dy - halfW * normY,
     );
     final notch = Offset(
-      tip.dx - (length - 2.0) * cosD,
-      tip.dy - (length - 2.0) * sinD,
+      tip.dx - (length - 2.5) * cosD,
+      tip.dy - (length - 2.5) * sinD,
     );
 
     final path = Path()
@@ -230,14 +255,16 @@ class RelationStyleHelper {
                       : AppColors.lightTextPrimary))
             .withValues(alpha: alphaMultiplier);
 
-    final bgBase = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final bgBase = isDark
+        ? const Color(0xFF0F172A).withValues(alpha: 0.92)
+        : Colors.white.withValues(alpha: 0.96);
     final bgColor =
         (isSelected
                 ? (isDark
-                      ? AppColors.brand.withValues(alpha: 0.25)
+                      ? AppColors.brand.withValues(alpha: 0.32)
                       : AppColors.brandLight)
                 : Color.alphaBlend(
-                    color.withValues(alpha: isDark ? 0.16 : 0.09),
+                    color.withValues(alpha: isDark ? 0.20 : 0.10),
                     bgBase,
                   ))
             .withValues(alpha: alphaMultiplier);
@@ -245,7 +272,7 @@ class RelationStyleHelper {
     final borderColor =
         (isSelected
                 ? AppColors.brand
-                : color.withValues(alpha: isDark ? 0.5 : 0.4))
+                : color.withValues(alpha: isDark ? 0.55 : 0.45))
             .withValues(alpha: alphaMultiplier);
 
     tp.text = TextSpan(
@@ -264,7 +291,7 @@ class RelationStyleHelper {
       width: tp.width + 16,
       height: tp.height + 7,
     );
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(10));
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
 
     // Badge shadow
     if (!isDimmed) {

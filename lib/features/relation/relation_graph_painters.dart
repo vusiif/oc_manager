@@ -366,144 +366,79 @@ class RelationPainter extends CustomPainter {
       final ny = dist > 0 ? dx / dist : 0.0;
       const arrowLen = 10.0;
 
-      if (count == 1) {
-        final p1 = GraphGeometry.getExitPoint(
-          fromCenter: from,
-          toCenter: to,
-          fromGender: fromGender,
-        );
-        final p2 = GraphGeometry.getEntryPoint(
-          fromCenter: from,
-          toCenter: to,
-          toGender: toGender,
-        );
-        final dir = (p2 - p1).direction;
-        final chordDist = (p2 - p1).distance;
+      final offset = count == 1
+          ? RelationStyleHelper.computeSingleLineOffset(dist)
+          : RelationStyleHelper.computeCurveOffset(i, count, dist);
+      final cp = Offset(
+        (from.dx + to.dx) / 2 + nx * offset,
+        (from.dy + to.dy) / 2 + ny * offset,
+      );
 
-        final lineStart = (rel.isBidirectional && chordDist > arrowLen * 2.5)
-            ? p1 + Offset(arrowLen * cos(dir), arrowLen * sin(dir))
-            : p1;
-        final lineEnd = (chordDist > arrowLen * 2.5)
-            ? p2 - Offset(arrowLen * cos(dir), arrowLen * sin(dir))
-            : p2;
+      final tStart = Offset(cp.dx - from.dx, cp.dy - from.dy).direction;
+      final tEnd = Offset(to.dx - cp.dx, to.dy - cp.dy).direction;
 
-        final path = Path()
-          ..moveTo(lineStart.dx, lineStart.dy)
-          ..lineTo(lineEnd.dx, lineEnd.dy);
+      final p1 = GraphGeometry.calculateBoundaryIntersection(
+        nodeCenter: from,
+        gender: fromGender,
+        angle: tStart,
+        includeText: true,
+      );
+      final p2 = GraphGeometry.calculateBoundaryIntersection(
+        nodeCenter: to,
+        gender: toGender,
+        angle: tEnd + pi,
+        includeText: true,
+      );
 
-        if (isSelected || isPathHit) {
-          RelationStyleHelper.drawGlow(canvas, path, color);
-        }
+      final adjCp = Offset(
+        (p1.dx + p2.dx) / 2 + nx * offset,
+        (p1.dy + p2.dy) / 2 + ny * offset,
+      );
 
-        if (isDashed) {
-          RelationStyleHelper.drawDashedPath(canvas, path, paint);
-        } else {
-          canvas.drawPath(path, paint);
-        }
+      final tangentStart = (adjCp - p1).direction;
+      final tangentEnd = (p2 - adjCp).direction;
+      final chordDist = (p2 - p1).distance;
 
-        if (rel.isBidirectional) {
-          RelationStyleHelper.drawFilledArrow(
-            canvas,
-            tip: p2,
-            direction: dir,
-            color: color,
-          );
-          RelationStyleHelper.drawFilledArrow(
-            canvas,
-            tip: p1,
-            direction: dir + pi,
-            color: color,
-          );
-        } else {
-          if (isReversed) {
-            RelationStyleHelper.drawFilledArrow(
-              canvas,
-              tip: p1,
-              direction: dir + pi,
-              color: color,
-            );
-          } else {
-            RelationStyleHelper.drawFilledArrow(
-              canvas,
-              tip: p2,
-              direction: dir,
-              color: color,
-            );
-          }
-        }
+      final curveStart = (rel.isBidirectional && chordDist > arrowLen * 2.5)
+          ? p1 +
+                Offset(
+                  arrowLen * cos(tangentStart),
+                  arrowLen * sin(tangentStart),
+                )
+          : p1;
+      final curveEnd = (chordDist > arrowLen * 2.5)
+          ? p2 - Offset(arrowLen * cos(tangentEnd), arrowLen * sin(tangentEnd))
+          : p2;
 
-        final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-        RelationStyleHelper.drawRelationBadge(
+      final path = Path()
+        ..moveTo(curveStart.dx, curveStart.dy)
+        ..quadraticBezierTo(adjCp.dx, adjCp.dy, curveEnd.dx, curveEnd.dy);
+
+      if (isSelected || isPathHit) {
+        RelationStyleHelper.drawGlow(canvas, path, color);
+      }
+
+      if (isDashed) {
+        RelationStyleHelper.drawDashedPath(canvas, path, paint);
+      } else {
+        canvas.drawPath(path, paint);
+      }
+
+      if (rel.isBidirectional) {
+        RelationStyleHelper.drawFilledArrow(
           canvas,
-          tp,
-          rel.relationType,
-          mid,
+          tip: p2,
+          direction: tangentEnd,
           color: color,
-          isSelected: isSelected || isPathHit,
-          isDark: isDark,
-          isDimmed: isDimmed && !isPathHit && !isSelected,
-          scale: scale,
+        );
+        RelationStyleHelper.drawFilledArrow(
+          canvas,
+          tip: p1,
+          direction: tangentStart + pi,
+          color: color,
         );
       } else {
-        final offset = RelationStyleHelper.computeCurveOffset(i, count, dist);
-        final cp = Offset(
-          (from.dx + to.dx) / 2 + nx * offset,
-          (from.dy + to.dy) / 2 + ny * offset,
-        );
-
-        final tStart = Offset(cp.dx - from.dx, cp.dy - from.dy).direction;
-        final tEnd = Offset(to.dx - cp.dx, to.dy - cp.dy).direction;
-
-        final p1 = GraphGeometry.calculateBoundaryIntersection(
-          nodeCenter: from,
-          gender: fromGender,
-          angle: tStart,
-        );
-        final p2 = GraphGeometry.calculateBoundaryIntersection(
-          nodeCenter: to,
-          gender: toGender,
-          angle: tEnd + pi,
-        );
-
-        final adjCp = Offset(
-          (p1.dx + p2.dx) / 2 + nx * offset,
-          (p1.dy + p2.dy) / 2 + ny * offset,
-        );
-
-        final tangentStart = (adjCp - p1).direction;
-        final tangentEnd = (p2 - adjCp).direction;
-
-        final curveStart = rel.isBidirectional
-            ? p1 +
-                  Offset(
-                    arrowLen * cos(tangentStart),
-                    arrowLen * sin(tangentStart),
-                  )
-            : p1;
-        final curveEnd =
-            p2 - Offset(arrowLen * cos(tangentEnd), arrowLen * sin(tangentEnd));
-
-        final path = Path()
-          ..moveTo(curveStart.dx, curveStart.dy)
-          ..quadraticBezierTo(adjCp.dx, adjCp.dy, curveEnd.dx, curveEnd.dy);
-
-        if (isSelected || isPathHit) {
-          RelationStyleHelper.drawGlow(canvas, path, color);
-        }
-
-        if (isDashed) {
-          RelationStyleHelper.drawDashedPath(canvas, path, paint);
-        } else {
-          canvas.drawPath(path, paint);
-        }
-
-        if (rel.isBidirectional) {
-          RelationStyleHelper.drawFilledArrow(
-            canvas,
-            tip: p2,
-            direction: tangentEnd,
-            color: color,
-          );
+        if (isReversed) {
           RelationStyleHelper.drawFilledArrow(
             canvas,
             tip: p1,
@@ -511,44 +446,35 @@ class RelationPainter extends CustomPainter {
             color: color,
           );
         } else {
-          if (isReversed) {
-            RelationStyleHelper.drawFilledArrow(
-              canvas,
-              tip: p1,
-              direction: tangentStart + pi,
-              color: color,
-            );
-          } else {
-            RelationStyleHelper.drawFilledArrow(
-              canvas,
-              tip: p2,
-              direction: tangentEnd,
-              color: color,
-            );
-          }
+          RelationStyleHelper.drawFilledArrow(
+            canvas,
+            tip: p2,
+            direction: tangentEnd,
+            color: color,
+          );
         }
-
-        const t = 0.5;
-        final labelX =
-            (1 - t) * (1 - t) * p1.dx +
-            2 * (1 - t) * t * adjCp.dx +
-            t * t * p2.dx;
-        final labelY =
-            (1 - t) * (1 - t) * p1.dy +
-            2 * (1 - t) * t * adjCp.dy +
-            t * t * p2.dy;
-        RelationStyleHelper.drawRelationBadge(
-          canvas,
-          tp,
-          rel.relationType,
-          Offset(labelX, labelY),
-          color: color,
-          isSelected: isSelected || isPathHit,
-          isDark: isDark,
-          isDimmed: isDimmed && !isPathHit && !isSelected,
-          scale: scale,
-        );
       }
+
+      const t = 0.5;
+      final labelX =
+          (1 - t) * (1 - t) * p1.dx +
+          2 * (1 - t) * t * adjCp.dx +
+          t * t * p2.dx;
+      final labelY =
+          (1 - t) * (1 - t) * p1.dy +
+          2 * (1 - t) * t * adjCp.dy +
+          t * t * p2.dy;
+      RelationStyleHelper.drawRelationBadge(
+        canvas,
+        tp,
+        rel.relationType,
+        Offset(labelX, labelY),
+        color: color,
+        isSelected: isSelected || isPathHit,
+        isDark: isDark,
+        isDimmed: isDimmed && !isPathHit && !isSelected,
+        scale: scale,
+      );
     }
   }
 

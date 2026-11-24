@@ -11,14 +11,31 @@ class GraphGeometry {
   /// - '女': Circle with base radius = 24.0.
   /// - '男': Rectangle/Square with half-width = 24.0, half-height = 24.0.
   /// - Other: Diamond (square with side = 38.4 rotated by 45°).
+  /// - When [includeText] is true and ray points downwards (sinA > 0.45),
+  ///   extends boundary to enclose character name text label below.
   static Offset calculateBoundaryIntersection({
     required Offset nodeCenter,
     required String gender,
     required double angle,
     double padding = 2.0,
+    bool includeText = false,
   }) {
     final cosA = cos(angle);
     final sinA = sin(angle);
+
+    // If ray points downwards, consider the label bounding box
+    if (includeText && sinA > 0.45) {
+      final textHalfW = 32.0 + padding;
+      final textBottom = 46.0 + padding;
+      final absCos = cosA.abs();
+      final tX = absCos > 1e-6 ? textHalfW / absCos : double.infinity;
+      final tY = textBottom / sinA;
+      final tLabel = min(tX, tY);
+      return Offset(
+        nodeCenter.dx + cosA * tLabel,
+        nodeCenter.dy + sinA * tLabel,
+      );
+    }
 
     if (gender == '女') {
       final r = 24.0 + padding;
@@ -54,6 +71,7 @@ class GraphGeometry {
     required Offset toCenter,
     required String fromGender,
     double padding = 2.0,
+    bool includeText = false,
   }) {
     final angle = (toCenter - fromCenter).direction;
     return calculateBoundaryIntersection(
@@ -61,6 +79,7 @@ class GraphGeometry {
       gender: fromGender,
       angle: angle,
       padding: padding,
+      includeText: includeText,
     );
   }
 
@@ -71,6 +90,7 @@ class GraphGeometry {
     required Offset toCenter,
     required String toGender,
     double padding = 2.0,
+    bool includeText = false,
   }) {
     final reverseAngle = (fromCenter - toCenter).direction;
     return calculateBoundaryIntersection(
@@ -78,6 +98,7 @@ class GraphGeometry {
       gender: toGender,
       angle: reverseAngle,
       padding: padding,
+      includeText: includeText,
     );
   }
 }

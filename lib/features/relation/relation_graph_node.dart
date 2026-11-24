@@ -129,6 +129,7 @@ class DraggableNode extends StatefulWidget {
   final VoidCallback onEdit;
   final bool isPathHighlighted;
   final bool isDimmed;
+  final bool isConnectTarget;
   final GraphLodLevel lodLevel;
 
   const DraggableNode({
@@ -148,6 +149,7 @@ class DraggableNode extends StatefulWidget {
     required this.onEdit,
     this.isPathHighlighted = false,
     this.isDimmed = false,
+    this.isConnectTarget = false,
     this.lodLevel = GraphLodLevel.full,
   });
 
@@ -158,6 +160,7 @@ class DraggableNode extends StatefulWidget {
 class _DraggableNodeState extends State<DraggableNode> {
   late Offset _pos;
   bool _isHovered = false;
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -323,139 +326,209 @@ class _DraggableNodeState extends State<DraggableNode> {
       );
     }
 
+    final showHandle = _isHovered || _isConnecting;
     return Positioned(
-      left: _pos.dx - 30,
-      top: _pos.dy - 30,
+      left: _pos.dx - 42,
+      top: _pos.dy - 24,
       child: RepaintBoundary(
         child: MouseRegion(
+          hitTestBehavior: HitTestBehavior.translucent,
           onEnter: (_) => setState(() => _isHovered = true),
-          onExit: (_) => setState(() => _isHovered = false),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onSecondaryTapDown: _showContextMenu,
-                onLongPressStart: (details) => _showContextMenu(
-                  TapDownDetails(
-                    globalPosition: details.globalPosition,
-                    localPosition: details.localPosition,
-                  ),
-                ),
-                onPanStart: (_) => widget.onDragStart?.call(_pos),
-                onPanUpdate: (details) {
-                  final newX = max(40.0, _pos.dx + details.delta.dx);
-                  final newY = max(40.0, _pos.dy + details.delta.dy);
-                  final nextPos = Offset(newX, newY);
-                  setState(() {
-                    _pos = nextPos;
-                  });
-                  widget.onDragUpdate(nextPos);
-                },
-                onPanEnd: (_) {
-                  widget.onDragEnd(_pos);
-                },
-                onPanCancel: () {
-                  widget.onDragEnd(_pos);
-                },
-                child: Opacity(
-                  opacity: widget.isDimmed ? 0.25 : 1.0,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
+          onExit: (_) {
+            if (!_isConnecting) {
+              setState(() => _isHovered = false);
+            }
+          },
+          child: SizedBox(
+            width: 86,
+            height: 72,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 10,
+                  top: 0,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onSecondaryTapDown: _showContextMenu,
+                    onLongPressStart: (details) => _showContextMenu(
+                      TapDownDetails(
+                        globalPosition: details.globalPosition,
+                        localPosition: details.localPosition,
+                      ),
+                    ),
+                    onPanStart: (_) {
+                      if (_isConnecting) return;
+                      widget.onDragStart?.call(_pos);
+                    },
+                    onPanUpdate: (details) {
+                      if (_isConnecting) return;
+                      final newX = max(40.0, _pos.dx + details.delta.dx);
+                      final newY = max(40.0, _pos.dy + details.delta.dy);
+                      final nextPos = Offset(newX, newY);
+                      setState(() {
+                        _pos = nextPos;
+                      });
+                      widget.onDragUpdate(nextPos);
+                    },
+                    onPanEnd: (_) {
+                      if (!_isConnecting) {
+                        widget.onDragEnd(_pos);
+                      }
+                    },
+                    onPanCancel: () {
+                      if (!_isConnecting) {
+                        widget.onDragEnd(_pos);
+                      }
+                    },
+                    child: Opacity(
+                      opacity: widget.isDimmed ? 0.25 : 1.0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (widget.isPathHighlighted)
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.brand.withValues(
-                                      alpha: 0.7,
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              clipBehavior: Clip.none,
+                              children: [
+                                // 磁吸吸附高亮光圈（使用Positioned渲染在外层，绝不撑大48x48布局尺寸）
+                                if (widget.isConnectTarget)
+                                  Positioned(
+                                    left: -7,
+                                    top: -7,
+                                    width: 62,
+                                    height: 62,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.brand.withValues(
+                                              alpha: 0.85,
+                                            ),
+                                            blurRadius: 20,
+                                            spreadRadius: 6,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    blurRadius: 18,
-                                    spreadRadius: 4,
                                   ),
-                                ],
-                              ),
+                                if (widget.isPathHighlighted)
+                                  Positioned(
+                                    left: -5,
+                                    top: -5,
+                                    width: 58,
+                                    height: 58,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.brand.withValues(
+                                              alpha: 0.7,
+                                            ),
+                                            blurRadius: 18,
+                                            spreadRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                buildGenderShape(
+                                  widget.character.gender,
+                                  24,
+                                  color,
+                                  name,
+                                ),
+                              ],
                             ),
-                          buildGenderShape(
-                            widget.character.gender,
-                            24,
-                            color,
-                            name,
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 64,
+                            child: Text(
+                              name,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight:
+                                    (widget.isPathHighlighted ||
+                                        widget.isConnectTarget)
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color:
+                                    (widget.isPathHighlighted ||
+                                        widget.isConnectTarget)
+                                    ? AppColors.brand
+                                    : null,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        width: 64,
-                        child: Text(
-                          name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: widget.isPathHighlighted
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: widget.isPathHighlighted
-                                ? AppColors.brand
-                                : null,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // 节点连接手柄：鼠标悬停在节点上时浮现
-              if (_isHovered)
-                Positioned(
-                  right: -6,
-                  top: 15,
-                  child: Tooltip(
-                    message: '拖拽到另一人物创建关系',
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onPanStart: (details) {
-                        widget.onConnectStart?.call(_pos);
-                      },
-                      onPanUpdate: (details) {
-                        widget.onConnectUpdate?.call(details.delta);
-                      },
-                      onPanEnd: (_) {
-                        widget.onConnectEnd?.call();
-                      },
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: AppColors.brand,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 11,
-                          color: Colors.white,
-                        ),
                       ),
                     ),
                   ),
                 ),
-            ],
+                // 节点连接手柄：完全置于 SizedBox(width: 86) 内部，鼠标靠近绝对不缩回！
+                if (showHandle)
+                  Positioned(
+                    right: 0,
+                    top: 12,
+                    child: Tooltip(
+                      message: '拖拽到另一人物创建关系',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanStart: (details) {
+                          setState(() => _isConnecting = true);
+                          widget.onConnectStart?.call(_pos);
+                        },
+                        onPanUpdate: (details) {
+                          widget.onConnectUpdate?.call(details.globalPosition);
+                        },
+                        onPanEnd: (_) {
+                          setState(() {
+                            _isConnecting = false;
+                            _isHovered = false;
+                          });
+                          widget.onConnectEnd?.call();
+                        },
+                        onPanCancel: () {
+                          setState(() {
+                            _isConnecting = false;
+                            _isHovered = false;
+                          });
+                          widget.onConnectEnd?.call();
+                        },
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.brand,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 6,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

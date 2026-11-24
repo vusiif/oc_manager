@@ -240,14 +240,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
               ? _currentViewport
               : MediaQuery.of(context).size);
     if (_positions.isEmpty) return;
+    final newMatrix = RelationViewportHelper.computeFitCanvasMatrix(
+      viewportSize: vp,
+      positions: _positions,
+    );
     setState(() {
-      _transformController.value =
-          RelationViewportHelper.computeFitCanvasMatrix(
-            viewportSize: vp,
-            positions: _positions,
-          );
+      _transformController.value = newMatrix;
     });
     _persistCurrentViewport();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _positions.isNotEmpty) {
+        _transformController.value = newMatrix;
+      }
+    });
   }
 
   void _onStartConnecting(int characterId, Offset startPos) {
@@ -257,12 +262,10 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     });
   }
 
-  void _onUpdateConnecting(Offset delta) {
-    if (_connectingCurrentPos == null) return;
-    final scale = _transformController.value.getMaxScaleOnAxis();
-    final sceneDelta = delta / (scale > 0 ? scale : 1.0);
+  void _onUpdateConnecting(Offset scenePos) {
+    if (_connectingFromId == null) return;
     setState(() {
-      _connectingCurrentPos = _connectingCurrentPos! + sceneDelta;
+      _connectingCurrentPos = scenePos;
     });
   }
 

@@ -8,6 +8,7 @@ import '../relation_advanced_analysis.dart';
 import '../relation_graph_node.dart';
 import '../relation_graph_painters.dart';
 import 'graph_minimap.dart';
+import 'relation_connection_helper.dart';
 
 /// Canvas view for relation graph rendering (nodes, edges, minimap, drag & drop, and filters).
 class RelationCanvasView extends StatefulWidget {
@@ -97,6 +98,15 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
     widget.onConnectStart(characterId, startPos);
   }
 
+  void _onConnectUpdate(Offset globalPos) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final localPos = renderBox.globalToLocal(globalPos);
+    final inv = Matrix4.inverted(widget.transformController.value);
+    final scenePos = MatrixUtils.transformPoint(inv, localPos);
+    widget.onConnectUpdate(scenePos);
+  }
+
   void _onConnectEnd() {
     if (_isNodeInteracting) {
       setState(() => _isNodeInteracting = false);
@@ -124,6 +134,20 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
         final currentLod = GraphViewportCulling.getLodLevel(
           widget.currentScale,
         );
+        final activeTargetId =
+            (widget.connectingFromId != null &&
+                widget.connectingCurrentPos != null)
+            ? RelationConnectionHelper.findConnectTarget(
+                sourceId: widget.connectingFromId,
+                currentPos: widget.connectingCurrentPos,
+                positions: widget.positions,
+                hitRadius: 65.0,
+              )
+            : null;
+        final connectTargetPos = activeTargetId != null
+            ? widget.positions[activeTargetId]
+            : null;
+
         double maxNodeX = 0, maxNodeY = 0;
         for (final pos in widget.positions.values) {
           if (pos.dx > maxNodeX) maxNodeX = pos.dx;
@@ -180,7 +204,7 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                       constrained: false,
                       panEnabled: !_isNodeInteracting,
                       scaleEnabled: !_isNodeInteracting,
-                      boundaryMargin: const EdgeInsets.all(double.infinity),
+                      boundaryMargin: const EdgeInsets.all(5000.0),
                       clipBehavior: Clip.none,
                       minScale: 0.1,
                       maxScale: 3.0,
@@ -209,21 +233,6 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                                   scale: widget.currentScale,
                                 ),
                               ),
-                              // 拖拽创建关系时的实时连线预览
-                              if (widget.connectingFromId != null &&
-                                  widget.connectingCurrentPos != null &&
-                                  widget.positions.containsKey(
-                                    widget.connectingFromId,
-                                  ))
-                                CustomPaint(
-                                  size: canvasSize,
-                                  painter: ConnectingLinePainter(
-                                    from: widget
-                                        .positions[widget.connectingFromId]!,
-                                    to: widget.connectingCurrentPos!,
-                                    color: AppColors.brand,
-                                  ),
-                                ),
                               for (var character in widget.characters)
                                 if (widget.positions.containsKey(
                                       character.id,
@@ -255,6 +264,8 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                                             .highlightedPath!
                                             .nodePath
                                             .contains(character.id)),
+                                    isConnectTarget:
+                                        character.id == activeTargetId,
                                     onDragStart: (startPos) => _onNodeDragStart(
                                       character.id,
                                       startPos,
@@ -265,7 +276,7 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                                         _onNodeDragEnd(character.id, newPos),
                                     onConnectStart: (startPos) =>
                                         _onConnectStart(character.id, startPos),
-                                    onConnectUpdate: widget.onConnectUpdate,
+                                    onConnectUpdate: _onConnectUpdate,
                                     onConnectEnd: _onConnectEnd,
                                     onRemove: () =>
                                         widget.onRemoveCharacter(character),
@@ -274,6 +285,23 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
                                     onEdit: () =>
                                         widget.onEditCharacter(character),
                                   ),
+                              // 拖拽创建关系时的实时连线预览（置于最顶层，支持自动磁吸）
+                              if (widget.connectingFromId != null &&
+                                  widget.connectingCurrentPos != null &&
+                                  widget.positions.containsKey(
+                                    widget.connectingFromId,
+                                  ))
+                                CustomPaint(
+                                  size: canvasSize,
+                                  painter: ConnectingLinePainter(
+                                    from: widget
+                                        .positions[widget.connectingFromId]!,
+                                    to:
+                                        connectTargetPos ??
+                                        widget.connectingCurrentPos!,
+                                    color: AppColors.brand,
+                                  ),
+                                ),
                               if (candidateData.isNotEmpty)
                                 Center(
                                   child: Container(
