@@ -332,45 +332,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     List<Relation> relations,
     List<Character> characters,
   ) {
-    final hitRelId = RelationConnectionHelper.hitTestRelation(
+    RelationConnectionHelper.handleRelationTap(
+      context: context,
+      ref: ref,
+      worldId: widget.worldId,
       tapPos: tapPos,
       relations: relations,
+      characters: characters,
       positions: _positions,
+      historyManager: _historyManager,
+      currentSelectedRelationId: _selectedRelationId,
+      onSelectedRelationChanged: (relId) =>
+          setState(() => _selectedRelationId = relId),
     );
-
-    if (hitRelId != null) {
-      final hitRel = relations.where((r) => r.id == hitRelId).firstOrNull;
-      if (hitRel != null) {
-        setState(() => _selectedRelationId = hitRelId);
-        RelationEditDialogs.showRelationActionDialog(
-          context: context,
-          ref: ref,
-          worldId: widget.worldId,
-          rel: hitRel,
-          characters: characters,
-          onRecordUpdate: (oldRel, newRel, desc) =>
-              RelationGraphCommands.recordUpdateRelation(
-                ref: ref,
-                worldId: widget.worldId,
-                oldRel: oldRel,
-                newRel: newRel,
-                desc: desc,
-                historyManager: _historyManager,
-              ),
-          onRecordDelete: (rel, desc) =>
-              RelationGraphCommands.recordDeleteRelation(
-                ref: ref,
-                worldId: widget.worldId,
-                rel: rel,
-                desc: desc,
-                historyManager: _historyManager,
-              ),
-          onRelationDeleted: () => setState(() => _selectedRelationId = null),
-        );
-      }
-    } else if (_selectedRelationId != null) {
-      setState(() => _selectedRelationId = null);
-    }
   }
 
   Future<void> _switchToCanvas(GraphCanvas targetCanvas) async {
@@ -406,31 +380,22 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final canvases = canvasesAsync.valueOrNull ?? [];
-    if (canvases.isEmpty &&
-        !canvasesAsync.isLoading &&
-        !_hasEnsuredDefaultCanvas) {
-      _hasEnsuredDefaultCanvas = true;
-      Future.microtask(() async {
-        if (mounted) {
-          final def = await ref
-              .read(canvasActionsProvider)
-              .ensureDefault(widget.worldId);
-          if (mounted && _selectedCanvasId == null) {
-            setState(() => _selectedCanvasId = def.id);
-          }
-        }
-      });
-    } else if (canvases.isNotEmpty && _selectedCanvasId == null) {
-      final defaultCanvas = canvases.firstWhere(
-        (c) => c.isDefault,
-        orElse: () => canvases.first,
-      );
-      _selectedCanvasId = defaultCanvas.id;
-      _filterState = RelationCanvasStateHelper.restoreCanvasState(
-        targetCanvas: defaultCanvas,
-        transformController: _transformController,
-      );
-    }
+    RelationCanvasStateHelper.handleCanvasInitialization(
+      ref: ref,
+      worldId: widget.worldId,
+      canvases: canvases,
+      isLoading: canvasesAsync.isLoading,
+      hasEnsuredDefault: _hasEnsuredDefaultCanvas,
+      currentSelectedId: _selectedCanvasId,
+      transformController: _transformController,
+      onMarkEnsured: () => _hasEnsuredDefaultCanvas = true,
+      onCanvasSelected: (id) {
+        if (mounted) setState(() => _selectedCanvasId = id);
+      },
+      onFilterRestored: (filter) {
+        if (mounted) setState(() => _filterState = filter);
+      },
+    );
 
     final layoutsAsync = _selectedCanvasId != null
         ? ref.watch(layoutsByCanvasProvider(_selectedCanvasId!))

@@ -63,4 +63,41 @@ class RelationCanvasStateHelper {
     }
     return changed;
   }
+
+  /// Handles canvas default bootstrap and state initialization.
+  static void handleCanvasInitialization({
+    required WidgetRef ref,
+    required int worldId,
+    required List<GraphCanvas> canvases,
+    required bool isLoading,
+    required bool hasEnsuredDefault,
+    required int? currentSelectedId,
+    required TransformationController transformController,
+    required VoidCallback onMarkEnsured,
+    required ValueChanged<int> onCanvasSelected,
+    required ValueChanged<RelationFilterState> onFilterRestored,
+  }) {
+    if (canvases.isEmpty && !isLoading && !hasEnsuredDefault) {
+      onMarkEnsured();
+      Future.microtask(() async {
+        final def = await ref
+            .read(canvasActionsProvider)
+            .ensureDefault(worldId);
+        if (currentSelectedId == null) {
+          onCanvasSelected(def.id);
+        }
+      });
+    } else if (canvases.isNotEmpty && currentSelectedId == null) {
+      final defaultCanvas = canvases.firstWhere(
+        (c) => c.isDefault,
+        orElse: () => canvases.first,
+      );
+      onCanvasSelected(defaultCanvas.id);
+      final restored = restoreCanvasState(
+        targetCanvas: defaultCanvas,
+        transformController: transformController,
+      );
+      onFilterRestored(restored);
+    }
+  }
 }

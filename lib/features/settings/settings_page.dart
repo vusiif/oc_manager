@@ -498,7 +498,7 @@ class _BasicInfoFieldsSection extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ).then((_) => controller.dispose());
   }
 
   void _confirmDeleteField(

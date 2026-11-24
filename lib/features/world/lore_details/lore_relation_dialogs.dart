@@ -173,7 +173,7 @@ class LoreRelationDialogs {
           );
         },
       ),
-    );
+    ).then((_) => roleController.dispose());
   }
 
   /// 弹出建立外交/地缘关系弹窗 (LORE-003: 势力间同盟/敌对/从属/贸易)
@@ -358,6 +358,6 @@ class LoreRelationDialogs {
           );
         },
       ),
-    );
+    ).then((_) => noteController.dispose());
   }
 }

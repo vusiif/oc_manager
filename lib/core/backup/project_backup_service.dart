@@ -352,7 +352,7 @@ class ProjectBackupService {
 
             final targetFilePath = p.join(baseDir.path, relPath);
             final canonicalTarget = p.canonicalize(targetFilePath);
-            if (!canonicalTarget.startsWith(canonicalBaseDir)) {
+            if (!p.isWithin(canonicalBaseDir, canonicalTarget)) {
               throw Exception('安全拦截：检测到非法路径穿越攻击 (Path Traversal: $relPath)');
             }
 

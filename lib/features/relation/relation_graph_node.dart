@@ -240,6 +240,12 @@ class _DraggableNodeState extends State<DraggableNode> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onSecondaryTapDown: _showContextMenu,
+            onLongPressStart: (details) => _showContextMenu(
+              TapDownDetails(
+                globalPosition: details.globalPosition,
+                localPosition: details.localPosition,
+              ),
+            ),
             onPanStart: (_) => widget.onDragStart?.call(_pos),
             onPanUpdate: (details) {
               final newX = max(40.0, _pos.dx + details.delta.dx);
@@ -292,6 +298,12 @@ class _DraggableNodeState extends State<DraggableNode> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onSecondaryTapDown: _showContextMenu,
+            onLongPressStart: (details) => _showContextMenu(
+              TapDownDetails(
+                globalPosition: details.globalPosition,
+                localPosition: details.localPosition,
+              ),
+            ),
             onPanStart: (_) => widget.onDragStart?.call(_pos),
             onPanUpdate: (details) {
               final newX = max(40.0, _pos.dx + details.delta.dx);

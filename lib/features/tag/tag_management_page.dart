@@ -168,7 +168,7 @@ class TagManagementPage extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).then((_) => nameController.dispose());
   }
 
   void _showEditDialog(BuildContext context, WidgetRef ref, Tag tag) {
@@ -260,7 +260,7 @@ class TagManagementPage extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).then((_) => nameController.dispose());
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, Tag tag) {

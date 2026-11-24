@@ -163,7 +163,11 @@ void showAddStatDialog(
         ),
       ],
     ),
-  );
+  ).then((_) {
+    labelCtrl.dispose();
+    valueCtrl.dispose();
+    maxCtrl.dispose();
+  });
 }
 
 /// 修改属性维度与上限弹窗
@@ -233,5 +237,8 @@ void showEditStatDialog(
         ),
       ],
     ),
-  );
+  ).then((_) {
+    labelCtrl.dispose();
+    maxCtrl.dispose();
+  });
 }

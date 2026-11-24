@@ -225,7 +225,7 @@ class TagSelector extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).then((_) => nameController.dispose());
   }
 
   Color _parseColor(String hex) {

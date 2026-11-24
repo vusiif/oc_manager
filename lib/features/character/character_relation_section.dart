@@ -210,7 +210,7 @@ class CharacterRelationSection extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).then((_) => noteController.dispose());
   }
 
   void _showEditRelationDialog(
@@ -283,7 +283,7 @@ class CharacterRelationSection extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).then((_) => noteController.dispose());
   }
 
   void _confirmDeleteRelation(

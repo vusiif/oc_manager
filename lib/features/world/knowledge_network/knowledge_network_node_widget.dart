@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
+import '../../../core/storage/image_storage_service.dart';
 import '../../../core/util/graph_viewport_culling.dart';
 import 'knowledge_network_models.dart';
 
@@ -258,16 +259,23 @@ class KnowledgeNetworkNodeWidget extends StatelessWidget {
   }
 
   Widget _buildNodeAvatar(Color typeColor) {
-    if (node.imagePath != null &&
-        node.imagePath!.isNotEmpty &&
-        File(node.imagePath!).existsSync()) {
-      return Image.file(
-        File(node.imagePath!),
-        fit: BoxFit.cover,
-        cacheWidth: 120,
-        cacheHeight: 120,
-        errorBuilder: (_, _, _) =>
-            Icon(node.type.icon, color: typeColor, size: 28),
+    if (node.imagePath != null && node.imagePath!.isNotEmpty) {
+      return FutureBuilder<File?>(
+        future: ImageStorageService.instance.resolveImageFile(node.imagePath),
+        builder: (context, snapshot) {
+          final file = snapshot.data;
+          if (file != null && file.existsSync()) {
+            return Image.file(
+              file,
+              fit: BoxFit.cover,
+              cacheWidth: 120,
+              cacheHeight: 120,
+              errorBuilder: (_, _, _) =>
+                  Icon(node.type.icon, color: typeColor, size: 28),
+            );
+          }
+          return Icon(node.type.icon, color: typeColor, size: 28);
+        },
       );
     }
     return Icon(node.type.icon, color: typeColor, size: 28);

@@ -444,7 +444,7 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
           ],
         ),
       ),
-    );
+    ).then((_) => nameController.dispose());
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {

@@ -97,12 +97,16 @@ class AppDatabase extends _$AppDatabase {
           final rows = await customSelect(
             'PRAGMA table_info("${table.actualTableName}");',
           ).get();
-          final exists = rows.any((r) => r.data['name'] == column.$name);
+          final exists = rows.any((r) {
+            final colName = r.data['name']?.toString();
+            return colName == column.name || colName == column.$name;
+          });
           if (!exists) {
             await m.addColumn(table, column);
           }
         } catch (e) {
-          if (!e.toString().contains('duplicate column name')) {
+          final err = e.toString().toLowerCase();
+          if (!err.contains('duplicate column')) {
             rethrow;
           }
         }
@@ -117,7 +121,8 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(table);
           }
         } catch (e) {
-          if (!e.toString().contains('already exists')) {
+          final err = e.toString().toLowerCase();
+          if (!err.contains('already exists')) {
             rethrow;
           }
         }

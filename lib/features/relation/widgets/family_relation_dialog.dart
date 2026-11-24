@@ -132,5 +132,5 @@ void showFamilyRelationDialog({
         );
       },
     ),
-  );
+  ).then((_) => noteController.dispose());
 }

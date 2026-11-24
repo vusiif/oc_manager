@@ -39,25 +39,12 @@ class CommandPaletteService {
         icon: Icons.person_add_alt_1_rounded,
         iconColor: const Color(0xFF10B981),
         keywords: ['character', 'oc', 'renwu', 'juese', 'new', 'add'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          showDialog(
+            context: context,
+            builder: (_) => CharacterDialog(worldId: w.id),
           );
-          if (targetWorld != null && context.mounted) {
-            showDialog(
-              context: context,
-              builder: (_) => CharacterDialog(worldId: targetWorld.id),
-            );
-          }
-        },
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_open_chronicle',
@@ -73,22 +60,9 @@ class CommandPaletteService {
           'shijianxian',
           'jiyuan',
         ],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
-          );
-          if (targetWorld != null && context.mounted) {
-            context.push('/world/${targetWorld.id}/chronicle');
-          }
-        },
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          context.push('/world/${w.id}/chronicle');
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_open_graph',
@@ -98,22 +72,9 @@ class CommandPaletteService {
         icon: Icons.hub_rounded,
         iconColor: const Color(0xFF8B5CF6),
         keywords: ['relation', 'graph', 'canvas', 'guanxitu', 'tupu'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
-          );
-          if (targetWorld != null && context.mounted) {
-            context.push('/world/${targetWorld.id}/graph');
-          }
-        },
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          context.push('/world/${w.id}/graph');
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_open_lore',
@@ -123,22 +84,9 @@ class CommandPaletteService {
         icon: Icons.auto_stories_rounded,
         iconColor: const Color(0xFF06B6D4),
         keywords: ['lore', 'wiki', 'encyclopedia', 'baike', 'didian', 'zuzhi'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
-          );
-          if (targetWorld != null && context.mounted) {
-            context.push('/world/${targetWorld.id}/lore');
-          }
-        },
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          context.push('/world/${w.id}/lore');
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_open_analytics',
@@ -148,28 +96,13 @@ class CommandPaletteService {
         icon: Icons.insights_rounded,
         iconColor: const Color(0xFF3B82F6),
         keywords: ['analytics', 'stats', 'dapan', 'shuju', 'fenxi'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          showDialog(
+            context: context,
+            builder: (_) =>
+                WorldAnalyticsDialog(worldId: w.id, worldName: w.name),
           );
-          if (targetWorld != null && context.mounted) {
-            showDialog(
-              context: context,
-              builder: (_) => WorldAnalyticsDialog(
-                worldId: targetWorld.id,
-                worldName: targetWorld.name,
-              ),
-            );
-          }
-        },
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_consistency_check',
@@ -179,26 +112,13 @@ class CommandPaletteService {
         icon: Icons.fact_check_rounded,
         iconColor: const Color(0xFFEC4899),
         keywords: ['consistency', 'check', 'yizhixing', 'jiancha', 'chongtu'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          ConsistencyCheckerDialog.show(
             context,
-            worlds,
-            activeId,
+            worldId: w.id,
+            worldName: w.name,
           );
-          if (targetWorld != null && context.mounted) {
-            ConsistencyCheckerDialog.show(
-              context,
-              worldId: targetWorld.id,
-              worldName: targetWorld.name,
-            );
-          }
-        },
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_booklet_export',
@@ -208,22 +128,9 @@ class CommandPaletteService {
         icon: Icons.menu_book_rounded,
         iconColor: const Color(0xFFF97316),
         keywords: ['booklet', 'export', 'html', 'daochu', 'shedingji'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
-          );
-          if (targetWorld != null && context.mounted) {
-            BookletExportDialog.show(context, targetWorld);
-          }
-        },
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          BookletExportDialog.show(context, w);
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_ocpkg_export',
@@ -233,22 +140,9 @@ class CommandPaletteService {
         icon: Icons.archive_outlined,
         iconColor: const Color(0xFF6366F1),
         keywords: ['ocpkg', 'package', 'export', 'daochu', 'dabao'],
-        onExecute: (context, ref) async {
-          final worlds = await ref
-              .read(databaseProvider)
-              .worldDao
-              .getAllWorlds();
-          if (!context.mounted) return;
-          final activeId = ref.read(activeWorldIdProvider);
-          final targetWorld = await _resolveTargetWorld(
-            context,
-            worlds,
-            activeId,
-          );
-          if (targetWorld != null && context.mounted) {
-            OcPackageExportDialog.show(context, targetWorld);
-          }
-        },
+        onExecute: (context, ref) => _runWithWorld(context, ref, (w) async {
+          OcPackageExportDialog.show(context, w);
+        }),
       ),
       CommandPaletteItem(
         id: 'cmd_ocpkg_import',
@@ -576,5 +470,20 @@ class CommandPaletteService {
         ),
       ),
     );
+  }
+
+  /// Helper to ensure a target world is resolved before executing a command.
+  static Future<void> _runWithWorld(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function(World world) action,
+  ) async {
+    final worlds = await ref.read(databaseProvider).worldDao.getAllWorlds();
+    if (!context.mounted) return;
+    final activeId = ref.read(activeWorldIdProvider);
+    final targetWorld = await _resolveTargetWorld(context, worlds, activeId);
+    if (targetWorld != null && context.mounted) {
+      await action(targetWorld);
+    }
   }
 }

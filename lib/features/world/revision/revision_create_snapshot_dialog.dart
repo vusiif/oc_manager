@@ -105,12 +105,15 @@ Future<SnapshotDialogResult?> showCreateSnapshotDialog(
     ),
   );
 
+  SnapshotDialogResult? result;
   if (confirmed == true) {
-    return SnapshotDialogResult(
+    result = SnapshotDialogResult(
       title: titleController.text.trim(),
       note: noteController.text.trim(),
       isMilestone: isMilestone,
     );
   }
-  return null;
+  titleController.dispose();
+  noteController.dispose();
+  return result;
 }

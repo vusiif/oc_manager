@@ -157,6 +157,6 @@ class _TreeSidebarState extends ConsumerState<TreeSidebar> {
           ),
         ],
       ),
-    );
+    ).then((_) => controller.dispose());
   }
 }
