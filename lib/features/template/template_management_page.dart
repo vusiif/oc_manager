@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design/components/confirmation_dialog.dart';
+import '../../core/design/components/empty_state.dart';
+import '../../core/design/design_tokens.dart';
 import '../../providers/template_provider.dart';
 import '../../data/database/app_database.dart';
 import 'template_dialog.dart';
+import 'template_transfer_dialogs.dart';
 
 class TemplateManagementPage extends ConsumerWidget {
   const TemplateManagementPage({super.key});
@@ -13,42 +17,69 @@ class TemplateManagementPage extends ConsumerWidget {
     final templatesAsync = ref.watch(globalTemplatesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('模板管理')),
+      appBar: AppBar(
+        title: const Text('模板管理'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            tooltip: '官方预设模板库',
+            onPressed: () =>
+                TemplateTransferDialogs.showOfficialPresetsDialog(context, ref),
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: '导入模板 (JSON)',
+            onPressed: () =>
+                TemplateTransferDialogs.importFromJsonFile(context, ref),
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_upload_outlined),
+            tooltip: '导出全部模板 (JSON)',
+            onPressed: () =>
+                TemplateTransferDialogs.exportTemplates(context, ref),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
+      ),
       body: templatesAsync.when(
         data: (templates) {
           if (templates.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.description, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    '还没有模板',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+            return EmptyStateView(
+              icon: Icons.description_outlined,
+              title: '还没有人物模板',
+              description: '创建自定义字段模板，或直接从官方预设库导入常用角色模板（奇幻、现代、科幻、TRPG 等）。',
+              primaryActionLabel: '浏览官方预设模板',
+              onPrimaryAction: () =>
+                  TemplateTransferDialogs.showOfficialPresetsDialog(
+                    context,
+                    ref,
                   ),
-                  SizedBox(height: 8),
-                  Text('点击右下角按钮创建模板', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: templates.length,
-            itemBuilder: (context, index) {
-              final template = templates[index];
-              return _TemplateTile(template: template);
-            },
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                itemCount: templates.length,
+                itemBuilder: (context, index) {
+                  final template = templates[index];
+                  return _TemplateTile(template: template);
+                },
+              ),
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('错误: $error')),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
         onPressed: () => _showCreateDialog(context),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('新建模板'),
       ),
     );
   }
@@ -81,11 +112,22 @@ class _TemplateTile extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              icon: const Icon(Icons.file_upload_outlined, size: 20),
+              tooltip: '导出此模板',
+              onPressed: () => TemplateTransferDialogs.exportTemplates(
+                context,
+                ref,
+                targetTemplates: [template],
+              ),
+            ),
+            IconButton(
               icon: const Icon(Icons.edit, size: 20),
+              tooltip: '编辑模板',
               onPressed: () => _showEditDialog(context, ref),
             ),
             IconButton(
               icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+              tooltip: '删除模板',
               onPressed: () => _confirmDelete(context, ref),
             ),
           ],
@@ -169,51 +211,33 @@ class _TemplateTile extends ConsumerWidget {
     });
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除模板'),
-        content: Text('确定要删除"${template.name}"吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref.read(templateActionsProvider).delete(template.id);
-              ref.invalidate(globalTemplatesProvider);
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: '删除模板',
+      content: '确定要删除"${template.name}"吗？',
+      confirmLabel: '删除',
+      isDestructive: true,
     );
+    if (!confirmed) return;
+    await ref.read(templateActionsProvider).delete(template.id);
+    ref.invalidate(globalTemplatesProvider);
   }
 
-  void _deleteField(BuildContext context, WidgetRef ref, int fieldId) {
-    showDialog(
+  Future<void> _deleteField(
+    BuildContext context,
+    WidgetRef ref,
+    int fieldId,
+  ) async {
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除字段'),
-        content: const Text('确定要删除这个字段吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref.read(templateActionsProvider).removeField(fieldId);
-              ref.invalidate(templateFieldsProvider(template.id));
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: '删除字段',
+      content: '确定要删除这个字段吗？',
+      confirmLabel: '删除',
+      isDestructive: true,
     );
+    if (!confirmed) return;
+    await ref.read(templateActionsProvider).removeField(fieldId);
+    ref.invalidate(templateFieldsProvider(template.id));
   }
 }

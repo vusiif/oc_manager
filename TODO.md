@@ -251,10 +251,10 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 
 # 7. P2 / P3 --- 模板与生态
 
--   [ ] **TPL-001：模板分享与导入**
+-   [x] **TPL-001：模板分享与导入**（已完成，位于 `lib/core/services/template_transfer_service.dart` 与 `lib/features/template/template_transfer_dialogs.dart`，支持纯字段定义 JSON 导出/导入、旧字段类型降级兼容、冲突预检与创建副本/覆盖/跳过三维策略，通过 `test/template_transfer_test.dart` 验证）
     -   导出/导入人物模板；只包含字段定义，不包含人物隐私数据。
     -   导入前预览冲突和兼容性；定义旧模板迁移策略。
--   [ ] **TPL-002：官方模板集合**
+-   [x] **TPL-002：官方模板集合**（已完成，内置 5 套预设：奇幻冒险者档案、现代都市日常、科幻星际设定、TRPG 跑团调查员、核心反派/对立角色，支持在模板管理页一键预览并导入，通过 `test/template_transfer_test.dart` 验证）
     -   奇幻、现代、科幻、TRPG、反派、配角等示例。
     -   模板是可选起点，不限制自定义。
 -   [ ] **ECOSYS-001：扩展接口调研**
