@@ -10,6 +10,7 @@ class RelationGraphShortcuts extends StatelessWidget {
   final GraphHistoryManager historyManager;
   final VoidCallback? onDeleteSelected;
   final VoidCallback? onEscape;
+  final VoidCallback? onSelectAll;
   final Widget child;
 
   const RelationGraphShortcuts({
@@ -17,6 +18,7 @@ class RelationGraphShortcuts extends StatelessWidget {
     required this.historyManager,
     this.onDeleteSelected,
     this.onEscape,
+    this.onSelectAll,
     required this.child,
   });
 
@@ -75,6 +77,16 @@ class RelationGraphShortcuts extends StatelessWidget {
         const SingleActivator(LogicalKeyboardKey.escape): () {
           if (!_isEditingText()) {
             onEscape?.call();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.keyA, control: true): () {
+          if (!_isEditingText()) {
+            onSelectAll?.call();
+          }
+        },
+        const SingleActivator(LogicalKeyboardKey.keyA, meta: true): () {
+          if (!_isEditingText()) {
+            onSelectAll?.call();
           }
         },
       },

@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/database/app_database.dart';
+import '../../../providers/character_provider.dart';
 import '../../../providers/relation_provider.dart';
+import '../../character/character_dialog.dart';
 import '../graph_history_manager.dart';
 import '../relation_advanced_analysis.dart';
+import '../relation_edit_dialogs.dart';
 
 /// Runner for node and layout command operations with undo/redo history tracking.
 class RelationGraphCommands {
@@ -140,6 +143,50 @@ class RelationGraphCommands {
     }
   }
 
+  /// Records BatchMoveCommand for multi-node drag or alignment operations.
+  static void recordBatchNodeMove({
+    required WidgetRef ref,
+    required int worldId,
+    required int? canvasId,
+    required String descriptionText,
+    required Map<int, Offset> oldPositions,
+    required Map<int, Offset> newPositions,
+    required GraphHistoryManager historyManager,
+    required void Function(Map<int, Offset> updatedPositions) onUpdateMemory,
+  }) {
+    if (newPositions.isEmpty) return;
+
+    bool hasMoved = false;
+    for (final entry in newPositions.entries) {
+      final oldPos = oldPositions[entry.key];
+      if (oldPos == null ||
+          (oldPos.dx - entry.value.dx).abs() > 0.5 ||
+          (oldPos.dy - entry.value.dy).abs() > 0.5) {
+        hasMoved = true;
+        break;
+      }
+    }
+    if (!hasMoved) return;
+
+    ref
+        .read(graphLayoutActionsProvider)
+        .batchSavePositions(worldId, newPositions, canvasId: canvasId);
+
+    historyManager.record(
+      BatchMoveCommand(
+        descriptionText: descriptionText,
+        oldPositions: Map<int, Offset>.of(oldPositions),
+        newPositions: Map<int, Offset>.of(newPositions),
+        onUpdateMemory: onUpdateMemory,
+        onPersist: (posMap) async {
+          await ref
+              .read(graphLayoutActionsProvider)
+              .batchSavePositions(worldId, posMap, canvasId: canvasId);
+        },
+      ),
+    );
+  }
+
   /// Executes automatic layout computation, records BatchMoveCommand, and shows SnackBar.
   static void applyAutoLayout({
     required BuildContext context,
@@ -232,6 +279,28 @@ class RelationGraphCommands {
     );
   }
 
+  /// Looks up the previous relation and records an UpdateRelationCommand.
+  static void updateRelationById({
+    required WidgetRef ref,
+    required int worldId,
+    required List<Relation> relations,
+    required Relation newRel,
+    required String desc,
+    required GraphHistoryManager historyManager,
+  }) {
+    final oldRel = relations.where((r) => r.id == newRel.id).firstOrNull;
+    if (oldRel != null) {
+      recordUpdateRelation(
+        ref: ref,
+        worldId: worldId,
+        oldRel: oldRel,
+        newRel: newRel,
+        desc: desc,
+        historyManager: historyManager,
+      );
+    }
+  }
+
   /// Records UpdateRelationCommand with undo/redo support.
   static void recordUpdateRelation({
     required WidgetRef ref,
@@ -275,6 +344,110 @@ class RelationGraphCommands {
           ref.invalidate(relationsByWorldProvider(worldId));
         },
       ),
+    );
+  }
+
+  /// Deletes a relation, records undo history, and shows an undo SnackBar.
+  static void deleteRelationWithFeedback({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int worldId,
+    required Relation rel,
+    required GraphHistoryManager historyManager,
+    required VoidCallback onCleared,
+  }) {
+    recordDeleteRelation(
+      ref: ref,
+      worldId: worldId,
+      rel: rel,
+      desc: '删除关系【${rel.relationType}】',
+      historyManager: historyManager,
+    );
+    onCleared();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已删除关系【${rel.relationType}】'),
+        action: SnackBarAction(
+          label: '撤销',
+          textColor: Colors.amberAccent,
+          onPressed: () {
+            if (historyManager.canUndo) {
+              historyManager.undo();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Opens the relation manager dialog for [character].
+  static void openRelationManager({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int worldId,
+    required Character character,
+    required List<Character> allCharacters,
+    required List<Relation> relations,
+    required GraphHistoryManager historyManager,
+  }) {
+    RelationEditDialogs.showRelationManager(
+      context: context,
+      ref: ref,
+      worldId: worldId,
+      character: character,
+      allCharacters: allCharacters,
+      relations: relations,
+      historyManager: historyManager,
+      onRecordDelete: (rel, desc) => recordDeleteRelation(
+        ref: ref,
+        worldId: worldId,
+        rel: rel,
+        desc: desc,
+        historyManager: historyManager,
+      ),
+    );
+  }
+
+  /// Opens the character editor dialog and invalidates world character cache.
+  static void openCharacterEditor({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int worldId,
+    required Character character,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) => CharacterDialog(worldId: worldId, character: character),
+    ).then((_) => ref.invalidate(charactersByWorldProvider(worldId)));
+  }
+
+  /// Opens the full relation action dialog with undo/redo recording.
+  static void openFullRelationDialog({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int worldId,
+    required Relation rel,
+    required List<Character> characters,
+    required GraphHistoryManager historyManager,
+    required ValueChanged<Relation> onDeleteRelation,
+    required VoidCallback onRelationDeleted,
+  }) {
+    RelationEditDialogs.showRelationActionDialog(
+      context: context,
+      ref: ref,
+      worldId: worldId,
+      rel: rel,
+      characters: characters,
+      onRecordUpdate: (oldRel, newRel, desc) => recordUpdateRelation(
+        ref: ref,
+        worldId: worldId,
+        oldRel: oldRel,
+        newRel: newRel,
+        desc: desc,
+        historyManager: historyManager,
+      ),
+      onRecordDelete: (r, desc) => onDeleteRelation(r),
+      onRelationDeleted: onRelationDeleted,
     );
   }
 }

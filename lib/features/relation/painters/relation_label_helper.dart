@@ -52,7 +52,29 @@ Map<int, Offset> calculateRelationLabelCenters({
             (parents[0].dy + parents[1].dy) / 2,
           )
         : parents[0];
-    final labelOffset = Offset(parentMid.dx, parentMid.dy + 16);
+    final children = group
+        .map((r) => positions[r.toCharacterId])
+        .whereType<Offset>()
+        .toList();
+    final minChildY = children.isNotEmpty
+        ? children.map((c) => c.dy).reduce(min)
+        : parentMid.dy + 100;
+    final parentBottom = parentMid.dy + 54.0;
+    final minChildTop = minChildY - 26.0;
+    final double busY;
+    if (minChildTop - parentBottom >= 24.0) {
+      busY = min(
+        minChildTop - 18.0,
+        parentBottom + (minChildTop - parentBottom) * 0.45,
+      );
+    } else if (minChildY < parentMid.dy) {
+      busY = minChildTop - 24.0;
+    } else {
+      busY = parentBottom + 16.0;
+    }
+    final labelOffset = parents.length >= 2
+        ? Offset(parentMid.dx, parentMid.dy + 16)
+        : Offset(parentMid.dx, max(parentMid.dy + 60, busY - 14));
     for (final rel in group) {
       centers[rel.id] = labelOffset;
     }
@@ -71,11 +93,13 @@ Map<int, Offset> calculateRelationLabelCenters({
       final dx = to.dx - from.dx;
       final dy = to.dy - from.dy;
       final dist = sqrt(dx * dx + dy * dy);
-      final offset = RelationStyleHelper.computeCurveOffset(i, count, dist);
+      final offset = count == 1
+          ? RelationStyleHelper.computeSingleLineOffset(dist)
+          : RelationStyleHelper.computeCurveOffset(i, count, dist);
       final nx = dist > 0 ? -dy / dist : 0.0;
       final ny = dist > 0 ? dx / dist : 0.0;
 
-      if (count == 1) {
+      if (offset.abs() < 1e-3) {
         centers[rel.id] = Offset((from.dx + to.dx) / 2, (from.dy + to.dy) / 2);
       } else {
         final cp = Offset(

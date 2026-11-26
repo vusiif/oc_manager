@@ -25,8 +25,10 @@ class DraggableNode extends StatefulWidget {
   final VoidCallback onManageRelations;
   final VoidCallback onEdit;
   final bool isPathHighlighted;
+  final bool isSelected;
   final bool isDimmed;
   final bool isConnectTarget;
+  final VoidCallback? onTap;
   final GraphLodLevel lodLevel;
 
   const DraggableNode({
@@ -45,8 +47,10 @@ class DraggableNode extends StatefulWidget {
     required this.onManageRelations,
     required this.onEdit,
     this.isPathHighlighted = false,
+    this.isSelected = false,
     this.isDimmed = false,
     this.isConnectTarget = false,
+    this.onTap,
     this.lodLevel = GraphLodLevel.full,
   });
 
@@ -131,6 +135,8 @@ class _DraggableNodeState extends State<DraggableNode> {
         ? Colors.grey
         : Theme.of(context).colorScheme.primary;
 
+    final isHighlighted = widget.isPathHighlighted || widget.isSelected;
+
     // Overview LOD: ultra-lightweight micro-dot for massive graph rendering (PERF-001)
     if (widget.lodLevel == GraphLodLevel.overview) {
       return Positioned(
@@ -139,6 +145,7 @@ class _DraggableNodeState extends State<DraggableNode> {
         child: RepaintBoundary(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
             onSecondaryTapDown: _showContextMenu,
             onLongPressStart: (details) => _showContextMenu(
               TapDownDetails(
@@ -168,12 +175,10 @@ class _DraggableNodeState extends State<DraggableNode> {
                     ? BorderRadius.circular(3)
                     : null,
                 border: Border.all(
-                  color: widget.isPathHighlighted
-                      ? AppColors.brand
-                      : Colors.white70,
-                  width: widget.isPathHighlighted ? 2.5 : 1.0,
+                  color: isHighlighted ? AppColors.brand : Colors.white70,
+                  width: isHighlighted ? 2.5 : 1.0,
                 ),
-                boxShadow: widget.isPathHighlighted
+                boxShadow: isHighlighted
                     ? [
                         BoxShadow(
                           color: AppColors.brand.withValues(alpha: 0.6),
@@ -197,6 +202,7 @@ class _DraggableNodeState extends State<DraggableNode> {
         child: RepaintBoundary(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
             onSecondaryTapDown: _showContextMenu,
             onLongPressStart: (details) => _showContextMenu(
               TapDownDetails(
@@ -220,7 +226,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                 character: widget.character,
                 size: 40,
                 color: color,
-                isHighlighted: widget.isPathHighlighted,
+                isHighlighted: isHighlighted,
               ),
             ),
           ),
@@ -252,6 +258,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                   top: 0,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    onTap: widget.onTap,
                     onSecondaryTapDown: _showContextMenu,
                     onLongPressStart: (details) => _showContextMenu(
                       TapDownDetails(
@@ -317,7 +324,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                                       ),
                                     ),
                                   ),
-                                if (widget.isPathHighlighted)
+                                if (isHighlighted)
                                   Positioned(
                                     left: -5,
                                     top: -5,
@@ -342,7 +349,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                                   character: widget.character,
                                   size: 48,
                                   color: color,
-                                  isHighlighted: widget.isPathHighlighted,
+                                  isHighlighted: isHighlighted,
                                   isConnectTarget: widget.isConnectTarget,
                                 ),
                               ],
@@ -365,9 +372,7 @@ class _DraggableNodeState extends State<DraggableNode> {
                                   : Colors.white.withValues(alpha: 0.92),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color:
-                                    (widget.isPathHighlighted ||
-                                        widget.isConnectTarget)
+                                color: (isHighlighted || widget.isConnectTarget)
                                     ? AppColors.brand.withValues(alpha: 0.85)
                                     : (Theme.of(context).brightness ==
                                               Brightness.dark
@@ -389,13 +394,10 @@ class _DraggableNodeState extends State<DraggableNode> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight:
-                                    (widget.isPathHighlighted ||
-                                        widget.isConnectTarget)
+                                    (isHighlighted || widget.isConnectTarget)
                                     ? FontWeight.bold
                                     : FontWeight.w500,
-                                color:
-                                    (widget.isPathHighlighted ||
-                                        widget.isConnectTarget)
+                                color: (isHighlighted || widget.isConnectTarget)
                                     ? AppColors.brand
                                     : null,
                               ),

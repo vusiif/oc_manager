@@ -223,9 +223,19 @@ class RelationPainter extends CustomPainter {
       parentMid = parents[0];
     }
 
-    double busY = minChildY > parentMid.dy
-        ? parentMid.dy + (minChildY - parentMid.dy) * 0.4
-        : parentMid.dy + 50;
+    final parentBottom = parentMid.dy + 54.0;
+    final minChildTop = minChildY - 26.0;
+    final double busY;
+    if (minChildTop - parentBottom >= 24.0) {
+      busY = min(
+        minChildTop - 18.0,
+        parentBottom + (minChildTop - parentBottom) * 0.45,
+      );
+    } else if (minChildY < parentMid.dy) {
+      busY = minChildTop - 24.0;
+    } else {
+      busY = parentBottom + 16.0;
+    }
 
     final busStart = Offset(parentMid.dx, busY);
     final topPoint = parents.length >= 2
@@ -233,9 +243,12 @@ class RelationPainter extends CustomPainter {
         : GraphGeometry.calculateBoundaryIntersection(
             nodeCenter: parentMid,
             gender: characterMap[parentIds.first]?.gender ?? '',
-            angle: pi / 2,
+            angle: (busStart - parentMid).direction,
+            includeText: true,
           );
-    canvas.drawLine(topPoint, busStart, paint);
+    if ((busStart - topPoint).distance > 2.0) {
+      canvas.drawLine(topPoint, busStart, paint);
+    }
     canvas.drawCircle(
       busStart,
       3.0,
@@ -245,27 +258,17 @@ class RelationPainter extends CustomPainter {
         ..isAntiAlias = true,
     );
 
-    const arrowLen = 10.0;
     if (children.length == 1) {
       final child = children[0];
       final childId = childIds.first;
-      final junction = Offset(busStart.dx, busStart.dy);
       final midPoint = Offset(child.dx, busY);
-      final cEdge = GraphGeometry.getEntryPoint(
-        fromCenter: midPoint,
-        toCenter: child,
-        toGender: characterMap[childId]?.gender ?? '',
-      );
-
-      canvas.drawLine(junction, midPoint, paint);
-      final childDir = (child - midPoint).direction;
-      final childEnd =
-          cEdge - Offset(arrowLen * cos(childDir), arrowLen * sin(childDir));
-      canvas.drawLine(midPoint, childEnd, paint);
-      RelationStyleHelper.drawFilledArrow(
+      canvas.drawLine(busStart, midPoint, paint);
+      _drawFamilyChildBranch(
         canvas,
-        tip: cEdge,
-        direction: childDir,
+        paint,
+        junction: midPoint,
+        child: child,
+        childGender: characterMap[childId]?.gender ?? '',
         color: color,
       );
     } else {
@@ -283,12 +286,6 @@ class RelationPainter extends CustomPainter {
         final child = children[i];
         final childId = childIds.skip(i).first;
         final junction = Offset(child.dx, busY);
-        final cEdge = GraphGeometry.getEntryPoint(
-          fromCenter: junction,
-          toCenter: child,
-          toGender: characterMap[childId]?.gender ?? '',
-        );
-
         canvas.drawCircle(
           junction,
           2.6,
@@ -297,30 +294,72 @@ class RelationPainter extends CustomPainter {
             ..style = PaintingStyle.fill
             ..isAntiAlias = true,
         );
-        final childDir = (child - junction).direction;
-        final childEnd =
-            cEdge - Offset(arrowLen * cos(childDir), arrowLen * sin(childDir));
-        canvas.drawLine(junction, childEnd, paint);
-        RelationStyleHelper.drawFilledArrow(
+        _drawFamilyChildBranch(
           canvas,
-          tip: cEdge,
-          direction: childDir,
+          paint,
+          junction: junction,
+          child: child,
+          childGender: characterMap[childId]?.gender ?? '',
           color: color,
         );
       }
     }
 
+    final badgePos = parents.length >= 2
+        ? Offset(parentMid.dx, parentMid.dy + 16)
+        : Offset(parentMid.dx, max(parentMid.dy + 60, busY - 14));
     RelationStyleHelper.drawRelationBadge(
       canvas,
       tp,
       relType,
-      Offset(parentMid.dx, parentMid.dy + 16),
+      badgePos,
       color: color,
       isSelected: isSelected || isPathHit,
       isDark: isDark,
       isDimmed: isDimmed && !isPathHit && !isSelected,
       scale: scale,
     );
+  }
+
+  void _drawFamilyChildBranch(
+    Canvas canvas,
+    Paint paint, {
+    required Offset junction,
+    required Offset child,
+    required String childGender,
+    required Color color,
+  }) {
+    const arrowLen = 10.0;
+    final distToCenter = (child - junction).distance;
+    // Skip drawing arrow/stem when junction overlaps inside child avatar bounds.
+    if (distToCenter < 28.0) return;
+
+    final cEdge = GraphGeometry.getEntryPoint(
+      fromCenter: junction,
+      toCenter: child,
+      toGender: childGender,
+      includeText: true,
+    );
+    final stemDist = (cEdge - junction).distance;
+    // Guard against inverted stem when junction is inside boundary.
+    if (cEdge.dy < junction.dy && child.dy > junction.dy) return;
+    if (cEdge.dy > junction.dy && child.dy < junction.dy) return;
+
+    final childDir = (child - junction).direction;
+    if (stemDist >= arrowLen + 2.0) {
+      final childEnd =
+          cEdge - Offset(arrowLen * cos(childDir), arrowLen * sin(childDir));
+      canvas.drawLine(junction, childEnd, paint);
+      RelationStyleHelper.drawFilledArrow(
+        canvas,
+        tip: cEdge,
+        direction: childDir,
+        color: color,
+      );
+    } else if (stemDist >= 2.0) {
+      // Too close to fit a full arrowhead without protruding past junction.
+      canvas.drawLine(junction, cEdge, paint);
+    }
   }
 
   void _drawNormalGroup(
@@ -399,14 +438,16 @@ class RelationPainter extends CustomPainter {
       final tangentEnd = (p2 - adjCp).direction;
       final chordDist = (p2 - p1).distance;
 
-      final curveStart = (rel.isBidirectional && chordDist > arrowLen * 2.5)
+      final hasStartArrow = rel.isBidirectional || isReversed;
+      final hasEndArrow = rel.isBidirectional || !isReversed;
+      final curveStart = (hasStartArrow && chordDist > arrowLen * 2.5)
           ? p1 +
                 Offset(
                   arrowLen * cos(tangentStart),
                   arrowLen * sin(tangentStart),
                 )
           : p1;
-      final curveEnd = (chordDist > arrowLen * 2.5)
+      final curveEnd = (hasEndArrow && chordDist > arrowLen * 2.5)
           ? p2 - Offset(arrowLen * cos(tangentEnd), arrowLen * sin(tangentEnd))
           : p2;
 

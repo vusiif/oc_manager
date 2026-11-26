@@ -67,4 +67,36 @@ class RelationViewportHelper {
     final ty = viewportSize.height / 2 - targetWorldPos.dy * clampedScale;
     return matrixFromViewport(tx, ty, clampedScale);
   }
+
+  /// Resolves a non-empty viewport size, falling back to MediaQuery size.
+  static Size resolveViewportSize(
+    BuildContext context,
+    Size currentViewport, [
+    Size? customViewport,
+  ]) {
+    if (customViewport != null && customViewport.width > 0) {
+      return customViewport;
+    }
+    return currentViewport.width > 0
+        ? currentViewport
+        : MediaQuery.of(context).size;
+  }
+
+  /// Computes the scene-space center point of the current viewport.
+  static Offset? computeViewportCenter({
+    required BuildContext context,
+    required Size currentViewport,
+    required Matrix4 transformMatrix,
+  }) {
+    final vp = resolveViewportSize(context, currentViewport);
+    try {
+      final inv = Matrix4.inverted(transformMatrix);
+      return MatrixUtils.transformPoint(
+        inv,
+        Offset(vp.width / 2, vp.height / 2),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 }

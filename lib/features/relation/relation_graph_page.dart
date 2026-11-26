@@ -5,10 +5,8 @@ import '../../core/util/graph_viewport_culling.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/character_provider.dart';
 import '../../providers/relation_provider.dart';
-import '../character/character_dialog.dart';
 import 'graph_history_manager.dart';
 import 'relation_advanced_analysis.dart';
-import 'relation_edit_dialogs.dart';
 import 'relation_sidebar.dart';
 import 'relation_viewport_helper.dart';
 import 'widgets/relation_canvas_state_helper.dart';
@@ -17,6 +15,7 @@ import 'widgets/relation_connection_helper.dart';
 import 'widgets/relation_graph_app_bar.dart';
 import 'widgets/relation_graph_commands.dart';
 import 'widgets/relation_graph_shortcuts.dart';
+import 'widgets/relation_selection_helper.dart';
 
 class RelationGraphPage extends ConsumerStatefulWidget {
   final int worldId;
@@ -51,6 +50,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   // GRAPH-002 撤销/重做历史管理器
   final GraphHistoryManager _historyManager = GraphHistoryManager();
   final Map<int, Offset> _nodeDragStartPositions = {};
+  final Set<int> _selectedNodeIds = {};
+  final Map<int, Offset> _multiDragStartPositions = {};
 
   // GRAPH-005 大画布全局导览视口状态
   Size _currentViewport = const Size(1200, 800);
@@ -104,6 +105,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       _selectedCanvasId = null;
       _hasEnsuredDefaultCanvas = false;
       _positions.clear();
+      _selectedNodeIds.clear();
       _loadedFromDbCharacters.clear();
     }
   }
@@ -130,18 +132,6 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     List<Character> characters,
     List<Relation> relations,
   ) {
-    Offset? targetCenter;
-    final vp = _currentViewport.width > 0
-        ? _currentViewport
-        : MediaQuery.of(context).size;
-    try {
-      final inv = Matrix4.inverted(_transformController.value);
-      targetCenter = MatrixUtils.transformPoint(
-        inv,
-        Offset(vp.width / 2, vp.height / 2),
-      );
-    } catch (_) {}
-
     RelationGraphCommands.applyAutoLayout(
       context: context,
       ref: ref,
@@ -152,15 +142,18 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       relations: relations,
       currentPositions: _positions,
       historyManager: _historyManager,
-      targetCenter: targetCenter,
+      targetCenter: RelationViewportHelper.computeViewportCenter(
+        context: context,
+        currentViewport: _currentViewport,
+        transformMatrix: _transformController.value,
+      ),
       onPositionsUpdated: (newPositions) {
         if (!mounted) return;
         setState(() {
-          _positions.clear();
-          _positions.addAll(newPositions);
-          for (final cid in newPositions.keys) {
-            _loadedFromDbCharacters.add(cid);
-          }
+          _positions
+            ..clear()
+            ..addAll(newPositions);
+          _loadedFromDbCharacters.addAll(newPositions.keys);
           _graphRevision++;
         });
         _fitCanvasToNodes(_currentViewport);
@@ -170,13 +163,12 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   }
 
   void _undoAutoLayout() {
-    if (_historyManager.canUndo) {
-      _historyManager.undo();
-      _fitCanvasToNodes(_currentViewport);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已撤销自动排版')));
-    }
+    if (!_historyManager.canUndo) return;
+    _historyManager.undo();
+    _fitCanvasToNodes(_currentViewport);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已撤销自动排版')));
   }
 
   void _addCharacterMemory(int id, Offset pos) {
@@ -197,56 +189,19 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     });
   }
 
-  void _dropCharacter(
-    int characterId,
-    Offset screenDropPos, {
-    String characterName = '',
-  }) {
-    RelationGraphCommands.dropCharacter(
-      ref: ref,
-      worldId: widget.worldId,
-      canvasId: _selectedCanvasId,
-      characterId: characterId,
-      characterName: characterName,
-      screenDropPos: screenDropPos,
-      transformMatrix: _transformController.value,
-      historyManager: _historyManager,
-      onAddMemory: _addCharacterMemory,
-      onRemoveMemory: _removeCharacterMemory,
-    );
-  }
-
-  void _removeFromCanvas(int characterId, {String characterName = ''}) {
-    final currentPos = _positions[characterId];
-    if (currentPos == null) return;
-    RelationGraphCommands.removeCharacter(
-      ref: ref,
-      worldId: widget.worldId,
-      canvasId: _selectedCanvasId,
-      characterId: characterId,
-      characterName: characterName,
-      currentPos: currentPos,
-      historyManager: _historyManager,
-      onAddMemory: _addCharacterMemory,
-      onRemoveMemory: _removeCharacterMemory,
-    );
-  }
-
   /// 适应画布：将所有节点自动居中并自适应缩放到视野中
   void _fitCanvasToNodes([Size? customViewport]) {
-    final vp = (customViewport != null && customViewport.width > 0)
-        ? customViewport
-        : (_currentViewport.width > 0
-              ? _currentViewport
-              : MediaQuery.of(context).size);
     if (_positions.isEmpty) return;
+    final vp = RelationViewportHelper.resolveViewportSize(
+      context,
+      _currentViewport,
+      customViewport,
+    );
     final newMatrix = RelationViewportHelper.computeFitCanvasMatrix(
       viewportSize: vp,
       positions: _positions,
     );
-    setState(() {
-      _transformController.value = newMatrix;
-    });
+    setState(() => _transformController.value = newMatrix);
     _persistCurrentViewport();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _positions.isNotEmpty) {
@@ -267,64 +222,30 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
   }
 
   void _onEndConnecting(List<Character> characters) {
-    final targetId = RelationConnectionHelper.findConnectTarget(
-      sourceId: _connectingFromId,
-      currentPos: _connectingCurrentPos,
-      positions: _positions,
-    );
-
     final sourceId = _connectingFromId;
+    final currentPos = _connectingCurrentPos;
     setState(() {
       _connectingFromId = null;
       _connectingCurrentPos = null;
     });
-
-    if (targetId != null && sourceId != null) {
-      RelationEditDialogs.showAddRelationDialog(
-        context: context,
-        ref: ref,
-        worldId: widget.worldId,
-        characters: characters,
-        historyManager: _historyManager,
-        fromId: sourceId,
-        toId: targetId,
-      );
-    }
-  }
-
-  void _onNodeDragEnd(
-    int characterId,
-    Offset newPos,
-    List<Character> characters,
-  ) {
-    final startPos =
-        _nodeDragStartPositions.remove(characterId) ?? _positions[characterId];
-    if (startPos == null) return;
-
-    final charName =
-        characters
-            .where((c) => c.id == characterId)
-            .map((c) => c.name)
-            .firstOrNull ??
-        'ID:$characterId';
-
-    RelationGraphCommands.recordNodeMove(
+    RelationConnectionHelper.completeConnection(
+      context: context,
       ref: ref,
       worldId: widget.worldId,
-      canvasId: _selectedCanvasId,
-      characterId: characterId,
-      characterName: charName,
-      oldPos: startPos,
-      newPos: newPos,
+      sourceId: sourceId,
+      currentPos: currentPos,
+      positions: _positions,
+      characters: characters,
       historyManager: _historyManager,
-      onUpdateMemory: (id, pos) {
-        if (!mounted) return;
-        setState(() {
-          _positions[id] = pos;
-          _graphRevision++;
-        });
-      },
     );
+  }
+
+  void _applyPositionsBatch(Map<int, Offset> updated) {
+    if (!mounted) return;
+    setState(() {
+      _positions.addAll(updated);
+      _graphRevision++;
+    });
   }
 
   void _handleCanvasTap(
@@ -342,8 +263,12 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
       positions: _positions,
       historyManager: _historyManager,
       currentSelectedRelationId: _selectedRelationId,
-      onSelectedRelationChanged: (relId) =>
-          setState(() => _selectedRelationId = relId),
+      onSelectedRelationChanged: (relId) => setState(() {
+        _selectedRelationId = relId;
+        if (relId != null || _selectedNodeIds.isNotEmpty) {
+          _selectedNodeIds.clear();
+        }
+      }),
     );
   }
 
@@ -360,6 +285,8 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
     setState(() {
       _selectedCanvasId = targetCanvas.id;
       _positions.clear();
+      _selectedNodeIds.clear();
+      _selectedRelationId = null;
       _loadedFromDbCharacters.clear();
       _filterState = RelationCanvasStateHelper.restoreCanvasState(
         targetCanvas: targetCanvas,
@@ -444,7 +371,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
             );
           }
 
-          if (layoutsAsync.isLoading) {
+          if (layoutsAsync.isLoading && !layoutsAsync.hasValue) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -476,6 +403,7 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   positions: _positions,
                   graphRevision: _graphRevision,
                   selectedRelationId: _selectedRelationId,
+                  selectedNodeIds: _selectedNodeIds,
                   connectingFromId: _connectingFromId,
                   connectingCurrentPos: _connectingCurrentPos,
                   filterState: _filterState,
@@ -483,27 +411,106 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   currentScale: _currentScale,
                   onViewportChanged: (vp) => _currentViewport = vp,
                   onDropCharacter: (charId, localPos, charName) =>
-                      _dropCharacter(charId, localPos, characterName: charName),
+                      RelationGraphCommands.dropCharacter(
+                        ref: ref,
+                        worldId: widget.worldId,
+                        canvasId: _selectedCanvasId,
+                        characterId: charId,
+                        characterName: charName,
+                        screenDropPos: localPos,
+                        transformMatrix: _transformController.value,
+                        historyManager: _historyManager,
+                        onAddMemory: _addCharacterMemory,
+                        onRemoveMemory: _removeCharacterMemory,
+                      ),
                   onCanvasTap: (localPos) =>
                       _handleCanvasTap(localPos, relations, characters),
                   onPersistViewport: _persistCurrentViewport,
                   onNodeDragStart: (charId, startPos) =>
-                      _nodeDragStartPositions[charId] = startPos,
-                  onNodeDragUpdate: (charId, newPos) {
-                    setState(() {
-                      _positions[charId] = newPos;
-                      _graphRevision++;
-                    });
-                  },
+                      RelationSelectionHelper.startNodeDrag(
+                        charId: charId,
+                        startPos: startPos,
+                        selectedNodeIds: _selectedNodeIds,
+                        positions: _positions,
+                        singleStartPositions: _nodeDragStartPositions,
+                        multiStartPositions: _multiDragStartPositions,
+                      ),
+                  onNodeDragUpdate: (charId, newPos) => setState(() {
+                    RelationSelectionHelper.updateNodeDrag(
+                      charId: charId,
+                      newPos: newPos,
+                      selectedNodeIds: _selectedNodeIds,
+                      positions: _positions,
+                      multiStartPositions: _multiDragStartPositions,
+                    );
+                    _graphRevision++;
+                  }),
                   onNodeDragEnd: (charId, newPos) =>
-                      _onNodeDragEnd(charId, newPos, characters),
+                      RelationSelectionHelper.endNodeDrag(
+                        ref: ref,
+                        worldId: widget.worldId,
+                        canvasId: _selectedCanvasId,
+                        characterId: charId,
+                        newPos: newPos,
+                        characters: characters,
+                        selectedNodeIds: _selectedNodeIds,
+                        positions: _positions,
+                        singleStartPositions: _nodeDragStartPositions,
+                        multiStartPositions: _multiDragStartPositions,
+                        historyManager: _historyManager,
+                        onUpdateSingle: (id, pos) =>
+                            _applyPositionsBatch({id: pos}),
+                        onUpdateBatch: _applyPositionsBatch,
+                      ),
+                  onNodeTap: (charId, isAdditive) => setState(() {
+                    _selectedRelationId = null;
+                    RelationSelectionHelper.applyNodeTap(
+                      _selectedNodeIds,
+                      charId,
+                      isAdditive,
+                    );
+                  }),
+                  onBoxSelectNodes: (hitIds, isAdditive) => setState(() {
+                    _selectedRelationId = null;
+                    RelationSelectionHelper.applyBoxSelect(
+                      _selectedNodeIds,
+                      hitIds,
+                      isAdditive,
+                    );
+                  }),
+                  onAlignSelectedNodes: (mode) =>
+                      RelationSelectionHelper.alignSelectedNodes(
+                        ref: ref,
+                        worldId: widget.worldId,
+                        canvasId: _selectedCanvasId,
+                        mode: mode,
+                        selectedNodeIds: _selectedNodeIds,
+                        positions: _positions,
+                        historyManager: _historyManager,
+                        onUpdateBatch: _applyPositionsBatch,
+                      ),
+                  onClearNodeSelection: () =>
+                      setState(() => _selectedNodeIds.clear()),
                   onConnectStart: _onStartConnecting,
                   onConnectUpdate: _onUpdateConnecting,
                   onConnectEnd: () => _onEndConnecting(characters),
-                  onRemoveCharacter: (char) =>
-                      _removeFromCanvas(char.id, characterName: char.name),
+                  onRemoveCharacter: (char) {
+                    final pos = _positions[char.id];
+                    if (pos == null) return;
+                    RelationGraphCommands.removeCharacter(
+                      ref: ref,
+                      worldId: widget.worldId,
+                      canvasId: _selectedCanvasId,
+                      characterId: char.id,
+                      characterName: char.name,
+                      currentPos: pos,
+                      historyManager: _historyManager,
+                      onAddMemory: _addCharacterMemory,
+                      onRemoveMemory: _removeCharacterMemory,
+                    );
+                  },
                   onManageRelations: (char) =>
-                      RelationEditDialogs.showRelationManager(
+                      RelationGraphCommands.openRelationManager(
                         context: context,
                         ref: ref,
                         worldId: widget.worldId,
@@ -511,26 +518,13 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                         allCharacters: characters,
                         relations: relations,
                         historyManager: _historyManager,
-                        onRecordDelete: (rel, desc) =>
-                            RelationGraphCommands.recordDeleteRelation(
-                              ref: ref,
-                              worldId: widget.worldId,
-                              rel: rel,
-                              desc: desc,
-                              historyManager: _historyManager,
-                            ),
                       ),
                   onEditCharacter: (char) =>
-                      showDialog(
+                      RelationGraphCommands.openCharacterEditor(
                         context: context,
-                        builder: (_) => CharacterDialog(
-                          worldId: widget.worldId,
-                          character: char,
-                        ),
-                      ).then(
-                        (_) => ref.invalidate(
-                          charactersByWorldProvider(widget.worldId),
-                        ),
+                        ref: ref,
+                        worldId: widget.worldId,
+                        character: char,
                       ),
                   onNavigateToPosition: _navigateToPosition,
                   onClearFilter: () {
@@ -540,22 +534,26 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
                   onDeselectRelation: () =>
                       setState(() => _selectedRelationId = null),
                   onOpenFullRelationDialog: (rel) =>
-                      _showRelationActionDialog(rel, characters),
-                  onUpdateRelation: (newRel, desc) {
-                    final oldRel = relations
-                        .where((r) => r.id == newRel.id)
-                        .firstOrNull;
-                    if (oldRel != null) {
-                      RelationGraphCommands.recordUpdateRelation(
+                      RelationGraphCommands.openFullRelationDialog(
+                        context: context,
                         ref: ref,
                         worldId: widget.worldId,
-                        oldRel: oldRel,
+                        rel: rel,
+                        characters: characters,
+                        historyManager: _historyManager,
+                        onDeleteRelation: _handleDeleteRelation,
+                        onRelationDeleted: () =>
+                            setState(() => _selectedRelationId = null),
+                      ),
+                  onUpdateRelation: (newRel, desc) =>
+                      RelationGraphCommands.updateRelationById(
+                        ref: ref,
+                        worldId: widget.worldId,
+                        relations: relations,
                         newRel: newRel,
                         desc: desc,
                         historyManager: _historyManager,
-                      );
-                    }
-                  },
+                      ),
                   onDeleteRelation: _handleDeleteRelation,
                 ),
               ),
@@ -569,69 +567,42 @@ class _RelationGraphPageState extends ConsumerState<RelationGraphPage> {
 
     return RelationGraphShortcuts(
       historyManager: _historyManager,
-      onDeleteSelected: _deleteCurrentSelectedRelation,
+      onDeleteSelected: () {
+        if (_selectedRelationId == null) return;
+        final relations =
+            ref.read(relationsByWorldProvider(widget.worldId)).valueOrNull ??
+            [];
+        final rel = relations
+            .where((r) => r.id == _selectedRelationId)
+            .firstOrNull;
+        if (rel != null) _handleDeleteRelation(rel);
+      },
       onEscape: () {
-        if (_selectedRelationId != null) {
-          setState(() => _selectedRelationId = null);
+        if (_selectedRelationId != null || _selectedNodeIds.isNotEmpty) {
+          setState(() {
+            _selectedRelationId = null;
+            _selectedNodeIds.clear();
+          });
         }
       },
+      onSelectAll: () => setState(() {
+        _selectedRelationId = null;
+        _selectedNodeIds
+          ..clear()
+          ..addAll(_positions.keys);
+      }),
       child: scaffold,
     );
   }
 
-  void _showRelationActionDialog(Relation rel, List<Character> characters) {
-    RelationEditDialogs.showRelationActionDialog(
+  void _handleDeleteRelation(Relation rel) {
+    RelationGraphCommands.deleteRelationWithFeedback(
       context: context,
       ref: ref,
       worldId: widget.worldId,
       rel: rel,
-      characters: characters,
-      onRecordUpdate: (oldRel, newRel, desc) =>
-          RelationGraphCommands.recordUpdateRelation(
-            ref: ref,
-            worldId: widget.worldId,
-            oldRel: oldRel,
-            newRel: newRel,
-            desc: desc,
-            historyManager: _historyManager,
-          ),
-      onRecordDelete: (r, desc) => _handleDeleteRelation(r),
-      onRelationDeleted: () => setState(() => _selectedRelationId = null),
-    );
-  }
-
-  void _handleDeleteRelation(Relation rel) {
-    RelationGraphCommands.recordDeleteRelation(
-      ref: ref,
-      worldId: widget.worldId,
-      rel: rel,
-      desc: '删除关系【${rel.relationType}】',
       historyManager: _historyManager,
+      onCleared: () => setState(() => _selectedRelationId = null),
     );
-    setState(() => _selectedRelationId = null);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('已删除关系【${rel.relationType}】'),
-        action: SnackBarAction(
-          label: '撤销',
-          textColor: Colors.amberAccent,
-          onPressed: () {
-            if (_historyManager.canUndo) {
-              _historyManager.undo();
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  void _deleteCurrentSelectedRelation() {
-    if (_selectedRelationId == null) return;
-    final relations =
-        ref.read(relationsByWorldProvider(widget.worldId)).valueOrNull ?? [];
-    final rel = relations.where((r) => r.id == _selectedRelationId).firstOrNull;
-    if (rel != null) {
-      _handleDeleteRelation(rel);
-    }
   }
 }

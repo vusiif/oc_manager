@@ -23,10 +23,10 @@ class GraphGeometry {
     final cosA = cos(angle);
     final sinA = sin(angle);
 
-    // If ray points downwards, consider the label bounding box
-    if (includeText && sinA > 0.45) {
+    // If ray points downwards, consider the frosted name pill bounding box
+    if (includeText && sinA > 0.40) {
       final textHalfW = 32.0 + padding;
-      final textBottom = 46.0 + padding;
+      final textBottom = 50.0 + padding;
       final absCos = cosA.abs();
       final tX = absCos > 1e-6 ? textHalfW / absCos : double.infinity;
       final tY = textBottom / sinA;

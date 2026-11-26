@@ -435,4 +435,44 @@ class RelationInspectorPanel extends StatelessWidget {
       ],
     );
   }
+
+  /// Builds the positioned inspector overlay when a valid relation is selected.
+  static Widget buildOverlay({
+    required int? selectedRelationId,
+    required List<Relation> relations,
+    required List<Character> characters,
+    required VoidCallback onClose,
+    required ValueChanged<Relation> onOpenFullDialog,
+    required void Function(Relation newRel, String desc) onUpdateRelation,
+    required ValueChanged<Relation> onDeleteRelation,
+  }) {
+    final selectedRel = selectedRelationId != null
+        ? relations.where((r) => r.id == selectedRelationId).firstOrNull
+        : null;
+    final fromChar = selectedRel != null
+        ? characters
+              .where((c) => c.id == selectedRel.fromCharacterId)
+              .firstOrNull
+        : null;
+    final toChar = selectedRel != null
+        ? characters.where((c) => c.id == selectedRel.toCharacterId).firstOrNull
+        : null;
+    if (selectedRel == null || fromChar == null || toChar == null) {
+      return const SizedBox.shrink();
+    }
+    return Positioned(
+      bottom: 16,
+      left: 16,
+      child: RelationInspectorPanel(
+        key: ValueKey(selectedRel.id),
+        relation: selectedRel,
+        fromCharacter: fromChar,
+        toCharacter: toChar,
+        onClose: onClose,
+        onOpenFullDialog: () => onOpenFullDialog(selectedRel),
+        onUpdateRelation: onUpdateRelation,
+        onDeleteRelation: () => onDeleteRelation(selectedRel),
+      ),
+    );
+  }
 }

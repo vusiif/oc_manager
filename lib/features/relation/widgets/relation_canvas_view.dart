@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/util/graph_viewport_culling.dart';
@@ -10,6 +11,8 @@ import '../relation_graph_painters.dart';
 import 'graph_minimap.dart';
 import 'relation_connection_helper.dart';
 import 'relation_inspector_panel.dart';
+import 'relation_multi_selection_bar.dart';
+import 'relation_selection_helper.dart';
 
 /// Canvas view for relation graph rendering (nodes, edges, minimap, drag & drop, and filters).
 class RelationCanvasView extends StatefulWidget {
@@ -19,6 +22,7 @@ class RelationCanvasView extends StatefulWidget {
   final Map<int, Offset> positions;
   final int graphRevision;
   final int? selectedRelationId;
+  final Set<int> selectedNodeIds;
   final int? connectingFromId;
   final Offset? connectingCurrentPos;
   final RelationFilterState filterState;
@@ -44,6 +48,10 @@ class RelationCanvasView extends StatefulWidget {
   final ValueChanged<Relation>? onOpenFullRelationDialog;
   final void Function(Relation newRel, String desc)? onUpdateRelation;
   final ValueChanged<Relation>? onDeleteRelation;
+  final void Function(int characterId, bool isAdditive)? onNodeTap;
+  final void Function(Set<int> selectedIds, bool isAdditive)? onBoxSelectNodes;
+  final ValueChanged<NodeAlignMode>? onAlignSelectedNodes;
+  final VoidCallback? onClearNodeSelection;
 
   const RelationCanvasView({
     super.key,
@@ -53,6 +61,7 @@ class RelationCanvasView extends StatefulWidget {
     required this.positions,
     required this.graphRevision,
     this.selectedRelationId,
+    this.selectedNodeIds = const {},
     this.connectingFromId,
     this.connectingCurrentPos,
     required this.filterState,
@@ -77,6 +86,10 @@ class RelationCanvasView extends StatefulWidget {
     this.onOpenFullRelationDialog,
     this.onUpdateRelation,
     this.onDeleteRelation,
+    this.onNodeTap,
+    this.onBoxSelectNodes,
+    this.onAlignSelectedNodes,
+    this.onClearNodeSelection,
   });
 
   @override
@@ -85,6 +98,51 @@ class RelationCanvasView extends StatefulWidget {
 
 class _RelationCanvasViewState extends State<RelationCanvasView> {
   bool _isNodeInteracting = false;
+  bool _isBoxSelectMode = false;
+  bool _isShiftPressed = false;
+  Offset? _boxSelectStart;
+  Offset? _boxSelectCurrent;
+
+  @override
+  void initState() {
+    super.initState();
+    _isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    final shift = HardwareKeyboard.instance.isShiftPressed;
+    if (shift != _isShiftPressed && mounted) {
+      setState(() => _isShiftPressed = shift);
+    }
+    return false;
+  }
+
+  void _finishBoxSelect() {
+    final start = _boxSelectStart;
+    final current = _boxSelectCurrent;
+    setState(() {
+      _boxSelectStart = null;
+      _boxSelectCurrent = null;
+    });
+    if (start == null || current == null) return;
+    final rect = Rect.fromPoints(start, current);
+    if (rect.width.abs() < 4 && rect.height.abs() < 4) return;
+    final hitIds = RelationSelectionHelper.findNodesInRect(
+      rect,
+      widget.positions,
+    );
+    final isAdditive =
+        HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+    widget.onBoxSelectNodes?.call(hitIds, isAdditive);
+  }
 
   void _onNodeDragStart(int characterId, Offset startPos) {
     if (!_isNodeInteracting) {
@@ -168,284 +226,345 @@ class _RelationCanvasViewState extends State<RelationCanvasView> {
         );
 
         return ClipRect(
-          child: Stack(
-            children: [
-              // 1. 全屏统一画布底色 (Solid Infinite Canvas Background)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: theme.colorScheme.surfaceContainerLowest,
+          child: SizedBox.expand(
+            child: Stack(
+              children: [
+                // 1. 全屏统一画布底色 (Solid Infinite Canvas Background)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: theme.colorScheme.surfaceContainerLowest,
+                  ),
                 ),
-              ),
-              // 2. 全屏无限动态网格 (Infinite Dynamic Grid)
-              Positioned.fill(
-                child: ListenableBuilder(
-                  listenable: widget.transformController,
-                  builder: (context, _) {
-                    return CustomPaint(
-                      size: viewport,
-                      painter: InfiniteGridPainter(
-                        transformMatrix: widget.transformController.value,
-                        gridColor: theme.colorScheme.outlineVariant.withValues(
-                          alpha: isDark ? 0.22 : 0.45,
+                // 2. 全屏无限动态网格 (Infinite Dynamic Grid)
+                Positioned.fill(
+                  child: ListenableBuilder(
+                    listenable: widget.transformController,
+                    builder: (context, _) {
+                      return CustomPaint(
+                        size: viewport,
+                        painter: InfiniteGridPainter(
+                          transformMatrix: widget.transformController.value,
+                          gridColor: theme.colorScheme.outlineVariant
+                              .withValues(alpha: isDark ? 0.22 : 0.45),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-              // 3. 关系图内容层与手势交互 (Infinite InteractiveViewer)
-              Positioned.fill(
-                child: DragTarget<int>(
-                  onAcceptWithDetails: (details) {
-                    final renderBox = context.findRenderObject() as RenderBox;
-                    final localPos = renderBox.globalToLocal(details.offset);
-                    final charName =
-                        widget.characters
-                            .where((c) => c.id == details.data)
-                            .map((c) => c.name)
-                            .firstOrNull ??
-                        '';
-                    widget.onDropCharacter(details.data, localPos, charName);
-                  },
-                  builder: (context, candidateData, rejectedData) {
-                    return InteractiveViewer(
-                      transformationController: widget.transformController,
-                      constrained: false,
-                      panEnabled: !_isNodeInteracting,
-                      scaleEnabled: !_isNodeInteracting,
-                      boundaryMargin: const EdgeInsets.all(5000.0),
-                      clipBehavior: Clip.none,
-                      minScale: 0.1,
-                      maxScale: 3.0,
-                      onInteractionEnd: (_) => widget.onPersistViewport(),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTapUp: (details) =>
-                            widget.onCanvasTap(details.localPosition),
-                        child: SizedBox(
-                          width: canvasSize.width,
-                          height: canvasSize.height,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              CustomPaint(
-                                size: canvasSize,
-                                painter: RelationPainter(
-                                  relations: widget.relations,
-                                  positions: widget.positions,
-                                  characters: widget.characters,
-                                  revision: widget.graphRevision,
-                                  selectedRelationId: widget.selectedRelationId,
-                                  isDark: isDark,
-                                  filterState: widget.filterState,
-                                  visibleRect: visibleRect,
-                                  scale: widget.currentScale,
-                                ),
-                              ),
-                              for (var character in widget.characters)
-                                if (widget.positions.containsKey(
-                                      character.id,
-                                    ) &&
-                                    GraphViewportCulling.isNodeVisible(
-                                      widget.positions[character.id]!,
-                                      visibleRect,
-                                      radius: 40.0,
-                                    ))
-                                  DraggableNode(
-                                    key: ValueKey(character.id),
-                                    character: character,
-                                    position: widget.positions[character.id]!,
-                                    lodLevel: currentLod,
-                                    allCharacters: widget.characters,
-                                    relations: widget.relations,
-                                    isPathHighlighted:
-                                        widget
-                                            .filterState
-                                            .highlightedPath
-                                            ?.nodePath
-                                            .contains(character.id) ??
-                                        false,
-                                    isDimmed:
-                                        widget.filterState.highlightedPath !=
-                                            null &&
-                                        !(widget
-                                            .filterState
-                                            .highlightedPath!
-                                            .nodePath
-                                            .contains(character.id)),
-                                    isConnectTarget:
-                                        character.id == activeTargetId,
-                                    onDragStart: (startPos) => _onNodeDragStart(
-                                      character.id,
-                                      startPos,
-                                    ),
-                                    onDragUpdate: (newPos) => widget
-                                        .onNodeDragUpdate(character.id, newPos),
-                                    onDragEnd: (newPos) =>
-                                        _onNodeDragEnd(character.id, newPos),
-                                    onConnectStart: (startPos) =>
-                                        _onConnectStart(character.id, startPos),
-                                    onConnectUpdate: _onConnectUpdate,
-                                    onConnectEnd: _onConnectEnd,
-                                    onRemove: () =>
-                                        widget.onRemoveCharacter(character),
-                                    onManageRelations: () =>
-                                        widget.onManageRelations(character),
-                                    onEdit: () =>
-                                        widget.onEditCharacter(character),
-                                  ),
-                              // 拖拽创建关系时的实时连线预览（置于最顶层，支持自动磁吸）
-                              if (widget.connectingFromId != null &&
-                                  widget.connectingCurrentPos != null &&
-                                  widget.positions.containsKey(
-                                    widget.connectingFromId,
-                                  ))
+                // 3. 关系图内容层与手势交互 (Infinite InteractiveViewer)
+                Positioned.fill(
+                  child: DragTarget<int>(
+                    onAcceptWithDetails: (details) {
+                      final renderBox = context.findRenderObject() as RenderBox;
+                      final localPos = renderBox.globalToLocal(details.offset);
+                      final charName =
+                          widget.characters
+                              .where((c) => c.id == details.data)
+                              .map((c) => c.name)
+                              .firstOrNull ??
+                          '';
+                      widget.onDropCharacter(details.data, localPos, charName);
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      final isMarqueeActive =
+                          _isBoxSelectMode || _isShiftPressed;
+                      return InteractiveViewer(
+                        transformationController: widget.transformController,
+                        constrained: false,
+                        panEnabled: !_isNodeInteracting && !isMarqueeActive,
+                        scaleEnabled: !_isNodeInteracting,
+                        boundaryMargin: const EdgeInsets.all(5000.0),
+                        clipBehavior: Clip.none,
+                        minScale: 0.1,
+                        maxScale: 3.0,
+                        onInteractionEnd: (_) => widget.onPersistViewport(),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTapUp: (details) =>
+                              widget.onCanvasTap(details.localPosition),
+                          onPanStart: isMarqueeActive
+                              ? (details) => setState(() {
+                                  _boxSelectStart = details.localPosition;
+                                  _boxSelectCurrent = details.localPosition;
+                                })
+                              : null,
+                          onPanUpdate: isMarqueeActive
+                              ? (details) => setState(() {
+                                  _boxSelectCurrent = details.localPosition;
+                                })
+                              : null,
+                          onPanEnd: isMarqueeActive
+                              ? (_) => _finishBoxSelect()
+                              : null,
+                          onPanCancel: isMarqueeActive
+                              ? () => setState(() {
+                                  _boxSelectStart = null;
+                                  _boxSelectCurrent = null;
+                                })
+                              : null,
+                          child: SizedBox(
+                            width: canvasSize.width,
+                            height: canvasSize.height,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
                                 CustomPaint(
                                   size: canvasSize,
-                                  painter: ConnectingLinePainter(
-                                    from: widget
-                                        .positions[widget.connectingFromId]!,
-                                    to:
-                                        connectTargetPos ??
-                                        widget.connectingCurrentPos!,
-                                    color: AppColors.brand,
+                                  painter: RelationPainter(
+                                    relations: widget.relations,
+                                    positions: widget.positions,
+                                    characters: widget.characters,
+                                    revision: widget.graphRevision,
+                                    selectedRelationId:
+                                        widget.selectedRelationId,
+                                    isDark: isDark,
+                                    filterState: widget.filterState,
+                                    visibleRect: visibleRect,
+                                    scale: widget.currentScale,
                                   ),
                                 ),
-                              if (candidateData.isNotEmpty)
-                                Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
+                                for (var character in widget.characters)
+                                  if (widget.positions.containsKey(
+                                        character.id,
+                                      ) &&
+                                      GraphViewportCulling.isNodeVisible(
+                                        widget.positions[character.id]!,
+                                        visibleRect,
+                                        radius: 40.0,
+                                      ))
+                                    DraggableNode(
+                                      key: ValueKey(character.id),
+                                      character: character,
+                                      position: widget.positions[character.id]!,
+                                      lodLevel: currentLod,
+                                      allCharacters: widget.characters,
+                                      relations: widget.relations,
+                                      isSelected: widget.selectedNodeIds
+                                          .contains(character.id),
+                                      onTap: () {
+                                        final isAdditive =
+                                            HardwareKeyboard
+                                                .instance
+                                                .isShiftPressed ||
+                                            HardwareKeyboard
+                                                .instance
+                                                .isControlPressed ||
+                                            HardwareKeyboard
+                                                .instance
+                                                .isMetaPressed;
+                                        widget.onNodeTap?.call(
+                                          character.id,
+                                          isAdditive,
+                                        );
+                                      },
+                                      isPathHighlighted:
+                                          widget
+                                              .filterState
+                                              .highlightedPath
+                                              ?.nodePath
+                                              .contains(character.id) ??
+                                          false,
+                                      isDimmed:
+                                          widget.filterState.highlightedPath !=
+                                              null &&
+                                          !(widget
+                                              .filterState
+                                              .highlightedPath!
+                                              .nodePath
+                                              .contains(character.id)),
+                                      isConnectTarget:
+                                          character.id == activeTargetId,
+                                      onDragStart: (startPos) =>
+                                          _onNodeDragStart(
+                                            character.id,
+                                            startPos,
+                                          ),
+                                      onDragUpdate: (newPos) =>
+                                          widget.onNodeDragUpdate(
+                                            character.id,
+                                            newPos,
+                                          ),
+                                      onDragEnd: (newPos) =>
+                                          _onNodeDragEnd(character.id, newPos),
+                                      onConnectStart: (startPos) =>
+                                          _onConnectStart(
+                                            character.id,
+                                            startPos,
+                                          ),
+                                      onConnectUpdate: _onConnectUpdate,
+                                      onConnectEnd: _onConnectEnd,
+                                      onRemove: () =>
+                                          widget.onRemoveCharacter(character),
+                                      onManageRelations: () =>
+                                          widget.onManageRelations(character),
+                                      onEdit: () =>
+                                          widget.onEditCharacter(character),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(12),
+                                // 拖拽创建关系时的实时连线预览（置于最顶层，支持自动磁吸）
+                                if (widget.connectingFromId != null &&
+                                    widget.connectingCurrentPos != null &&
+                                    widget.positions.containsKey(
+                                      widget.connectingFromId,
+                                    ))
+                                  CustomPaint(
+                                    size: canvasSize,
+                                    painter: ConnectingLinePainter(
+                                      from: widget
+                                          .positions[widget.connectingFromId]!,
+                                      to:
+                                          connectTargetPos ??
+                                          widget.connectingCurrentPos!,
+                                      color: AppColors.brand,
                                     ),
-                                    child: Text(
-                                      '松开放置人物',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.primary,
-                                        fontSize: 16,
+                                  ),
+                                if (_boxSelectStart != null &&
+                                    _boxSelectCurrent != null)
+                                  CustomPaint(
+                                    size: canvasSize,
+                                    painter: SelectionBoxPainter(
+                                      rect: Rect.fromPoints(
+                                        _boxSelectStart!,
+                                        _boxSelectCurrent!,
+                                      ),
+                                      color: AppColors.brand,
+                                    ),
+                                  ),
+                                if (candidateData.isNotEmpty)
+                                  Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '松开放置人物',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.primary,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                     ),
                                   ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (widget.filterState.hasActiveFilter)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: RepaintBoundary(
+                      child: Material(
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(24),
+                        color: theme.colorScheme.surfaceContainerHigh,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.alt_route,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                widget.filterState.highlightedPath != null
+                                    ? '最短路径: ${widget.filterState.highlightedPath!.hopCount} 步跃迁'
+                                    : '已应用过滤条件',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.colorScheme.onSurface,
                                 ),
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.close, size: 16),
+                                tooltip: '清除高亮',
+                                onPressed: widget.onClearFilter,
+                              ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              if (widget.filterState.hasActiveFilter)
+                    ),
+                  ),
+                // GRAPH-005: 悬浮全局导览小地图
                 Positioned(
-                  top: 16,
+                  bottom: 16,
                   right: 16,
                   child: RepaintBoundary(
-                    child: Material(
-                      elevation: 4,
-                      borderRadius: BorderRadius.circular(24),
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.alt_route,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              widget.filterState.highlightedPath != null
-                                  ? '最短路径: ${widget.filterState.highlightedPath!.hopCount} 步跃迁'
-                                  : '已应用过滤条件',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.close, size: 16),
-                              tooltip: '清除高亮',
-                              onPressed: widget.onClearFilter,
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: GraphMinimap(
+                      positions: widget.positions,
+                      characters: widget.characters,
+                      relations: widget.relations,
+                      transformController: widget.transformController,
+                      viewportSize: viewport,
+                      isDark: isDark,
+                      onNavigate: widget.onNavigateToPosition,
                     ),
                   ),
                 ),
-              // GRAPH-005: 悬浮全局导览小地图
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: RepaintBoundary(
-                  child: GraphMinimap(
-                    positions: widget.positions,
-                    characters: widget.characters,
-                    relations: widget.relations,
-                    transformController: widget.transformController,
-                    viewportSize: viewport,
-                    isDark: isDark,
-                    onNavigate: widget.onNavigateToPosition,
+                // 关系属性检查面板 (Obsidian Canvas 交互)
+                RelationInspectorPanel.buildOverlay(
+                  selectedRelationId: widget.selectedRelationId,
+                  relations: widget.relations,
+                  characters: widget.characters,
+                  onClose: widget.onDeselectRelation ?? () {},
+                  onOpenFullDialog: (rel) =>
+                      widget.onOpenFullRelationDialog?.call(rel),
+                  onUpdateRelation: (newRel, desc) =>
+                      widget.onUpdateRelation?.call(newRel, desc),
+                  onDeleteRelation: (rel) => widget.onDeleteRelation?.call(rel),
+                ),
+                // 顶部居中：浏览 / 框选模式切换胶囊 (Excalidraw / Figma 风格)
+                Positioned(
+                  top: 12,
+                  left: 0,
+                  right: 0,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: 1.0,
+                    child: RelationCanvasModeToggle(
+                      isBoxSelectMode: _isBoxSelectMode,
+                      onModeChanged: (v) =>
+                          setState(() => _isBoxSelectMode = v),
+                    ),
                   ),
                 ),
-              ),
-              // 关系属性检查面板 (Obsidian Canvas 交互)
-              Builder(
-                builder: (context) {
-                  final selectedRel = widget.selectedRelationId != null
-                      ? widget.relations
-                            .where((r) => r.id == widget.selectedRelationId)
-                            .firstOrNull
-                      : null;
-                  final fromChar = selectedRel != null
-                      ? widget.characters
-                            .where((c) => c.id == selectedRel.fromCharacterId)
-                            .firstOrNull
-                      : null;
-                  final toChar = selectedRel != null
-                      ? widget.characters
-                            .where((c) => c.id == selectedRel.toCharacterId)
-                            .firstOrNull
-                      : null;
-
-                  if (selectedRel != null &&
-                      fromChar != null &&
-                      toChar != null) {
-                    return Positioned(
-                      bottom: 16,
-                      left: 16,
-                      child: RelationInspectorPanel(
-                        key: ValueKey(selectedRel.id),
-                        relation: selectedRel,
-                        fromCharacter: fromChar,
-                        toCharacter: toChar,
-                        onClose: widget.onDeselectRelation ?? () {},
-                        onOpenFullDialog: () =>
-                            widget.onOpenFullRelationDialog?.call(selectedRel),
-                        onUpdateRelation: (newRel, desc) =>
-                            widget.onUpdateRelation?.call(newRel, desc),
-                        onDeleteRelation: () =>
-                            widget.onDeleteRelation?.call(selectedRel),
+                // 底部居中：多节点选中浮动操作栏
+                if (widget.selectedNodeIds.isNotEmpty &&
+                    widget.selectedRelationId == null)
+                  Positioned(
+                    bottom: 16,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: RelationMultiSelectionBar(
+                        selectedCount: widget.selectedNodeIds.length,
+                        onAlign: (mode) =>
+                            widget.onAlignSelectedNodes?.call(mode),
+                        onClearSelection: widget.onClearNodeSelection ?? () {},
                       ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

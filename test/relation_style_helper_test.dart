@@ -211,5 +211,51 @@ void main() {
       expect(centers.containsKey(102), isTrue);
       expect(centers[101], isNot(equals(centers[102])));
     });
+
+    test(
+      'calculateRelationLabelCenters avoids parent pill for single-parent family and aligns single-line curve midpoint',
+      () {
+        final singleParentFamily = [
+          const Relation(
+            id: 201,
+            fromCharacterId: 1,
+            toCharacterId: 2,
+            relationType: '父子',
+            isBidirectional: false,
+            relationGroupId: 'fam-single',
+          ),
+        ];
+        final famPositions = {
+          1: const Offset(200, 100),
+          2: const Offset(200, 320),
+        };
+        final famCenters = calculateRelationLabelCenters(
+          relations: singleParentFamily,
+          positions: famPositions,
+        );
+        // Should sit below the parent frosted pill (dy + 50), not overlap dy + 16
+        expect(famCenters[201]!.dy, greaterThanOrEqualTo(160.0));
+
+        final longSingleRel = [
+          const Relation(
+            id: 202,
+            fromCharacterId: 1,
+            toCharacterId: 2,
+            relationType: '盟友',
+            isBidirectional: true,
+          ),
+        ];
+        final longPositions = {
+          1: const Offset(100, 200),
+          2: const Offset(500, 200),
+        };
+        final longCenters = calculateRelationLabelCenters(
+          relations: longSingleRel,
+          positions: longPositions,
+        );
+        // Single-line micro-arc midpoint should be offset from straight y=200
+        expect(longCenters[202]!.dy, isNot(equals(200.0)));
+      },
+    );
   });
 }

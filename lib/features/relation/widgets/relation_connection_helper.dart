@@ -153,4 +153,33 @@ class RelationConnectionHelper {
       onSelectedRelationChanged(null);
     }
   }
+
+  /// Resolves connection target and opens the add-relation dialog if valid.
+  static void completeConnection({
+    required BuildContext context,
+    required WidgetRef ref,
+    required int worldId,
+    required int? sourceId,
+    required Offset? currentPos,
+    required Map<int, Offset> positions,
+    required List<Character> characters,
+    required GraphHistoryManager historyManager,
+  }) {
+    final targetId = findConnectTarget(
+      sourceId: sourceId,
+      currentPos: currentPos,
+      positions: positions,
+    );
+    if (targetId != null && sourceId != null) {
+      RelationEditDialogs.showAddRelationDialog(
+        context: context,
+        ref: ref,
+        worldId: worldId,
+        characters: characters,
+        historyManager: historyManager,
+        fromId: sourceId,
+        toId: targetId,
+      );
+    }
+  }
 }
