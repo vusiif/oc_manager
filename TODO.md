@@ -265,8 +265,8 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 
 # 8. 持续 UX 与性能优化
 
--   [ ]
-    **UX-002：最近项目与快速切换**：最近世界观、人物、编辑记录和固定收藏。
+-   [x]
+    **UX-002：最近项目与快速切换**（已完成，位于 `lib/core/services/recent_items_service.dart`、`lib/features/shell/workspace_recent_section.dart` 与 `lib/features/main_shell.dart`，支持记录最近访问世界观/人物、置顶固定收藏、工作台 Hub 速览与顶栏历史快速切换，通过 `test/recent_items_test.dart` 验证）
 -   [ ]
     **UX-003：快捷键体系**：新建、搜索、保存、撤销/重做、切换视图及快捷键帮助。
 -   [ ]

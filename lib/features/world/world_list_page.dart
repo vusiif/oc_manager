@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design/components/confirmation_dialog.dart';
+import '../../core/design/components/empty_state.dart';
+import '../../core/design/components/world_card.dart';
+import '../../core/design/design_tokens.dart';
+import '../../data/database/app_database.dart';
 import '../../providers/world_provider.dart';
 import 'world_dialog.dart';
 
@@ -18,6 +23,7 @@ class WorldListPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
+            tooltip: '全局搜索',
             onPressed: () => context.push('/search'),
           ),
           PopupMenuButton(
@@ -25,28 +31,28 @@ class WorldListPage extends ConsumerWidget {
               const PopupMenuItem(
                 value: 'tags',
                 child: ListTile(
-                  leading: Icon(Icons.label),
+                  leading: Icon(Icons.label_outlined),
                   title: Text('标签管理'),
                 ),
               ),
               const PopupMenuItem(
                 value: 'drafts',
                 child: ListTile(
-                  leading: Icon(Icons.drafts),
+                  leading: Icon(Icons.drafts_outlined),
                   title: Text('草稿箱'),
                 ),
               ),
               const PopupMenuItem(
                 value: 'trash',
                 child: ListTile(
-                  leading: Icon(Icons.delete),
+                  leading: Icon(Icons.delete_outline),
                   title: Text('回收站'),
                 ),
               ),
               const PopupMenuItem(
                 value: 'settings',
                 child: ListTile(
-                  leading: Icon(Icons.settings),
+                  leading: Icon(Icons.settings_outlined),
                   title: Text('设置'),
                 ),
               ),
@@ -68,59 +74,43 @@ class WorldListPage extends ConsumerWidget {
       body: worldsAsync.when(
         data: (worlds) {
           if (worlds.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.public, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    '还没有世界观',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  SizedBox(height: 8),
-                  Text('点击右下角按钮创建第一个世界观', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
+            return EmptyStateView(
+              icon: Icons.public_rounded,
+              title: '还没有世界观',
+              description: '创建你的第一个原创世界观，开始管理人物档案、百科设定与关系网络。',
+              primaryActionLabel: '创建世界观',
+              onPrimaryAction: () => _showCreateDialog(context),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: worlds.length,
-            itemBuilder: (context, index) {
-              final world = worlds[index];
-              return RepaintBoundary(
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.public)),
-                    title: Text(
-                      world.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final crossAxisCount = width >= 1020 ? 3 : (width >= 640 ? 2 : 1);
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: AppSpacing.md,
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisExtent: 132,
                     ),
-                    subtitle: world.description != null
-                        ? Text(
-                            world.description!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (world.isLocked)
-                          const Icon(Icons.lock, color: Colors.orange),
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _showEditDialog(context, ref, world),
+                    itemCount: worlds.length,
+                    itemBuilder: (context, index) {
+                      final world = worlds[index];
+                      return RepaintBoundary(
+                        child: WorldCard(
+                          world: world,
+                          onTap: () => context.push('/world/${world.id}'),
+                          onEdit: () => _showEditDialog(context, world),
+                          onDelete: () => _confirmDelete(context, ref, world),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _confirmDelete(context, ref, world),
-                        ),
-                      ],
-                    ),
-                    onTap: () => context.push('/world/${world.id}'),
+                      );
+                    },
                   ),
                 ),
               );
@@ -130,55 +120,51 @@ class WorldListPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('错误: $error')),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateDialog(context, ref),
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
+        onPressed: () => _showCreateDialog(context),
+        icon: const Icon(Icons.add),
+        label: const Text('新建世界观'),
       ),
     );
   }
 
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
+  void _showCreateDialog(BuildContext context) {
     showDialog(context: context, builder: (context) => const WorldDialog());
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref, dynamic world) {
+  void _showEditDialog(BuildContext context, World world) {
     showDialog(
       context: context,
       builder: (context) => WorldDialog(world: world),
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref, dynamic world) {
-    showDialog(
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    World world,
+  ) async {
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除世界观'),
-        content: Text('确定要删除"${world.name}"吗？\n该世界观下的所有人物也会被删除。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await ref.read(worldActionsProvider).delete(world.id);
-                if (context.mounted) Navigator.pop(context);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('删除世界观失败: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: '删除世界观',
+      content: '确定要删除"${world.name}"吗？\n该世界观下的所有人物与设定也会移入回收站。',
+      confirmLabel: '删除',
+      isDestructive: true,
     );
+    if (!confirmed || !context.mounted) return;
+    try {
+      await ref.read(worldActionsProvider).delete(world.id);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除世界观失败: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 }

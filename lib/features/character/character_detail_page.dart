@@ -7,7 +7,9 @@ import '../../providers/character_provider.dart';
 import '../../data/database/app_database.dart';
 import '../../core/storage/image_storage_service.dart';
 import '../../core/constants/character_status.dart';
+import '../../core/design/components/confirmation_dialog.dart';
 import '../../core/design/components/oc_avatar.dart';
+import '../../core/design/design_tokens.dart';
 import 'character_gallery_section.dart';
 import 'character_timeline_section.dart';
 import 'character_description_section.dart';
@@ -176,185 +178,228 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
       body: characterAsync.when(
         data: (character) {
           final fields = fieldsAsync.valueOrNull ?? [];
+          final statusInfo = CharacterCreationStatus.find(character.status);
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // === 基本信息 + 自定义字段 ===
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 基本信息
-                      const Text(
-                        '基本信息',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Divider(),
-                      Center(
-                        child: Stack(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.lg,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 920),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // === 基本信息 + 自定义字段 ===
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            InkWell(
-                              onTap: () => _pickAndChangeAvatar(character),
-                              borderRadius: BorderRadius.circular(44),
-                              child: OcAvatar(
-                                avatarPath: character.avatarPath,
-                                name: character.name,
-                                gender: character.gender,
-                                size: 88,
-                                isDraft: character.status == 1,
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Tooltip(
-                                message: '更换立绘/头像',
-                                child: InkWell(
-                                  onTap: () => _pickAndChangeAvatar(character),
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  children: [
+                                    InkWell(
+                                      onTap: () =>
+                                          _pickAndChangeAvatar(character),
+                                      borderRadius: BorderRadius.circular(44),
+                                      child: OcAvatar(
+                                        avatarPath: character.avatarPath,
+                                        name: character.name,
+                                        gender: character.gender,
+                                        size: 88,
+                                        isDraft: character.status == 1,
                                       ),
                                     ),
-                                    child: const Icon(
-                                      Icons.camera_alt,
-                                      size: 15,
-                                      color: Colors.white,
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Tooltip(
+                                        message: '更换立绘/头像',
+                                        child: InkWell(
+                                          onTap: () =>
+                                              _pickAndChangeAvatar(character),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt,
+                                              size: 15,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(width: AppSpacing.lg),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        character.name,
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      Wrap(
+                                        spacing: AppSpacing.sm,
+                                        runSpacing: AppSpacing.xs,
+                                        children: [
+                                          if (character.gender.isNotEmpty)
+                                            Chip(
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              label: Text(character.gender),
+                                            ),
+                                          Chip(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            label: Text(statusInfo.label),
+                                          ),
+                                          Chip(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            avatar: const Icon(
+                                              Icons.calendar_today_outlined,
+                                              size: 14,
+                                            ),
+                                            label: Text(
+                                              '创建于 ${_formatDate(character.createdAt)}',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      CharacterInfoRow(label: '名称', value: character.name),
-                      if (character.gender.isNotEmpty)
-                        CharacterInfoRow(label: '性别', value: character.gender),
-                      CharacterInfoRow(
-                        label: '状态',
-                        value: CharacterCreationStatus.find(
-                          character.status,
-                        ).label,
-                      ),
-                      CharacterInfoRow(
-                        label: '创建时间',
-                        value: _formatDate(character.createdAt),
-                      ),
 
-                      // 自定义字段紧贴基本信息
-                      if (fields.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '附加信息',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant,
+                            // 自定义字段紧贴基本信息
+                            if (fields.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '附加信息',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add, size: 20),
+                                    onPressed: () =>
+                                        _showAddFieldDialog(context, ref),
+                                  ),
+                                ],
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 20),
-                              onPressed: () =>
-                                  _showAddFieldDialog(context, ref),
-                            ),
+                              const Divider(),
+                              for (final field in fields)
+                                CharacterFieldRow(
+                                  field: field,
+                                  characterId: widget.characterId,
+                                ),
+                            ],
+                            if (fields.isEmpty) ...[
+                              const SizedBox(height: 12),
+                              Center(
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('添加附加字段'),
+                                  onPressed: () =>
+                                      _showAddFieldDialog(context, ref),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        const Divider(),
-                        for (final field in fields)
-                          CharacterFieldRow(
-                            field: field,
-                            characterId: widget.characterId,
-                          ),
-                      ],
-                      if (fields.isEmpty) ...[
-                        const SizedBox(height: 12),
-                        Center(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('添加附加字段'),
-                            onPressed: () => _showAddFieldDialog(context, ref),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 战力与属性雷达图 ===
+                    CharacterStatsSection(characterId: widget.characterId),
+                    const SizedBox(height: 16),
+
+                    // === 立绘画廊与差分 ===
+                    CharacterGallerySection(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 生平大事记与时间线 ===
+                    CharacterTimelineSection(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 标签 ===
+                    TagSelector(characterId: widget.characterId),
+                    const SizedBox(height: 16),
+
+                    // === 分组 ===
+                    CharacterGroupSelector(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 详细设定与双向链接小传 ===
+                    CharacterDescriptionSection(
+                      worldId: widget.worldId,
+                      character: character,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 关系 ===
+                    CharacterRelationSection(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 所属势力与地点归属 (LORE-002 & LORE-003) ===
+                    CharacterLoreSection(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // === 故事线出场记录 (STORY-003) ===
+                    CharacterStoryAppearanceSection(
+                      worldId: widget.worldId,
+                      characterId: widget.characterId,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // === 战力与属性雷达图 ===
-              CharacterStatsSection(characterId: widget.characterId),
-              const SizedBox(height: 16),
-
-              // === 立绘画廊与差分 ===
-              CharacterGallerySection(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-              const SizedBox(height: 16),
-
-              // === 生平大事记与时间线 ===
-              CharacterTimelineSection(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-              const SizedBox(height: 16),
-
-              // === 标签 ===
-              TagSelector(characterId: widget.characterId),
-              const SizedBox(height: 16),
-
-              // === 分组 ===
-              CharacterGroupSelector(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-              const SizedBox(height: 16),
-
-              // === 详细设定与双向链接小传 ===
-              CharacterDescriptionSection(
-                worldId: widget.worldId,
-                character: character,
-              ),
-              const SizedBox(height: 16),
-
-              // === 关系 ===
-              CharacterRelationSection(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-              const SizedBox(height: 16),
-
-              // === 所属势力与地点归属 (LORE-002 & LORE-003) ===
-              CharacterLoreSection(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-              const SizedBox(height: 16),
-
-              // === 故事线出场记录 (STORY-003) ===
-              CharacterStoryAppearanceSection(
-                worldId: widget.worldId,
-                characterId: widget.characterId,
-              ),
-            ],
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -447,44 +492,31 @@ class _CharacterDetailPageState extends ConsumerState<CharacterDetailPage> {
     ).then((_) => nameController.dispose());
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除人物'),
-        content: const Text('确定要删除这个人物吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await ref
-                    .read(characterActionsProvider)
-                    .delete(widget.characterId);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  if (widget.onDeleted != null) {
-                    widget.onDeleted!();
-                  } else if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('删除人物失败: $e')));
-                }
-              }
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      title: '删除人物',
+      content: '确定要删除这个人物吗？该人物将移入回收站。',
+      confirmLabel: '删除',
+      isDestructive: true,
     );
+    if (!confirmed || !context.mounted) return;
+    try {
+      await ref.read(characterActionsProvider).delete(widget.characterId);
+      if (context.mounted) {
+        if (widget.onDeleted != null) {
+          widget.onDeleted!();
+        } else if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('删除人物失败: $e')));
+      }
+    }
   }
 
   String _formatDate(DateTime date) {

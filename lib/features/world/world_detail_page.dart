@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/world_provider.dart';
-import '../../providers/character_provider.dart';
-import '../../providers/group_provider.dart';
-import '../../data/database/app_database.dart';
 import '../../core/design/components/empty_state.dart';
 import '../../core/design/components/oc_card.dart';
 import '../../core/design/design_tokens.dart';
+import '../../data/database/app_database.dart';
+import '../../providers/character_provider.dart';
+import '../../providers/group_provider.dart';
+import '../../providers/world_provider.dart';
 import '../character/character_dialog.dart';
+import 'booklet_export_dialog.dart';
+import 'consistency_checker_dialog.dart';
+import 'oc_package_dialogs.dart';
 import 'views/world_kanban_view.dart';
 import 'views/world_table_view.dart';
 import 'world_analytics_dialog.dart';
-import 'booklet_export_dialog.dart';
-import 'oc_package_dialogs.dart';
-import 'consistency_checker_dialog.dart';
 
 enum WorldViewMode { cards, kanban, table }
 
@@ -45,14 +45,13 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
       charactersByWorldProvider(widget.worldId),
     );
     final groupsAsync = ref.watch(groupsByWorldProvider(widget.worldId));
-
-    // 根据选中的分组过滤人物
     final filteredCharactersAsync = widget.selectedGroupId != null
         ? ref.watch(charactersByGroupProvider(widget.selectedGroupId!))
         : null;
 
     final allCharacters = charactersAsync.valueOrNull ?? [];
     final allGroups = groupsAsync.valueOrNull ?? [];
+    final isWide = MediaQuery.sizeOf(context).width >= 880;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,7 +61,6 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
           error: (err, stack) => const Text('错误'),
         ),
         actions: [
-          // 视图切换器（仅在全域世界视图下生效）
           if (widget.selectedGroupId == null) ...[
             SegmentedButton<WorldViewMode>(
               segments: const [
@@ -83,9 +81,8 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
                 ),
               ],
               selected: {_viewMode},
-              onSelectionChanged: (set) {
-                setState(() => _viewMode = set.first);
-              },
+              onSelectionChanged: (set) =>
+                  setState(() => _viewMode = set.first),
               style: const ButtonStyle(
                 visualDensity: VisualDensity.compact,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -93,98 +90,31 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
             ),
             const SizedBox(width: 8),
           ],
-          IconButton(
-            icon: const Icon(Icons.insights_rounded),
-            tooltip: '全景数据大盘与人际网络分析',
-            onPressed: () {
-              final world = worldAsync.valueOrNull;
-              showDialog(
-                context: context,
-                builder: (_) => WorldAnalyticsDialog(
-                  worldId: widget.worldId,
-                  worldName: world?.name ?? '世界观',
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.history_edu_rounded),
-            tooltip: '编年史大事件',
-            onPressed: () => context.push('/world/${widget.worldId}/chronicle'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.movie_creation_outlined),
-            tooltip: '故事创作与场景分镜 (Story & Scenes)',
-            onPressed: () => context.push('/world/${widget.worldId}/story'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_stories_rounded),
-            tooltip: '世界百科 (Lore)',
-            onPressed: () => context.push('/world/${widget.worldId}/lore'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.hub_outlined),
-            tooltip: '知识网络视图 (Knowledge Network)',
-            onPressed: () =>
-                context.push('/world/${widget.worldId}/knowledge-network'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.fact_check_outlined),
-            tooltip: '设定一致性检查器',
-            onPressed: () {
-              final world = worldAsync.valueOrNull;
-              ConsistencyCheckerDialog.show(
-                context,
-                worldId: widget.worldId,
-                worldName: world?.name ?? '世界观',
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.menu_book_rounded),
-            tooltip: '生成世界设定集 (Booklet)',
-            onPressed: () {
-              final world = worldAsync.valueOrNull;
-              if (world != null) {
-                BookletExportDialog.show(context, world);
-              }
-            },
-          ),
-          PopupMenuButton<String>(
-            tooltip: '数据分享包与更多',
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (value) {
-              final world = worldAsync.valueOrNull;
-              if (world == null) return;
-              if (value == 'export_ocpkg') {
-                OcPackageExportDialog.show(context, world);
-              } else if (value == 'import_ocpkg') {
-                OcPackageImportDialog.show(context, targetWorldId: world.id);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'export_ocpkg',
-                child: Row(
-                  children: [
-                    Icon(Icons.archive_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('导出数据分享包 (.ocpkg)'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'import_ocpkg',
-                child: Row(
-                  children: [
-                    Icon(Icons.unarchive_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('导入数据分享包 (.ocpkg)'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          if (isWide) ...[
+            IconButton(
+              icon: const Icon(Icons.history_edu_rounded),
+              tooltip: '编年史大事件',
+              onPressed: () =>
+                  context.push('/world/${widget.worldId}/chronicle'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.movie_creation_outlined),
+              tooltip: '故事创作与场景分镜 (Story & Scenes)',
+              onPressed: () => context.push('/world/${widget.worldId}/story'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.auto_stories_rounded),
+              tooltip: '世界百科 (Lore)',
+              onPressed: () => context.push('/world/${widget.worldId}/lore'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.hub_outlined),
+              tooltip: '知识网络视图 (Knowledge Network)',
+              onPressed: () =>
+                  context.push('/world/${widget.worldId}/knowledge-network'),
+            ),
+          ],
+          _buildToolsMenu(context, worldAsync.valueOrNull, isWide),
           const SizedBox(width: 8),
         ],
       ),
@@ -206,7 +136,79 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
     );
   }
 
-  // 根据当前视图模式渲染
+  Widget _buildToolsMenu(BuildContext context, World? world, bool isWide) {
+    return PopupMenuButton<String>(
+      tooltip: '工具与更多操作',
+      icon: const Icon(Icons.more_vert_rounded),
+      onSelected: (value) => _handleMenuAction(context, world, value),
+      itemBuilder: (context) => [
+        if (!isWide) ...[
+          _menuItem('chronicle', Icons.history_edu_rounded, '编年史大事件'),
+          _menuItem('story', Icons.movie_creation_outlined, '故事创作与场景分镜'),
+          _menuItem('lore', Icons.auto_stories_rounded, '世界百科 (Lore)'),
+          _menuItem('network', Icons.hub_outlined, '知识网络视图'),
+          const PopupMenuDivider(),
+        ],
+        _menuItem('analytics', Icons.insights_rounded, '全景数据大盘'),
+        _menuItem('consistency', Icons.fact_check_outlined, '设定一致性检查器'),
+        const PopupMenuDivider(),
+        _menuItem('booklet', Icons.menu_book_rounded, '生成世界设定集 (Booklet)'),
+        _menuItem('export_ocpkg', Icons.archive_outlined, '导出数据分享包 (.ocpkg)'),
+        _menuItem('import_ocpkg', Icons.unarchive_outlined, '导入数据分享包 (.ocpkg)'),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 19),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleMenuAction(BuildContext context, World? world, String value) {
+    switch (value) {
+      case 'chronicle':
+        context.push('/world/${widget.worldId}/chronicle');
+      case 'story':
+        context.push('/world/${widget.worldId}/story');
+      case 'lore':
+        context.push('/world/${widget.worldId}/lore');
+      case 'network':
+        context.push('/world/${widget.worldId}/knowledge-network');
+      case 'analytics':
+        showDialog(
+          context: context,
+          builder: (_) => WorldAnalyticsDialog(
+            worldId: widget.worldId,
+            worldName: world?.name ?? '世界观',
+          ),
+        );
+      case 'consistency':
+        ConsistencyCheckerDialog.show(
+          context,
+          worldId: widget.worldId,
+          worldName: world?.name ?? '世界观',
+        );
+      case 'booklet':
+        if (world != null) BookletExportDialog.show(context, world);
+      case 'export_ocpkg':
+        if (world != null) OcPackageExportDialog.show(context, world);
+      case 'import_ocpkg':
+        if (world != null) {
+          OcPackageImportDialog.show(context, targetWorldId: world.id);
+        }
+    }
+  }
+
   Widget _buildAllCharactersWithViewMode(
     BuildContext context,
     AsyncValue<List<Character>> charactersAsync,
@@ -248,7 +250,6 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
     );
   }
 
-  // 经典卡片流视图
   Widget _buildClassicCards(BuildContext context, List<Character> characters) {
     final pinned = characters.where((c) => c.isPinned).toList();
     final normal = characters
@@ -259,142 +260,126 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
         .where((c) => !c.isPinned && c.status > 1)
         .toList();
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
-        if (pinned.isNotEmpty) ...[
-          Row(
-            children: [
-              const Icon(
-                Icons.push_pin_rounded,
-                size: 16,
-                color: AppColors.brand,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                '置顶 (${pinned.length})',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ...pinned.map(
-            (c) => OcCard(
-              character: c,
-              onTap: () => widget.onCharacterSelected?.call(c.id),
-              onFavoriteToggle: () {
-                ref.read(characterActionsProvider).toggleFavorite(c);
-              },
-              onPinToggle: () {
-                ref.read(characterActionsProvider).togglePin(c);
-              },
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-        if (normal.isNotEmpty) ...[
-          if (pinned.isNotEmpty)
-            const Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                '细化中角色',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 780 ? 2 : 1;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (pinned.isNotEmpty)
+                    _buildCharacterSection(
+                      '置顶 (${pinned.length})',
+                      Icons.push_pin_rounded,
+                      pinned,
+                      columns,
+                      iconColor: AppColors.brand,
+                    ),
+                  if (normal.isNotEmpty)
+                    _buildCharacterSection(
+                      pinned.isNotEmpty ? '细化中角色' : null,
+                      null,
+                      normal,
+                      columns,
+                    ),
+                  if (drafts.isNotEmpty)
+                    _buildCharacterSection(
+                      '构思草稿 (${drafts.length})',
+                      Icons.lightbulb_outline_rounded,
+                      drafts,
+                      columns,
+                    ),
+                  if (others.isNotEmpty)
+                    _buildCharacterSection(
+                      '定稿与归档 (${others.length})',
+                      Icons.inventory_2_outlined,
+                      others,
+                      columns,
+                    ),
+                ],
               ),
             ),
-          ...normal.map(
-            (c) => OcCard(
-              character: c,
-              onTap: () => widget.onCharacterSelected?.call(c.id),
-              onFavoriteToggle: () {
-                ref.read(characterActionsProvider).toggleFavorite(c);
-              },
-              onPinToggle: () {
-                ref.read(characterActionsProvider).togglePin(c);
-              },
-            ),
           ),
-        ],
-        if (drafts.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              const Icon(
-                Icons.lightbulb_outline_rounded,
-                size: 16,
-                color: Colors.grey,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                '构思草稿 (${drafts.length})',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ...drafts.map(
-            (c) => OcCard(
-              character: c,
-              onTap: () => widget.onCharacterSelected?.call(c.id),
-              onFavoriteToggle: () {
-                ref.read(characterActionsProvider).toggleFavorite(c);
-              },
-              onPinToggle: () {
-                ref.read(characterActionsProvider).togglePin(c);
-              },
-            ),
-          ),
-        ],
-        if (others.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                size: 16,
-                color: Colors.grey,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                '定稿与归档 (${others.length})',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ...others.map(
-            (c) => OcCard(
-              character: c,
-              onTap: () => widget.onCharacterSelected?.call(c.id),
-              onFavoriteToggle: () {
-                ref.read(characterActionsProvider).toggleFavorite(c);
-              },
-              onPinToggle: () {
-                ref.read(characterActionsProvider).togglePin(c);
-              },
-            ),
-          ),
-        ],
-      ],
+        );
+      },
     );
   }
 
-  // 显示分组下的人物
+  Widget _buildCharacterSection(
+    String? title,
+    IconData? icon,
+    List<Character> list,
+    int columns, {
+    Color? iconColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 16, color: iconColor ?? Colors.grey),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          _buildResponsiveCardGrid(list, columns),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResponsiveCardGrid(List<Character> list, int columns) {
+    if (columns == 1) {
+      return Column(children: list.map(_buildOcCard).toList());
+    }
+    final rows = <Widget>[];
+    for (var i = 0; i < list.length; i += 2) {
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _buildOcCard(list[i])),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: i + 1 < list.length
+                  ? _buildOcCard(list[i + 1])
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(children: rows);
+  }
+
+  Widget _buildOcCard(Character c) {
+    return OcCard(
+      character: c,
+      onTap: () => widget.onCharacterSelected?.call(c.id),
+      onFavoriteToggle: () =>
+          ref.read(characterActionsProvider).toggleFavorite(c),
+      onPinToggle: () => ref.read(characterActionsProvider).togglePin(c),
+    );
+  }
+
   Widget _buildGroupCharacters(
     BuildContext context,
     AsyncValue<List<Character>>? charactersAsync,
@@ -413,22 +398,19 @@ class _WorldDetailPageState extends ConsumerState<WorldDetailPage> {
           );
         }
 
-        return ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: characters
-              .map(
-                (c) => OcCard(
-                  character: c,
-                  onTap: () => widget.onCharacterSelected?.call(c.id),
-                  onFavoriteToggle: () {
-                    ref.read(characterActionsProvider).toggleFavorite(c);
-                  },
-                  onPinToggle: () {
-                    ref.read(characterActionsProvider).togglePin(c);
-                  },
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 780 ? 2 : 1;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: _buildResponsiveCardGrid(characters, columns),
                 ),
-              )
-              .toList(),
+              ),
+            );
+          },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

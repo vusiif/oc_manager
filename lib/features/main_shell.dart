@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../core/design/components/empty_state.dart';
 import '../core/design/design_tokens.dart';
+import '../core/services/recent_items_service.dart';
 import '../providers/character_provider.dart';
 import '../providers/group_provider.dart';
 import '../providers/world_provider.dart';
 import 'character/character_detail_page.dart';
 import 'command_palette/command_palette_dialog.dart';
+import 'shell/workspace_recent_section.dart';
 import 'sidebar/tree_sidebar.dart';
 import 'world/world_detail_page.dart';
 import 'world/world_dialog.dart';
@@ -90,6 +92,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               },
             ),
           ],
+          RecentQuickSwitchButton(onOpenItem: _openRecentItem),
           IconButton(
             icon: const Icon(Icons.terminal_rounded),
             tooltip: '全局命令面板 (Ctrl+K)',
@@ -187,26 +190,14 @@ class _MainShellState extends ConsumerState<MainShell> {
                       selectedWorldId: _selectedWorldId,
                       selectedGroupId: _selectedGroupId,
                       selectedCharacterId: _selectedCharacterId,
-                      onWorldSelected: (worldId) {
-                        ref.read(activeWorldIdProvider.notifier).state =
-                            worldId;
-                        setState(() {
-                          _selectedWorldId = worldId;
-                          _selectedGroupId = null;
-                          _selectedCharacterId = null;
-                        });
-                      },
+                      onWorldSelected: _selectWorld,
                       onGroupSelected: (groupId) {
                         setState(() {
                           _selectedGroupId = groupId;
                           _selectedCharacterId = null;
                         });
                       },
-                      onCharacterSelected: (characterId) {
-                        setState(() {
-                          _selectedCharacterId = characterId;
-                        });
-                      },
+                      onCharacterSelected: _selectCharacter,
                     ),
                   ),
                 ),
@@ -367,12 +358,52 @@ class _MainShellState extends ConsumerState<MainShell> {
     return WorldDetailPage(
       worldId: _selectedWorldId!,
       selectedGroupId: _selectedGroupId,
-      onCharacterSelected: (characterId) {
-        setState(() {
-          _selectedCharacterId = characterId;
-        });
-      },
+      onCharacterSelected: _selectCharacter,
     );
+  }
+
+  void _selectWorld(int? worldId) {
+    ref.read(activeWorldIdProvider.notifier).state = worldId;
+    setState(() {
+      _selectedWorldId = worldId;
+      _selectedGroupId = null;
+      _selectedCharacterId = null;
+    });
+    if (worldId != null) {
+      ref.read(recentItemsProvider.notifier).recordWorldById(worldId);
+    }
+  }
+
+  void _selectCharacter(int? characterId) {
+    setState(() => _selectedCharacterId = characterId);
+    final wId = _selectedWorldId;
+    if (wId != null && characterId != null) {
+      ref
+          .read(recentItemsProvider.notifier)
+          .recordCharacterById(wId, characterId);
+    }
+  }
+
+  void _openRecentItem(RecentItem item) {
+    ref.read(activeWorldIdProvider.notifier).state = item.worldId;
+    setState(() {
+      _selectedWorldId = item.worldId;
+      _selectedGroupId = null;
+      _selectedCharacterId = item.type == RecentItemType.character
+          ? item.id
+          : null;
+    });
+    final notifier = ref.read(recentItemsProvider.notifier);
+    if (item.type == RecentItemType.world) {
+      notifier.recordWorld(worldId: item.id, worldName: item.title);
+    } else {
+      notifier.recordCharacter(
+        characterId: item.id,
+        worldId: item.worldId,
+        characterName: item.title,
+        worldName: item.subtitle,
+      );
+    }
   }
 
   /// 现代工作区中心主页 (Workspace Hub)
@@ -456,7 +487,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-
+            WorkspaceRecentSection(onOpenItem: _openRecentItem),
             // 世界观卡片网格
             const Text(
               '我的世界观',
@@ -481,15 +512,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                     return Card(
                       child: InkWell(
                         borderRadius: AppRadius.radiusMd,
-                        onTap: () {
-                          ref.read(activeWorldIdProvider.notifier).state =
-                              world.id;
-                          setState(() {
-                            _selectedWorldId = world.id;
-                            _selectedGroupId = null;
-                            _selectedCharacterId = null;
-                          });
-                        },
+                        onTap: () => _selectWorld(world.id),
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.md),
                           child: Column(
