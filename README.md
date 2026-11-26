@@ -1,19 +1,19 @@
 # OC Manager (二创与原创角色人设管理工作台)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.8.0-6366F1?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-v2.2.0-6366F1?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white&style=flat-square" alt="Flutter" />
   <img src="https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white&style=flat-square" alt="Dart" />
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android-4CAF50?style=flat-square" alt="Platform" />
-  <img src="https://img.shields.io/badge/Database-SQLite%20%2F%20Drift%20v12-003B57?logo=sqlite&logoColor=white&style=flat-square" alt="SQLite" />
-  <img src="https://img.shields.io/badge/Tests-151%2F151%20Passed-brightgreen?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Database-SQLite%20%2F%20Drift%20v15-003B57?logo=sqlite&logoColor=white&style=flat-square" alt="SQLite" />
+  <img src="https://img.shields.io/badge/Tests-293%2F293%20Passed-brightgreen?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/Security-Hardened%20(Atomic%20%26%20Isolation)-orange?style=flat-square" alt="Security" />
   <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
 </p>
 
 **OC Manager** 是一款专为小说创作者、漫画家、跑团（TRPG）玩家及二创爱好者打造的**本地优先、隐私安全、高颜值**的角色人设（Original Character）与世界观设定管理工作台。
 
-界面深度参考 **AppFlowy** 式现代桌面三栏信息架构，人物卡片汲取 **Milanote** 视觉展示语言，关系图谱对齐 **Obsidian Canvas** 交互体验，结合 **Notion** 多维矩阵与出版级设定集编译引擎，采用 **SQLite + Drift (Schema v12)** 强类型数据库保障数据底座的绝对安全。
+界面深度参考 **AppFlowy** 式现代桌面三栏信息架构（移动端自适应抽屉），人物卡片汲取 **Milanote** 视觉展示语言，关系图谱对齐 **Obsidian Canvas** 交互体验，结合 **Notion** 多维矩阵与出版级设定集编译引擎，采用 **SQLite + Drift (Schema v15)** 强类型数据库保障数据底座的绝对安全。
 
 ---
 
@@ -343,7 +343,14 @@ APK 产物生成于 `build/app/outputs/flutter-apk/app-release.apk`。
 
 ---
 
-## 🧪 自动化测试验证 (140 项全绿)
+### 8. 故事创作工坊、效率交互与模板生态
+- **故事工坊 (`StoryWorkbenchPage`)**：支持按世界观隔离的多作品/分卷/分镜场景管理、POV 视点与登场角色统计、故事线时间一致性检查，以及 HTML/Markdown/ZIP 剧本导出；
+- **关系图谱 2.0 进阶交互**：支持空白处框选（`Shift+拖拽` 或框选模式）、多节点同步平移、6 种对齐/等距分布、关系线发光选中与左下角轻量属性检查面板；
+- **效率与模板体系**：`Ctrl+K` 全局命令面板、`F1` 全应用快捷键指南、最近访问与固定收藏、纯字段模板 JSON 分享与 5 套官方预设模板、以及空状态一键体验示例世界观。
+
+---
+
+## 🧪 自动化测试验证 (293 项全绿)
 
 项目配置有严密的单元测试、安全沙盒防御、状态隔离与几何运算断言套件，采用内存数据库沙盒隔离，避免污染生产数据：
 

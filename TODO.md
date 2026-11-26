@@ -29,10 +29,10 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 
 ## P0
 
--   [x] **DOC-001：统一项目状态文档**（已对齐 README / PROGRESS / ROADMAP / TODO，Schema v15，全量 254 项测试 100% 通过）
+-   [x] **DOC-001：统一项目状态文档**（已对齐 README / PROGRESS / ROADMAP / TODO / pubspec.yaml，Schema v15，全量 293 项测试 100% 通过）
     -   对齐
         `README.md`、`CLAUDE.md`、`PROGRESS.md`、`ROADMAP.md`、`REQUIREMENTS.md`。
-    -   统一当前版本（v2.2.0）、Schema（v15）、已实现功能、测试数量（254项通过）和未完成事项。
+    -   统一当前版本（v2.2.0）、Schema（v15）、已实现功能、测试数量（293项通过）和未完成事项。
     -   测试数量必须来自实际运行结果，不得沿用旧数字。
     -   验收：文档之间无明显矛盾，新 Agent 能判断项目真实状态。
 -   [x] **DOC-002：建立功能状态核对机制**（开发前核对 TODO，已实现项注明代码位置和验证方式，不重复开发）
@@ -269,12 +269,12 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
     **UX-002：最近项目与快速切换**（已完成，位于 `lib/core/services/recent_items_service.dart`、`lib/features/shell/workspace_recent_section.dart` 与 `lib/features/main_shell.dart`，支持记录最近访问世界观/人物、置顶固定收藏、工作台 Hub 速览与顶栏历史快速切换，通过 `test/recent_items_test.dart` 验证）
 -   [x]
     **UX-003：快捷键体系**（已完成，位于 `lib/app.dart`、`lib/features/shell/shortcuts_help_dialog.dart` 与 `lib/features/main_shell.dart`，支持 `Ctrl+K` 命令面板、`Ctrl+F` 搜索、`Ctrl+N` 新建、`Ctrl+G` 关系图、`F1 / Ctrl+/` 快捷键指南及图谱画布全套快捷键，带文本编辑态安全守卫，通过 `test/shortcuts_help_test.dart` 验证）
--   [ ]
-    **UX-004：空状态与引导**：可跳过的新手引导/示例数据，不强迫导入。
+-   [x]
+    **UX-004：空状态与引导**（已完成，位于 `lib/core/services/sample_world_service.dart`、`lib/features/main_shell.dart` 与 `lib/features/world/world_list_page.dart`，在工作台与世界观列表空状态提供可选的「体验/导入示例世界观」事务级一键播种，包含 4 位带维基双链与雷达属性的角色、4 条关系与排布完备的主关系图画布，不强迫导入，通过 `test/sample_world_service_test.dart` 验证）
 -   [ ]
     **UX-005：大数据量性能**：列表、关系图、画廊、编年史的压力测试；按需分页、懒加载、缓存。
--   [ ] **UX-006：Android
-    体验复核**：触控目标、软键盘、返回行为、窄屏、长内容编辑。
+-   [x] **UX-006：Android
+    体验复核**（已完成，位于 `lib/features/main_shell.dart` 与 `lib/features/shell/workspace_hub_view.dart`，< 720px 窄屏自动切换为 `Drawer` 抽屉侧栏与单列卡片流，接入 `PopScope` 系统返回键分级回退，标题栏防溢出，已通过 `test/mobile_layout_test.dart` 及 `flutter build apk --release` 构建验证）
 -   [ ]
     **UX-007：无障碍与可读性**：文字缩放、对比度、焦点顺序、语义标签、键盘可达性。
 

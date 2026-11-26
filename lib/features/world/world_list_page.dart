@@ -6,6 +6,7 @@ import '../../core/design/components/confirmation_dialog.dart';
 import '../../core/design/components/empty_state.dart';
 import '../../core/design/components/world_card.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/services/sample_world_service.dart';
 import '../../data/database/app_database.dart';
 import '../../providers/world_provider.dart';
 import 'world_dialog.dart';
@@ -77,9 +78,16 @@ class WorldListPage extends ConsumerWidget {
             return EmptyStateView(
               icon: Icons.public_rounded,
               title: '还没有世界观',
-              description: '创建你的第一个原创世界观，开始管理人物档案、百科设定与关系网络。',
+              description: '创建你的第一个原创世界观，或一键导入官方示例世界观快速体验人物、双链与关系图谱。',
               primaryActionLabel: '创建世界观',
               onPrimaryAction: () => _showCreateDialog(context),
+              secondaryActionLabel: '导入示例世界观',
+              onSecondaryAction: () async {
+                final worldId = await SampleWorldService.createAndRefresh(ref);
+                if (context.mounted) {
+                  context.push('/world/$worldId');
+                }
+              },
             );
           }
 
