@@ -267,8 +267,8 @@ MVP；固定字段与自定义字段并存；不为功能数量而开发。
 
 -   [x]
     **UX-002：最近项目与快速切换**（已完成，位于 `lib/core/services/recent_items_service.dart`、`lib/features/shell/workspace_recent_section.dart` 与 `lib/features/main_shell.dart`，支持记录最近访问世界观/人物、置顶固定收藏、工作台 Hub 速览与顶栏历史快速切换，通过 `test/recent_items_test.dart` 验证）
--   [ ]
-    **UX-003：快捷键体系**：新建、搜索、保存、撤销/重做、切换视图及快捷键帮助。
+-   [x]
+    **UX-003：快捷键体系**（已完成，位于 `lib/app.dart`、`lib/features/shell/shortcuts_help_dialog.dart` 与 `lib/features/main_shell.dart`，支持 `Ctrl+K` 命令面板、`Ctrl+F` 搜索、`Ctrl+N` 新建、`Ctrl+G` 关系图、`F1 / Ctrl+/` 快捷键指南及图谱画布全套快捷键，带文本编辑态安全守卫，通过 `test/shortcuts_help_test.dart` 验证）
 -   [ ]
     **UX-004：空状态与引导**：可跳过的新手引导/示例数据，不强迫导入。
 -   [ ]

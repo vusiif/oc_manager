@@ -16,9 +16,13 @@ import 'features/world/lore_encyclopedia_page.dart';
 import 'features/world/knowledge_network/knowledge_network_page.dart';
 import 'features/story/story_workbench_page.dart';
 import 'features/character/character_detail_page.dart';
+import 'features/character/character_dialog.dart';
 import 'features/settings/settings_page.dart';
+import 'features/shell/shortcuts_help_dialog.dart';
 import 'features/template/template_management_page.dart';
+import 'features/world/world_dialog.dart';
 import 'providers/settings_provider.dart';
+import 'providers/world_provider.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -109,20 +113,70 @@ class App extends ConsumerWidget {
       themeMode: themeModeAsync.valueOrNull ?? ThemeMode.system,
       routerConfig: _router,
       builder: (context, child) {
+        bool isEditingText() {
+          final w = FocusManager.instance.primaryFocus?.context?.widget;
+          return w is EditableText;
+        }
+
+        void openCmdPalette() {
+          final ctx = rootNavigatorKey.currentContext;
+          if (ctx != null) showCommandPalette(ctx);
+        }
+
+        void openHelp() {
+          final ctx = rootNavigatorKey.currentContext;
+          if (ctx != null) showShortcutsHelpDialog(ctx);
+        }
+
+        void openSearch() {
+          if (isEditingText()) return;
+          _router.push('/search');
+        }
+
+        void openNewEntity() {
+          if (isEditingText()) return;
+          final ctx = rootNavigatorKey.currentContext;
+          if (ctx == null) return;
+          final activeWorldId = ref.read(activeWorldIdProvider);
+          showDialog(
+            context: ctx,
+            builder: (_) => activeWorldId != null
+                ? CharacterDialog(worldId: activeWorldId)
+                : const WorldDialog(),
+          );
+        }
+
+        void openGraph() {
+          if (isEditingText()) return;
+          final activeWorldId = ref.read(activeWorldIdProvider);
+          if (activeWorldId != null) {
+            _router.push('/world/$activeWorldId/graph');
+          }
+        }
+
         return CallbackShortcuts(
           bindings: {
-            const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
-              final ctx = rootNavigatorKey.currentContext;
-              if (ctx != null) {
-                showCommandPalette(ctx);
-              }
-            },
-            const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
-              final ctx = rootNavigatorKey.currentContext;
-              if (ctx != null) {
-                showCommandPalette(ctx);
-              }
-            },
+            const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                openCmdPalette,
+            const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                openCmdPalette,
+            const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+                openSearch,
+            const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+                openSearch,
+            const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+                openNewEntity,
+            const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+                openNewEntity,
+            const SingleActivator(LogicalKeyboardKey.keyG, control: true):
+                openGraph,
+            const SingleActivator(LogicalKeyboardKey.keyG, meta: true):
+                openGraph,
+            const SingleActivator(LogicalKeyboardKey.f1): openHelp,
+            const SingleActivator(LogicalKeyboardKey.slash, control: true):
+                openHelp,
+            const SingleActivator(LogicalKeyboardKey.slash, meta: true):
+                openHelp,
           },
           child: child ?? const SizedBox.shrink(),
         );

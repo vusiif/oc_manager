@@ -10,6 +10,7 @@ import '../providers/group_provider.dart';
 import '../providers/world_provider.dart';
 import 'character/character_detail_page.dart';
 import 'command_palette/command_palette_dialog.dart';
+import 'shell/shortcuts_help_dialog.dart';
 import 'shell/workspace_recent_section.dart';
 import 'sidebar/tree_sidebar.dart';
 import 'world/world_detail_page.dart';
@@ -140,6 +141,14 @@ class _MainShellState extends ConsumerState<MainShell> {
               ),
               const PopupMenuDivider(),
               const PopupMenuItem(
+                value: 'shortcuts',
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(Icons.keyboard_rounded),
+                  title: Text('快捷键指南 (F1)'),
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'settings',
                 child: ListTile(
                   dense: true,
@@ -152,19 +161,16 @@ class _MainShellState extends ConsumerState<MainShell> {
               switch (value) {
                 case 'tags':
                   context.push('/tags');
-                  break;
                 case 'templates':
                   context.push('/templates');
-                  break;
                 case 'drafts':
                   context.push('/drafts');
-                  break;
                 case 'trash':
                   context.push('/trash');
-                  break;
+                case 'shortcuts':
+                  showShortcutsHelpDialog(context);
                 case 'settings':
                   context.push('/settings');
-                  break;
               }
             },
           ),
